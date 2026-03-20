@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "107362981335",
+    "project_id": "rentpay-app-76517",
+    "storage_bucket": "rentpay-app-76517.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:107362981335:android:ef4855d7fdcc7a541fe792",
+        "android_client_info": {
+          "package_name": "com.example.rental_billing_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEcdDs6CM3qk5yGT9DLtG_WkjFzy-1LPE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:107362981335:android:0e2a86d74e29f2de1fe792",
+        "android_client_info": {
+          "package_name": "com.example.rentpay_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEcdDs6CM3qk5yGT9DLtG_WkjFzy-1LPE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
