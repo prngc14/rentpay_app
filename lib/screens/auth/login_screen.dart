@@ -39,11 +39,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       var user = await _auth.login(email, password);
 
+      if (!mounted) return;
+
       if (user != null) {
         var doc = await FirebaseFirestore.instance
             .collection("users")
             .doc(user.uid)
             .get();
+
+        if (!mounted) return;
 
         String role = doc["role"];
 
@@ -60,9 +64,14 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
     }
 
+    if (!mounted) return;
     setState(() => isLoading = false);
   }
 
@@ -76,6 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await FirebaseAuth.instance
         .sendPasswordResetEmail(email: emailController.text.trim());
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Password reset email sent")),
@@ -91,6 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
@@ -103,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(30),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
                   blurRadius: 10,
@@ -116,7 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 const Text(
                   "RentPay",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 30),
                 TextField(
@@ -135,7 +156,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Checkbox(
                       value: rememberMe,
                       activeColor: Colors.deepOrange,
-                      onChanged: (v) => setState(() => rememberMe = v!),
+                      onChanged: (v) {
+                        setState(() {
+                          rememberMe = v ?? false;
+                        });
+                      },
                     ),
                     const Text("Remember Me"),
                     const Spacer(),
@@ -170,7 +195,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const RegisterScreen(),
+                      ),
                     );
                   },
                   child: const Text("Create Account"),
