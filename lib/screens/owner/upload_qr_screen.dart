@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ ADD THIS
 import '../../services/cloudinary_service.dart';
 
 class UploadQRScreen extends StatefulWidget {
@@ -17,6 +18,8 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
 
   bool isLoading = false;
   final ImagePicker _picker = ImagePicker();
+
+  final user = FirebaseAuth.instance.currentUser; // ✅ CURRENT USER
 
   // ================= PICK =================
 
@@ -58,8 +61,9 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
         paymayaUrl = await uploadToCloudinary(paymayaImage!);
       }
 
-      final docRef =
-          FirebaseFirestore.instance.collection("settings").doc("payment_qr");
+      final docRef = FirebaseFirestore.instance
+          .collection("users")
+          .doc(user!.uid); // ✅ SAVE PER OWNER
 
       final doc = await docRef.get();
 
@@ -69,8 +73,8 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
       }
 
       await docRef.set({
-        "gcashQr": gcashUrl ?? oldData["gcashQr"],
-        "paymayaQr": paymayaUrl ?? oldData["paymayaQr"],
+        "gcashQR": gcashUrl ?? oldData["gcashQR"],
+        "mayaQR": paymayaUrl ?? oldData["mayaQR"],
       }, SetOptions(merge: true));
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,7 +111,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
     );
   }
 
-  // ================= CARD UI =================
+  // ================= CARD =================
 
   Widget qrCard({
     required String title,
@@ -148,7 +152,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
                       child: Image.network(url, fit: BoxFit.contain),
                     )
                   : const Center(
-                      child: Text("No QR uploaded"),
+                      child: Text("No QR uploaded"), // ✅ EMPTY FOR NEW OWNER
                     )),
         ),
         const SizedBox(height: 10),
@@ -178,8 +182,8 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
-            .collection("settings")
-            .doc("payment_qr")
+            .collection("users")
+            .doc(user!.uid) // ✅ LISTEN TO OWNER ONLY
             .snapshots(),
         builder: (context, snapshot) {
           String? gcashUrl;
@@ -187,8 +191,8 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
 
           if (snapshot.hasData && snapshot.data!.exists) {
             final data = snapshot.data!.data() as Map<String, dynamic>;
-            gcashUrl = data["gcashQr"];
-            paymayaUrl = data["paymayaQr"];
+            gcashUrl = data["gcashQR"];
+            paymayaUrl = data["mayaQR"];
           }
 
           return Padding(
@@ -196,7 +200,6 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  // GCASH CARD
                   qrCard(
                     title: "GCash QR",
                     localImage: gcashImage,
@@ -205,10 +208,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
                     buttonColor: Colors.green,
                     buttonText: "Select GCash",
                   ),
-
                   const SizedBox(height: 25),
-
-                  // PAYMAYA CARD
                   qrCard(
                     title: "PayMaya QR",
                     localImage: paymayaImage,
@@ -217,10 +217,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
                     buttonColor: Colors.blue,
                     buttonText: "Select PayMaya",
                   ),
-
                   const SizedBox(height: 30),
-
-                  // UPLOAD BUTTON
                   SizedBox(
                     width: double.infinity,
                     height: 50,
