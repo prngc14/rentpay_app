@@ -53,9 +53,8 @@ class OwnerDashboard extends StatelessWidget {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 👤 PROFILE
+                      // 👤 PROFILE + OWNER INFO
                       Center(
                         child: Column(
                           children: [
@@ -64,100 +63,43 @@ class OwnerDashboard extends StatelessWidget {
                               child: Icon(Icons.person, size: 40),
                             ),
                             const SizedBox(height: 10),
+
+                            // NAME
                             Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 15),
+
+                            // LABEL
+                            const Text(
+                              "Owner Code",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+
+                            const SizedBox(height: 5),
+
+                            // ✅ ONLY THIS WILL SHOW (6 DIGITS)
+                            Text(
+                              ownerCode,
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 4,
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      const SizedBox(height: 20),
-
-                      // 🔑 OWNER CODE
-                      Card(
-                        color: Colors.orange[100],
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              const Text("Your Owner Code"),
-                              const SizedBox(height: 10),
-                              Text(
-                                ownerCode,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      // 🔥 TENANTS LIST
-                      const Text(
-                        "Your Tenants",
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection("users")
-                            .where("ownerId", isEqualTo: user.uid)
-                            .where("role", isEqualTo: "tenant")
-                            .snapshots(),
-                        builder: (context, tenantSnapshot) {
-                          if (!tenantSnapshot.hasData) {
-                            return const CircularProgressIndicator();
-                          }
-
-                          var tenants = tenantSnapshot.data!.docs;
-
-                          if (tenants.isEmpty) {
-                            return const Text("No tenants yet");
-                          }
-
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: tenants.length,
-                            itemBuilder: (context, index) {
-                              var tenant =
-                                  tenants[index].data() as Map<String, dynamic>;
-
-                              return Card(
-                                child: ListTile(
-                                  leading: const Icon(Icons.person),
-                                  title: Text(tenant["name"] ?? "No Name"),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Room: ${tenant["room"] ?? "-"}"),
-                                      Text(
-                                          "Status: ${tenant["approved"] == true ? "Approved" : "Pending"}"),
-                                      Text(
-                                          "Payment: ${tenant["paymentStatus"] ?? "unpaid"}"),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 25),
+                      const SizedBox(height: 30),
 
                       // ⚡ ACTION GRID
                       GridView.count(
