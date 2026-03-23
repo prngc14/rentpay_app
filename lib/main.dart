@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/owner/owner_dashboard.dart';
 import 'screens/tenant/tenant_dashboard.dart';
+import 'screens/owner/boarding_screen.dart'; // ✅ ADD THIS
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,13 +30,15 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.deepOrange,
       ),
 
-      // ✅ IMPORTANT ROUTES
+      // ✅ ROUTES (FIXED)
       routes: {
         '/login': (context) => const LoginScreen(),
         '/owner': (context) => const OwnerDashboard(),
         '/tenant': (context) => const TenantDashboard(),
+        '/boarding': (context) => const BoardingScreen(),
       },
 
+      // ✅ START SCREEN
       home: const LoginScreen(),
     );
   }
