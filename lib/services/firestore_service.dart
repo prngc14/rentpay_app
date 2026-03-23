@@ -11,7 +11,7 @@ class FirestoreService {
     await _db.collection("users").doc(user.uid).set({
       ...user.toMap(),
 
-      // ✅ DEFAULT FIELDS (VERY IMPORTANT)
+      // DEFAULT FIELDS
       "job": "",
       "phone": "",
       "paymentStatus": "unpaid",
@@ -87,28 +87,47 @@ class FirestoreService {
   }
 
   // ===============================
-  // CONNECT TENANT TO ROOM
+  // CONNECT TENANT TO ROOM ✅ FIXED
   // ===============================
   Future<void> connectTenantToRoom(
     String roomNumber,
     String tenantId,
+    String ownerCode,
   ) async {
-    var query = await _db
-        .collection("rooms")
-        .where("roomNumber", isEqualTo: roomNumber)
+    // 🔍 Find owner using ownerCode
+    var ownerQuery = await _db
+        .collection("users")
+        .where("ownerCode", isEqualTo: ownerCode)
+        .where("role", isEqualTo: "owner")
         .limit(1)
         .get();
 
-    if (query.docs.isEmpty) throw Exception("Room not found");
+    if (ownerQuery.docs.isEmpty) {
+      throw Exception("Owner not found");
+    }
 
-    var roomDoc = query.docs.first;
+    String ownerId = ownerQuery.docs.first.id;
 
+    // 🔍 Find the room under that owner
+    var roomQuery = await _db
+        .collection("rooms")
+        .where("roomNumber", isEqualTo: roomNumber)
+        .where("ownerId", isEqualTo: ownerId)
+        .limit(1)
+        .get();
+
+    if (roomQuery.docs.isEmpty) {
+      throw Exception("Room not found for this owner");
+    }
+
+    var roomDoc = roomQuery.docs.first;
+
+    // ✅ Assign tenant to room
     await roomDoc.reference.update({
       "tenantId": tenantId,
     });
 
-    String ownerId = roomDoc["ownerId"];
-
+    // ✅ Update tenant info
     await _db.collection("users").doc(tenantId).update({
       "room": roomNumber,
       "ownerId": ownerId,
@@ -127,7 +146,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // UPDATE TENANT PROFILE ✅ FIXED
+  // UPDATE TENANT PROFILE
   // ===============================
   Future<void> updateTenantInfo(
     String tenantId,

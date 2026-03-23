@@ -24,6 +24,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
   String role = "tenant";
 
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    roomController.dispose();
+    ownerCodeController.dispose();
+    super.dispose();
+  }
+
   String generateOwnerCode() {
     final random = Random();
     return (100000 + random.nextInt(900000)).toString();
@@ -32,7 +42,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
-        passwordController.text.isEmpty) return;
+        passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all required fields")),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 
@@ -42,33 +57,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passwordController.text.trim(),
       );
 
-      String ownerCode = "";
-      String ownerId = "";
+      if (user == null) throw Exception("Registration failed");
 
       if (role == "owner") {
-        ownerCode = generateOwnerCode();
+        String ownerCode = generateOwnerCode();
+
+        await _firestore.createUser(UserModel(
+          uid: user.uid,
+          name: nameController.text.trim(),
+          email: emailController.text.trim(),
+          role: "owner",
+          room: "",
+          ownerCode: ownerCode,
+          ownerId: "",
+          approved: true,
+        ));
       } else {
+        if (ownerCodeController.text.isEmpty || roomController.text.isEmpty) {
+          throw Exception("Enter owner code and room");
+        }
+
         var ownerDoc =
             await _firestore.getOwnerByCode(ownerCodeController.text.trim());
-        ownerId = ownerDoc!.id;
+
+        if (ownerDoc == null) {
+          throw Exception("Invalid owner code");
+        }
+
+        await _firestore.createUser(UserModel(
+          uid: user.uid,
+          name: nameController.text.trim(),
+          email: emailController.text.trim(),
+          role: "tenant",
+          room: "",
+          ownerCode: ownerCodeController.text.trim(),
+          ownerId: ownerDoc.id,
+          approved: false,
+        ));
+
+        await _firestore.connectTenantToRoom(
+          roomController.text.trim(),
+          user.uid,
+          ownerCodeController.text.trim(),
+        );
       }
 
-      await _firestore.createUser(UserModel(
-        uid: user!.uid,
-        name: nameController.text.trim(),
-        email: emailController.text.trim(),
-        role: role,
-        room: role == "tenant" ? roomController.text.trim() : "",
-        ownerCode:
-            role == "owner" ? ownerCode : ownerCodeController.text.trim(),
-        ownerId: ownerId,
-        approved: role == "tenant" ? false : true,
-      ));
+      if (!mounted) return;
 
-      Navigator.pop(context);
-    } catch (e) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registered Successfully")),
+      );
 
-    setState(() => isLoading = false);
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   InputDecoration inputStyle(String label) {
@@ -108,13 +159,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🏠 LOGO + TITLE
                 Center(
                   child: Column(
-                    children: const [
-                      Icon(Icons.home, size: 70, color: Colors.deepOrange),
-                      SizedBox(height: 10),
-                      Text(
+                    children: [
+                      const Icon(Icons.home,
+                          size: 70, color: Colors.deepOrange),
+                      const SizedBox(height: 10),
+                      const Text(
                         "Create Account",
                         style: TextStyle(
                           fontSize: 26,
@@ -124,42 +175,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
-                // 📝 INPUTS
                 TextField(
                   controller: nameController,
                   decoration: inputStyle("Name"),
                 ),
                 const SizedBox(height: 20),
-
                 TextField(
                   controller: emailController,
                   decoration: inputStyle("Email"),
                 ),
                 const SizedBox(height: 20),
-
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: inputStyle("Password"),
                 ),
-
                 const SizedBox(height: 25),
-
-                // 🔽 DROPDOWN (IMPROVED)
                 DropdownButtonFormField<String>(
                   value: role,
                   decoration: inputStyle("Role"),
-                  style: const TextStyle(color: Colors.black),
                   items: const [
                     DropdownMenuItem(value: "tenant", child: Text("Tenant")),
                     DropdownMenuItem(value: "owner", child: Text("Owner")),
                   ],
-                  onChanged: (v) => setState(() => role = v!),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() => role = v);
+                    }
+                  },
                 ),
-
                 if (role == "tenant") ...[
                   const SizedBox(height: 20),
                   TextField(
@@ -172,10 +217,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: inputStyle("Room"),
                   ),
                 ],
-
                 const SizedBox(height: 35),
-
-                // 🔥 BUTTON (UPGRADED)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -183,27 +225,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 6,
-                      shadowColor: Colors.deepOrange.withOpacity(0.4),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "Register",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        : const Text("Register"),
                   ),
                 ),
-
                 const SizedBox(height: 15),
-
-                // 🔙 BACK TO LOGIN
                 Center(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
