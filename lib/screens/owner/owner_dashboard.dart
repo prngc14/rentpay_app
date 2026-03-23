@@ -53,32 +53,32 @@ class OwnerDashboard extends StatelessWidget {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 👤 PROFILE
-                      Column(
-                        children: [
-                          const CircleAvatar(
-                            radius: 40,
-                            child: Icon(Icons.person, size: 40),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                      Center(
+                        child: Column(
+                          children: [
+                            const CircleAvatar(
+                              radius: 40,
+                              child: Icon(Icons.person, size: 40),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 10),
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 20),
 
                       // 🔑 OWNER CODE
                       Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
                         color: Colors.orange[100],
                         child: Padding(
                           padding: const EdgeInsets.all(20),
@@ -101,7 +101,65 @@ class OwnerDashboard extends StatelessWidget {
 
                       const SizedBox(height: 25),
 
-                      // ⚡ ACTION GRID (NO QR HERE ❌)
+                      // 🔥 TENANTS LIST
+                      const Text(
+                        "Your Tenants",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection("users")
+                            .where("ownerId", isEqualTo: user.uid)
+                            .where("role", isEqualTo: "tenant")
+                            .snapshots(),
+                        builder: (context, tenantSnapshot) {
+                          if (!tenantSnapshot.hasData) {
+                            return const CircularProgressIndicator();
+                          }
+
+                          var tenants = tenantSnapshot.data!.docs;
+
+                          if (tenants.isEmpty) {
+                            return const Text("No tenants yet");
+                          }
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: tenants.length,
+                            itemBuilder: (context, index) {
+                              var tenant =
+                                  tenants[index].data() as Map<String, dynamic>;
+
+                              return Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.person),
+                                  title: Text(tenant["name"] ?? "No Name"),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Room: ${tenant["room"] ?? "-"}"),
+                                      Text(
+                                          "Status: ${tenant["approved"] == true ? "Approved" : "Pending"}"),
+                                      Text(
+                                          "Payment: ${tenant["paymentStatus"] ?? "unpaid"}"),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      // ⚡ ACTION GRID
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -116,8 +174,6 @@ class OwnerDashboard extends StatelessWidget {
                             Colors.deepOrange,
                             () => _showCreateRoomDialog(context, user.uid),
                           ),
-
-                          // ✅ ONLY NAVIGATE (NO IMAGE HERE)
                           _buildActionCard(
                             context,
                             "Upload QR",
@@ -132,7 +188,6 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
-
                           _buildActionCard(
                             context,
                             "Payments",
@@ -147,7 +202,6 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
-
                           _buildActionCard(
                             context,
                             "Boarding",
