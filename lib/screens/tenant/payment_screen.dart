@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../services/firestore_service.dart';
+import '../../services/cloudinary_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -57,7 +57,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // GET ROOM RENT
+      // 🔥 Get Room Rent
       var roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("roomNumber", isEqualTo: room)
@@ -68,24 +68,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
         rent = (roomQuery.docs.first["monthlyRent"] ?? 0).toDouble();
       }
 
-      // GET OWNER QR
+      // 🔥 Get Owner QR (FROM SETTINGS OR YOUR SERVICE)
       var ownerDoc = await firestore.getOwnerQR(ownerId);
 
       if (ownerDoc != null) {
-        gcashQR = ownerDoc["gcashQR"];
-        mayaQR = ownerDoc["mayaQR"];
+        gcashQR = ownerDoc["gcashQr"];
+        mayaQR = ownerDoc["paymayaQr"];
       }
 
       setState(() => loading = false);
     } catch (e) {
       setState(() => loading = false);
-      // ❌ Removed scary error for users
-      debugPrint("Error loading tenant data: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
   }
 
   // ===============================
-  // UPLOAD + SUBMIT PAYMENT
+  // UPLOAD + SUBMIT PAYMENT (FIXED)
   // ===============================
   Future<void> uploadAndSubmitPayment() async {
     try {
@@ -106,15 +107,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       File file = File(picked.path);
 
-      String fileName =
-          "payments/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg";
+      // ✅ UPLOAD TO CLOUDINARY
+      String? url = await uploadToCloudinary(file);
 
-      Reference ref = FirebaseStorage.instance.ref().child(fileName);
+      if (url == null) {
+        throw Exception("Cloudinary upload failed");
+      }
 
-      await ref.putFile(file);
-
-      String url = await ref.getDownloadURL();
-
+      // ✅ SAVE PAYMENT
       await firestore.submitPayment(
         user.uid,
         ownerId,
@@ -130,20 +130,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     } catch (e) {
       setState(() => uploading = false);
-
-      // ❌ CLEAN ERROR (no firebase technical message)
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Upload failed. Try again.")),
+        SnackBar(content: Text("❌ Upload failed: $e")),
       );
-
-      debugPrint("Upload error: $e");
     }
   }
 
   // ===============================
-  // FULLSCREEN IMAGE VIEW
+  // IMAGE ZOOM
   // ===============================
-  void showFullImage(String imageUrl) {
+  void showFullImage(String url) {
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -151,7 +147,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: InteractiveViewer(
-            child: Image.network(imageUrl),
+            child: Image.network(url),
           ),
         ),
       ),
@@ -225,7 +221,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
-                  // GCASH QR (CLICK TO ZOOM)
+                  // GCASH
                   if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
@@ -239,7 +235,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ],
                     ),
 
-                  // MAYA QR (CLICK TO ZOOM)
+                  // MAYA
                   if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
@@ -254,7 +250,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
-                  // UPLOAD BUTTON
+                  // BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
