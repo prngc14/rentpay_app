@@ -35,19 +35,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   // ===============================
-  // LOAD TENANT DATA
+  // LOAD TENANT + OWNER QR
   // ===============================
   Future<void> loadTenantData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // 🔥 GET TENANT INFO
       var userDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
           .get();
 
-      if (!userDoc.exists) return;
+      if (!userDoc.exists) {
+        setState(() => loading = false);
+        return;
+      }
 
       ownerId = userDoc["ownerId"] ?? "";
       room = userDoc["room"] ?? "";
@@ -57,10 +61,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // 🔥 Get Room Rent
+      // 🔥 GET RENT
       var roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("roomNumber", isEqualTo: room)
+          .where("ownerId", isEqualTo: ownerId)
           .limit(1)
           .get();
 
@@ -68,37 +73,47 @@ class _PaymentScreenState extends State<PaymentScreen> {
         rent = (roomQuery.docs.first["monthlyRent"] ?? 0).toDouble();
       }
 
-      // 🔥 Get Owner QR (FROM SETTINGS OR YOUR SERVICE)
-      var ownerDoc = await firestore.getOwnerQR(ownerId);
+      // 🔥 GET OWNER QR
+      var ownerDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(ownerId)
+          .get();
 
-      if (ownerDoc != null) {
-        gcashQR = ownerDoc["gcashQr"];
-        mayaQR = ownerDoc["paymayaQr"];
+      if (ownerDoc.exists) {
+        gcashQR = ownerDoc["gcashQR"];
+        mayaQR = ownerDoc["mayaQR"];
       }
 
       setState(() => loading = false);
     } catch (e) {
       setState(() => loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text("Error loading data: $e")),
       );
     }
   }
 
   // ===============================
-  // UPLOAD + SUBMIT PAYMENT (FIXED)
+  // SHOW FULLSCREEN IMAGE
+  // ===============================
+  void showFullImage(String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        child: InteractiveViewer(
+          child: Image.network(url),
+        ),
+      ),
+    );
+  }
+
+  // ===============================
+  // UPLOAD PAYMENT (CLOUDINARY)
   // ===============================
   Future<void> uploadAndSubmitPayment() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
-
-      if (ownerId.isEmpty || room.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Missing room or owner")),
-        );
-        return;
-      }
 
       final picked = await _picker.pickImage(source: ImageSource.gallery);
       if (picked == null) return;
@@ -107,14 +122,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       File file = File(picked.path);
 
-      // ✅ UPLOAD TO CLOUDINARY
+      // ✅ Upload to Cloudinary
       String? url = await uploadToCloudinary(file);
 
       if (url == null) {
         throw Exception("Cloudinary upload failed");
       }
 
-      // ✅ SAVE PAYMENT
+      // ✅ Save to Firestore
       await firestore.submitPayment(
         user.uid,
         ownerId,
@@ -130,28 +145,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     } catch (e) {
       setState(() => uploading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Upload failed: $e")),
       );
     }
-  }
-
-  // ===============================
-  // IMAGE ZOOM
-  // ===============================
-  void showFullImage(String url) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        child: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: InteractiveViewer(
-            child: Image.network(url),
-          ),
-        ),
-      ),
-    );
   }
 
   // ===============================
@@ -221,7 +219,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
-                  // GCASH
+                  // 🔵 GCASH QR
                   if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
@@ -235,7 +233,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ],
                     ),
 
-                  // MAYA
+                  // 🟢 MAYA QR
                   if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
@@ -250,7 +248,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
-                  // BUTTON
+                  // UPLOAD BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -263,7 +261,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text("Upload Payment Screenshot"),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
