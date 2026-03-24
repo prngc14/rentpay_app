@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ✅ ADD THIS
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../services/cloudinary_service.dart';
+import '../../services/firestore_service.dart';
 
 class UploadQRScreen extends StatefulWidget {
   const UploadQRScreen({super.key});
@@ -18,11 +19,33 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
 
   bool isLoading = false;
   final ImagePicker _picker = ImagePicker();
+  final FirestoreService firestore = FirestoreService();
 
-  final user = FirebaseAuth.instance.currentUser; // ✅ CURRENT USER
+  String? gcashUrl;
+  String? paymayaUrl;
+
+  // ================= LOAD EXISTING QR =================
+  Future<void> loadExistingQR() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    var data = await firestore.getOwnerQR(user.uid);
+
+    if (data != null) {
+      setState(() {
+        gcashUrl = data["gcashQR"];
+        paymayaUrl = data["mayaQR"];
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadExistingQR();
+  }
 
   // ================= PICK =================
-
   Future pickGcash() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
@@ -37,9 +60,11 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
     }
   }
 
-  // ================= UPLOAD =================
-
+  // ================= SAVE TO USER (FIXED) =================
   Future uploadBothQR() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     if (gcashImage == null && paymayaImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Select at least one QR")),
@@ -50,40 +75,33 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
     setState(() => isLoading = true);
 
     try {
-      String? gcashUrl;
-      String? paymayaUrl;
+      String? newGcashUrl;
+      String? newPaymayaUrl;
 
       if (gcashImage != null) {
-        gcashUrl = await uploadToCloudinary(gcashImage!);
+        newGcashUrl = await uploadToCloudinary(gcashImage!);
       }
 
       if (paymayaImage != null) {
-        paymayaUrl = await uploadToCloudinary(paymayaImage!);
+        newPaymayaUrl = await uploadToCloudinary(paymayaImage!);
       }
 
-      final docRef = FirebaseFirestore.instance
-          .collection("users")
-          .doc(user!.uid); // ✅ SAVE PER OWNER
-
-      final doc = await docRef.get();
-
-      Map<String, dynamic> oldData = {};
-      if (doc.exists && doc.data() != null) {
-        oldData = doc.data()!;
-      }
-
-      await docRef.set({
-        "gcashQR": gcashUrl ?? oldData["gcashQR"],
-        "mayaQR": paymayaUrl ?? oldData["mayaQR"],
-      }, SetOptions(merge: true));
+      // ✅ SAVE TO USER DOCUMENT (IMPORTANT FIX)
+      await firestore.saveOwnerQR(
+        user.uid,
+        newGcashUrl ?? gcashUrl,
+        newPaymayaUrl ?? paymayaUrl,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("QR Uploaded Successfully")),
+        const SnackBar(content: Text("QR Saved Successfully")),
       );
 
       setState(() {
         gcashImage = null;
         paymayaImage = null;
+        gcashUrl = newGcashUrl ?? gcashUrl;
+        paymayaUrl = newPaymayaUrl ?? paymayaUrl;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,7 +113,6 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
   }
 
   // ================= ZOOM =================
-
   void showFullImage(String imageUrl) {
     showDialog(
       context: context,
@@ -111,23 +128,19 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
     );
   }
 
-  // ================= CARD =================
-
+  // ================= UI CARD =================
   Widget qrCard({
     required String title,
     required File? localImage,
     required String? url,
     required VoidCallback onPick,
     required Color buttonColor,
-    required String buttonText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Container(
           width: double.infinity,
@@ -136,13 +149,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
           ),
           child: localImage != null
               ? Image.file(localImage, fit: BoxFit.contain)
@@ -151,9 +158,7 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
                       onTap: () => showFullImage(url),
                       child: Image.network(url, fit: BoxFit.contain),
                     )
-                  : const Center(
-                      child: Text("No QR uploaded"), // ✅ EMPTY FOR NEW OWNER
-                    )),
+                  : const Center(child: Text("No QR uploaded"))),
         ),
         const SizedBox(height: 10),
         ElevatedButton(
@@ -161,18 +166,14 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: buttonColor,
             minimumSize: const Size(double.infinity, 45),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
-          child: Text(buttonText),
+          child: const Text("Select Image"),
         ),
       ],
     );
   }
 
-  // ================= UI =================
-
+  // ================= MAIN UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,68 +181,41 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
         title: const Text("Upload QR"),
         backgroundColor: Colors.deepOrange,
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("users")
-            .doc(user!.uid) // ✅ LISTEN TO OWNER ONLY
-            .snapshots(),
-        builder: (context, snapshot) {
-          String? gcashUrl;
-          String? paymayaUrl;
-
-          if (snapshot.hasData && snapshot.data!.exists) {
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            gcashUrl = data["gcashQR"];
-            paymayaUrl = data["mayaQR"];
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  qrCard(
-                    title: "GCash QR",
-                    localImage: gcashImage,
-                    url: gcashUrl,
-                    onPick: pickGcash,
-                    buttonColor: Colors.green,
-                    buttonText: "Select GCash",
-                  ),
-                  const SizedBox(height: 25),
-                  qrCard(
-                    title: "PayMaya QR",
-                    localImage: paymayaImage,
-                    url: paymayaUrl,
-                    onPick: pickPaymaya,
-                    buttonColor: Colors.blue,
-                    buttonText: "Select PayMaya",
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : uploadBothQR,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Upload QR",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                    ),
-                  ),
-                ],
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            qrCard(
+              title: "GCash QR",
+              localImage: gcashImage,
+              url: gcashUrl,
+              onPick: pickGcash,
+              buttonColor: Colors.green,
+            ),
+            const SizedBox(height: 20),
+            qrCard(
+              title: "PayMaya QR",
+              localImage: paymayaImage,
+              url: paymayaUrl,
+              onPick: pickPaymaya,
+              buttonColor: Colors.blue,
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : uploadBothQR,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: const EdgeInsets.all(16),
+                ),
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Save QR"),
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
