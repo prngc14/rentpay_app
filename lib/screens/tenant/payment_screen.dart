@@ -57,7 +57,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // 🔥 Get Room Rent
+      // GET ROOM RENT
       var roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("roomNumber", isEqualTo: room)
@@ -68,7 +68,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         rent = (roomQuery.docs.first["monthlyRent"] ?? 0).toDouble();
       }
 
-      // 🔥 Get Owner QR
+      // GET OWNER QR
       var ownerDoc = await firestore.getOwnerQR(ownerId);
 
       if (ownerDoc != null) {
@@ -79,9 +79,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() => loading = false);
     } catch (e) {
       setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      // ❌ Removed scary error for users
+      debugPrint("Error loading tenant data: $e");
     }
   }
 
@@ -131,10 +130,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     } catch (e) {
       setState(() => uploading = false);
+
+      // ❌ CLEAN ERROR (no firebase technical message)
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Upload failed: $e")),
+        const SnackBar(content: Text("Upload failed. Try again.")),
       );
+
+      debugPrint("Upload error: $e");
     }
+  }
+
+  // ===============================
+  // FULLSCREEN IMAGE VIEW
+  // ===============================
+  void showFullImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.network(imageUrl),
+          ),
+        ),
+      ),
+    );
   }
 
   // ===============================
@@ -179,7 +200,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // 🧾 RENT CARD
+                  // RENT CARD
                   Card(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -204,30 +225,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
-                  // 💙 GCASH
-                  if (gcashQR != null)
+                  // GCASH QR (CLICK TO ZOOM)
+                  if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
                         const Text("GCash", style: TextStyle(fontSize: 18)),
                         const SizedBox(height: 10),
-                        Image.network(gcashQR!, height: 200),
+                        GestureDetector(
+                          onTap: () => showFullImage(gcashQR!),
+                          child: Image.network(gcashQR!, height: 200),
+                        ),
                         const SizedBox(height: 20),
                       ],
                     ),
 
-                  // 💚 MAYA
-                  if (mayaQR != null)
+                  // MAYA QR (CLICK TO ZOOM)
+                  if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
                         const Text("Maya", style: TextStyle(fontSize: 18)),
                         const SizedBox(height: 10),
-                        Image.network(mayaQR!, height: 200),
+                        GestureDetector(
+                          onTap: () => showFullImage(mayaQR!),
+                          child: Image.network(mayaQR!, height: 200),
+                        ),
                       ],
                     ),
 
                   const SizedBox(height: 30),
 
-                  // 🚀 UPLOAD BUTTON
+                  // UPLOAD BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
