@@ -15,8 +15,8 @@ class FirestoreService {
       "job": "",
       "phone": "",
       "paymentStatus": "unpaid",
-      "gcashQR": null,
-      "mayaQR": null,
+      "gcashQr": null, // ✅ FIXED
+      "paymayaQr": null, // ✅ FIXED
     });
   }
 
@@ -46,7 +46,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // SAVE OWNER QR
+  // SAVE OWNER QR (FIXED)
   // ===============================
   Future<void> saveOwnerQR(
     String ownerId,
@@ -54,8 +54,8 @@ class FirestoreService {
     String? mayaUrl,
   ) async {
     await _db.collection("users").doc(ownerId).update({
-      "gcashQR": gcashUrl,
-      "mayaQR": mayaUrl,
+      "gcashQr": gcashUrl, // ✅ FIXED
+      "paymayaQr": mayaUrl, // ✅ FIXED
     });
   }
 
@@ -87,14 +87,13 @@ class FirestoreService {
   }
 
   // ===============================
-  // CONNECT TENANT TO ROOM ✅ FIXED
+  // CONNECT TENANT TO ROOM
   // ===============================
   Future<void> connectTenantToRoom(
     String roomNumber,
     String tenantId,
     String ownerCode,
   ) async {
-    // 🔍 Find owner using ownerCode
     var ownerQuery = await _db
         .collection("users")
         .where("ownerCode", isEqualTo: ownerCode)
@@ -108,7 +107,6 @@ class FirestoreService {
 
     String ownerId = ownerQuery.docs.first.id;
 
-    // 🔍 Find the room under that owner
     var roomQuery = await _db
         .collection("rooms")
         .where("roomNumber", isEqualTo: roomNumber)
@@ -122,12 +120,10 @@ class FirestoreService {
 
     var roomDoc = roomQuery.docs.first;
 
-    // ✅ Assign tenant to room
     await roomDoc.reference.update({
       "tenantId": tenantId,
     });
 
-    // ✅ Update tenant info
     await _db.collection("users").doc(tenantId).update({
       "room": roomNumber,
       "ownerId": ownerId,
