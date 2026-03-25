@@ -1,8 +1,13 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // ===============================
   // CREATE USER
@@ -15,8 +20,8 @@ class FirestoreService {
       "job": "",
       "phone": "",
       "paymentStatus": "unpaid",
-      "gcashQr": null, // ✅ FIXED
-      "paymayaQr": null, // ✅ FIXED
+      "gcashQr": null,
+      "paymayaQr": null,
     });
   }
 
@@ -46,7 +51,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // SAVE OWNER QR (FIXED)
+  // SAVE OWNER QR (OLD METHOD - KEEPING THIS)
   // ===============================
   Future<void> saveOwnerQR(
     String ownerId,
@@ -54,9 +59,51 @@ class FirestoreService {
     String? mayaUrl,
   ) async {
     await _db.collection("users").doc(ownerId).update({
-      "gcashQr": gcashUrl, // ✅ FIXED
-      "paymayaQr": mayaUrl, // ✅ FIXED
+      "gcashQr": gcashUrl,
+      "paymayaQr": mayaUrl,
     });
+  }
+
+  // ===============================
+  // NEW: GET CURRENT OWNER QR DATA
+  // Used by upload_qr_screen.dart
+  // ===============================
+  Future<Map<String, dynamic>?> getOwnerQrData() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final doc = await _db.collection("users").doc(user.uid).get();
+
+    if (!doc.exists) return null;
+    return doc.data();
+  }
+
+  // ===============================
+  // NEW: UPLOAD OWNER QR IMAGE
+  // Used by upload_qr_screen.dart
+  // ===============================
+  Future<void> uploadOwnerQr({
+    required File file,
+    required String type,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not logged in");
+
+    final fileName = "${type}_${DateTime.now().millisecondsSinceEpoch}.jpg";
+    final ref = _storage.ref().child("owner_qr/${user.uid}/$fileName");
+
+    await ref.putFile(file);
+    final downloadUrl = await ref.getDownloadURL();
+
+    if (type == "gcash") {
+      await _db.collection("users").doc(user.uid).update({
+        "gcashQr": downloadUrl,
+      });
+    } else if (type == "maya") {
+      await _db.collection("users").doc(user.uid).update({
+        "paymayaQr": downloadUrl,
+      });
+    }
   }
 
   // ===============================

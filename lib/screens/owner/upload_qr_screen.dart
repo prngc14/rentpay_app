@@ -1,179 +1,204 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-import '../../services/cloudinary_service.dart';
 import '../../services/firestore_service.dart';
 
-class UploadQRScreen extends StatefulWidget {
-  const UploadQRScreen({super.key});
+class UploadQrScreen extends StatefulWidget {
+  const UploadQrScreen({super.key});
 
   @override
-  State<UploadQRScreen> createState() => _UploadQRScreenState();
+  State<UploadQrScreen> createState() => _UploadQrScreenState();
 }
 
-class _UploadQRScreenState extends State<UploadQRScreen> {
-  File? gcashImage;
-  File? paymayaImage;
-
-  bool isLoading = false;
-  final ImagePicker _picker = ImagePicker();
+class _UploadQrScreenState extends State<UploadQrScreen> {
   final FirestoreService firestore = FirestoreService();
 
+  File? gcashImage;
+  File? mayaImage;
+
   String? gcashUrl;
-  String? paymayaUrl;
+  String? mayaUrl;
 
-  // ================= LOAD EXISTING QR =================
-  Future<void> loadExistingQR() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    var data = await firestore.getOwnerQR(user.uid);
-
-    if (data != null) {
-      setState(() {
-        gcashUrl = data["gcashQR"];
-        paymayaUrl = data["mayaQR"];
-      });
-    }
-  }
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    loadExistingQR();
+    loadExistingQr();
   }
 
-  // ================= PICK =================
-  Future pickGcash() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => gcashImage = File(picked.path));
-    }
-  }
-
-  Future pickPaymaya() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => paymayaImage = File(picked.path));
-    }
-  }
-
-  // ================= SAVE TO USER (FIXED) =================
-  Future uploadBothQR() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    if (gcashImage == null && paymayaImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Select at least one QR")),
-      );
-      return;
-    }
-
-    setState(() => isLoading = true);
-
+  Future<void> loadExistingQr() async {
     try {
-      String? newGcashUrl;
-      String? newPaymayaUrl;
+      final data = await firestore.getOwnerQrData();
+      if (data != null) {
+        setState(() {
+          gcashUrl = data['gcashQr'];
+          mayaUrl = data['mayaQr'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading QR: $e");
+    }
 
-      if (gcashImage != null) {
-        newGcashUrl = await uploadToCloudinary(gcashImage!);
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> pickImage(String type) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      setState(() {
+        if (type == "gcash") {
+          gcashImage = File(picked.path);
+        } else {
+          mayaImage = File(picked.path);
+        }
+      });
+    }
+  }
+
+  Future<void> uploadQr(String type) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      File? selectedFile = type == "gcash" ? gcashImage : mayaImage;
+
+      if (selectedFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please select a $type QR image first")),
+        );
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
 
-      if (paymayaImage != null) {
-        newPaymayaUrl = await uploadToCloudinary(paymayaImage!);
-      }
-
-      // ✅ SAVE TO USER DOCUMENT (IMPORTANT FIX)
-      await firestore.saveOwnerQR(
-        user.uid,
-        newGcashUrl ?? gcashUrl,
-        newPaymayaUrl ?? paymayaUrl,
+      await firestore.uploadOwnerQr(
+        file: selectedFile,
+        type: type,
       );
+
+      await loadExistingQr();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("QR Saved Successfully")),
+        SnackBar(
+            content: Text("${type.toUpperCase()} QR uploaded successfully")),
       );
-
-      setState(() {
-        gcashImage = null;
-        paymayaImage = null;
-        gcashUrl = newGcashUrl ?? gcashUrl;
-        paymayaUrl = newPaymayaUrl ?? paymayaUrl;
-      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text("Upload failed: $e")),
       );
     }
 
-    setState(() => isLoading = false);
+    setState(() {
+      isLoading = false;
+    });
   }
 
-  // ================= ZOOM =================
-  void showFullImage(String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        child: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: InteractiveViewer(
-            child: Image.network(imageUrl),
-          ),
+  Widget buildQrCard({
+    required String title,
+    required File? localFile,
+    required String? networkUrl,
+    required Color buttonColor,
+    required VoidCallback onPick,
+    required VoidCallback onUpload,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 260,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: localFile != null
+                    ? Image.file(localFile, fit: BoxFit.contain)
+                    : (networkUrl != null && networkUrl.isNotEmpty)
+                        ? Image.network(
+                            networkUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Text(
+                                  "Failed to load QR image",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              );
+                            },
+                          )
+                        : const Center(
+                            child: Text(
+                              "No QR uploaded yet",
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onPick,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: buttonColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  "Select Image",
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onUpload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  "Upload QR",
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ================= UI CARD =================
-  Widget qrCard({
-    required String title,
-    required File? localImage,
-    required String? url,
-    required VoidCallback onPick,
-    required Color buttonColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          height: 260,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
-          ),
-          child: localImage != null
-              ? Image.file(localImage, fit: BoxFit.contain)
-              : (url != null && url.isNotEmpty
-                  ? GestureDetector(
-                      onTap: () => showFullImage(url),
-                      child: Image.network(url, fit: BoxFit.contain),
-                    )
-                  : const Center(child: Text("No QR uploaded"))),
-        ),
-        const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: onPick,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: buttonColor,
-            minimumSize: const Size(double.infinity, 45),
-          ),
-          child: const Text("Select Image"),
-        ),
-      ],
-    );
-  }
-
-  // ================= MAIN UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,42 +206,35 @@ class _UploadQRScreenState extends State<UploadQRScreen> {
         title: const Text("Upload QR"),
         backgroundColor: Colors.deepOrange,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            qrCard(
-              title: "GCash QR",
-              localImage: gcashImage,
-              url: gcashUrl,
-              onPick: pickGcash,
-              buttonColor: Colors.green,
-            ),
-            const SizedBox(height: 20),
-            qrCard(
-              title: "PayMaya QR",
-              localImage: paymayaImage,
-              url: paymayaUrl,
-              onPick: pickPaymaya,
-              buttonColor: Colors.blue,
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : uploadBothQR,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.all(16),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    buildQrCard(
+                      title: "GCash QR",
+                      localFile: gcashImage,
+                      networkUrl: gcashUrl,
+                      buttonColor: Colors.green,
+                      onPick: () => pickImage("gcash"),
+                      onUpload: () => uploadQr("gcash"),
+                    ),
+                    const SizedBox(height: 20),
+                    buildQrCard(
+                      title: "PayMaya QR",
+                      localFile: mayaImage,
+                      networkUrl: mayaUrl,
+                      buttonColor: Colors.blue,
+                      onPick: () => pickImage("maya"),
+                      onUpload: () => uploadQr("maya"),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
                 ),
-                child: isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Save QR"),
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
