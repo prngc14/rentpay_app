@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
+import 'cloudinary_service.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // ===============================
   // CREATE USER
@@ -51,7 +50,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // SAVE OWNER QR (OLD METHOD - KEEPING THIS)
+  // SAVE OWNER QR (OLD METHOD)
   // ===============================
   Future<void> saveOwnerQR(
     String ownerId,
@@ -65,8 +64,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // NEW: GET CURRENT OWNER QR DATA
-  // Used by upload_qr_screen.dart
+  // GET CURRENT OWNER QR DATA
   // ===============================
   Future<Map<String, dynamic>?> getOwnerQrData() async {
     final user = _auth.currentUser;
@@ -79,8 +77,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // NEW: UPLOAD OWNER QR IMAGE
-  // Used by upload_qr_screen.dart
+  // UPLOAD OWNER QR IMAGE USING CLOUDINARY
   // ===============================
   Future<void> uploadOwnerQr({
     required File file,
@@ -89,19 +86,19 @@ class FirestoreService {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in");
 
-    final fileName = "${type}_${DateTime.now().millisecondsSinceEpoch}.jpg";
-    final ref = _storage.ref().child("owner_qr/${user.uid}/$fileName");
+    final imageUrl = await uploadToCloudinary(file);
 
-    await ref.putFile(file);
-    final downloadUrl = await ref.getDownloadURL();
+    if (imageUrl == null) {
+      throw Exception("Cloudinary upload failed");
+    }
 
     if (type == "gcash") {
       await _db.collection("users").doc(user.uid).update({
-        "gcashQr": downloadUrl,
+        "gcashQr": imageUrl,
       });
     } else if (type == "maya") {
       await _db.collection("users").doc(user.uid).update({
-        "paymayaQr": downloadUrl,
+        "paymayaQr": imageUrl,
       });
     }
   }
