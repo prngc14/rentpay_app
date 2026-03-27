@@ -30,10 +30,11 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
   Future<void> loadExistingQr() async {
     try {
       final data = await firestore.getOwnerQrData();
+
       if (data != null) {
         setState(() {
           gcashUrl = data['gcashQr'];
-          mayaUrl = data['mayaQr'];
+          mayaUrl = data['paymayaQr']; // ✅ FIXED HERE
         });
       }
     } catch (e) {
@@ -86,7 +87,8 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text("${type.toUpperCase()} QR uploaded successfully")),
+          content: Text("${type.toUpperCase()} QR uploaded successfully"),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
