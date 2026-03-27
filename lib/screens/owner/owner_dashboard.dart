@@ -125,7 +125,7 @@ class OwnerDashboard extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const UploadQRScreen(),
+                                  builder: (_) => const UploadQrScreen(),
                                 ),
                               );
                             },
