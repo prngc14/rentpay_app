@@ -53,8 +53,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      ownerId = userDoc["ownerId"] ?? "";
-      room = userDoc["room"] ?? "";
+      final userData = userDoc.data();
+
+      ownerId = userData?["ownerId"] ?? "";
+      room = userData?["room"] ?? "";
 
       if (ownerId.isEmpty || room.isEmpty) {
         setState(() => loading = false);
@@ -70,18 +72,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
           .get();
 
       if (roomQuery.docs.isNotEmpty) {
-        rent = (roomQuery.docs.first["monthlyRent"] ?? 0).toDouble();
+        rent = (roomQuery.docs.first.data()["monthlyRent"] ?? 0).toDouble();
       }
 
-      // 🔥 GET OWNER QR
+      // 🔥 GET OWNER QR (FIXED)
       var ownerDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(ownerId)
           .get();
 
       if (ownerDoc.exists) {
-        gcashQR = ownerDoc["gcashQR"];
-        mayaQR = ownerDoc["mayaQR"];
+        final data = ownerDoc.data();
+        gcashQR = data?["gcashQr"]; // ✅ FIXED
+        mayaQR = data?["paymayaQr"]; // ✅ FIXED
       }
 
       setState(() => loading = false);
@@ -108,7 +111,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   // ===============================
-  // UPLOAD PAYMENT (CLOUDINARY)
+  // UPLOAD PAYMENT
   // ===============================
   Future<void> uploadAndSubmitPayment() async {
     try {
@@ -129,9 +132,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         throw Exception("Cloudinary upload failed");
       }
 
-      // ✅ Save to Firestore
+      // ✅ FIXED SUBMIT PAYMENT
       await firestore.submitPayment(
-        user.uid,
+        user.uid, // tenantId
         ownerId,
         room,
         rent,
@@ -194,11 +197,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // RENT CARD
                   Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 3,
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -216,46 +215,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // 🔵 GCASH QR
                   if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
-                        const Text("GCash", style: TextStyle(fontSize: 18)),
-                        const SizedBox(height: 10),
+                        const Text("GCash"),
                         GestureDetector(
                           onTap: () => showFullImage(gcashQR!),
                           child: Image.network(gcashQR!, height: 200),
                         ),
-                        const SizedBox(height: 20),
                       ],
                     ),
-
-                  // 🟢 MAYA QR
                   if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
-                        const Text("Maya", style: TextStyle(fontSize: 18)),
-                        const SizedBox(height: 10),
+                        const Text("Maya"),
                         GestureDetector(
                           onTap: () => showFullImage(mayaQR!),
                           child: Image.network(mayaQR!, height: 200),
                         ),
                       ],
                     ),
-
                   const SizedBox(height: 30),
-
-                  // UPLOAD BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: uploading ? null : confirmPayment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
-                        padding: const EdgeInsets.all(16),
                       ),
                       child: uploading
                           ? const CircularProgressIndicator(color: Colors.white)
