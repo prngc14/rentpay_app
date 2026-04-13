@@ -23,6 +23,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   bool rememberMe = false;
 
+  // ===============================
+  // LOGIN FUNCTION (FIXED)
+  // ===============================
   void loginUser() async {
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
@@ -49,8 +52,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (!mounted) return;
 
-        String role = doc["role"];
+        // ✅ CHECK IF DOCUMENT EXISTS
+        if (!doc.exists) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("User data not found. Please register again."),
+            ),
+          );
+          setState(() => isLoading = false);
+          return;
+        }
 
+        var data = doc.data() as Map<String, dynamic>;
+
+        // ✅ SAFE ROLE (NO CRASH)
+        String role = data['role'] ?? "tenant";
+
+        // ✅ REDIRECT BASED ON ROLE
         if (role == "owner") {
           Navigator.pushReplacement(
             context,
@@ -62,12 +80,16 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (_) => const TenantDashboard()),
           );
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Login failed")),
+        );
       }
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$e")),
+        SnackBar(content: Text("Error: $e")),
       );
     }
 
@@ -75,6 +97,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = false);
   }
 
+  // ===============================
+  // FORGOT PASSWORD
+  // ===============================
   void forgotPassword() async {
     if (emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ===============================
+  // INPUT DESIGN
+  // ===============================
   InputDecoration inputStyle(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -108,6 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ===============================
+  // UI
+  // ===============================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,17 +171,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
+
+                // EMAIL
                 TextField(
                   controller: emailController,
                   decoration: inputStyle("Email", Icons.email),
                 ),
+
                 const SizedBox(height: 20),
+
+                // PASSWORD
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: inputStyle("Password", Icons.lock),
                 ),
+
                 const SizedBox(height: 10),
+
+                // REMEMBER + FORGOT
                 Row(
                   children: [
                     Checkbox(
@@ -170,7 +209,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     )
                   ],
                 ),
+
                 const SizedBox(height: 10),
+
+                // LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -190,7 +232,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
+
                 const SizedBox(height: 15),
+
+                // REGISTER
                 TextButton(
                   onPressed: () {
                     Navigator.push(
