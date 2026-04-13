@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../services/auth_service.dart';
 import 'register_screen.dart';
 import '../owner/owner_dashboard.dart';
@@ -17,128 +15,99 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
   final AuthService _auth = AuthService();
 
   bool isLoading = false;
-  bool rememberMe = false;
 
   // ===============================
-  // LOGIN FUNCTION (FIXED)
+  // EMAIL LOGIN
   // ===============================
   void loginUser() async {
-    String email = emailController.text.trim();
-    String password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter email & password")),
-      );
-      return;
-    }
-
     setState(() => isLoading = true);
 
     try {
-      var user = await _auth.login(email, password);
+      var user = await _auth.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
 
-      if (!mounted) return;
+      if (user == null) throw Exception("Login failed");
 
-      if (user != null) {
-        var doc = await FirebaseFirestore.instance
-            .collection("users")
-            .doc(user.uid)
-            .get();
+      var doc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
 
-        if (!mounted) return;
+      String role = doc.data()?['role'] ?? "tenant";
 
-        // ✅ CHECK IF DOCUMENT EXISTS
-        if (!doc.exists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("User data not found. Please register again."),
-            ),
-          );
-          setState(() => isLoading = false);
-          return;
-        }
-
-        var data = doc.data() as Map<String, dynamic>;
-
-        // ✅ SAFE ROLE (NO CRASH)
-        String role = data['role'] ?? "tenant";
-
-        // ✅ REDIRECT BASED ON ROLE
-        if (role == "owner") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const OwnerDashboard()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const TenantDashboard()),
-          );
-        }
+      if (role == "owner") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OwnerDashboard()),
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login failed")),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const TenantDashboard()),
         );
       }
     } catch (e) {
-      if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text(e.toString())),
       );
     }
 
-    if (!mounted) return;
     setState(() => isLoading = false);
   }
 
   // ===============================
-  // FORGOT PASSWORD
+  // GOOGLE LOGIN
   // ===============================
-  void forgotPassword() async {
-    if (emailController.text.isEmpty) {
+  void googleLogin() async {
+    setState(() => isLoading = true);
+
+    try {
+      var user = await _auth.signInWithGoogle();
+
+      if (user == null) return;
+
+      var doc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+      String role = doc.data()?['role'] ?? "tenant";
+
+      if (role == "owner") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OwnerDashboard()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const TenantDashboard()),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter your email first")),
+        SnackBar(content: Text(e.toString())),
       );
-      return;
     }
 
-    await FirebaseAuth.instance
-        .sendPasswordResetEmail(email: emailController.text.trim());
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Password reset email sent")),
-    );
+    setState(() => isLoading = false);
   }
 
-  // ===============================
-  // INPUT DESIGN
-  // ===============================
   InputDecoration inputStyle(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
-      border: const UnderlineInputBorder(),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
-
-  // ===============================
-  // UI
-  // ===============================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,11 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Container(
-            width: double.infinity,
             padding: const EdgeInsets.all(25),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(25),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
@@ -163,13 +131,15 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Icon(Icons.home, size: 70, color: Colors.deepOrange),
                 const SizedBox(height: 10),
+
                 const Text(
-                  "RentPay",
+                  "RentPay Login",
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 30),
 
                 // EMAIL
@@ -187,30 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: inputStyle("Password", Icons.lock),
                 ),
 
-                const SizedBox(height: 10),
-
-                // REMEMBER + FORGOT
-                Row(
-                  children: [
-                    Checkbox(
-                      value: rememberMe,
-                      activeColor: Colors.deepOrange,
-                      onChanged: (v) {
-                        setState(() {
-                          rememberMe = v ?? false;
-                        });
-                      },
-                    ),
-                    const Text("Remember Me"),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: forgotPassword,
-                      child: const Text("Forgot Password?"),
-                    )
-                  ],
-                ),
-
-                const SizedBox(height: 10),
+                const SizedBox(height: 25),
 
                 // LOGIN BUTTON
                 SizedBox(
@@ -221,19 +168,34 @@ class _LoginScreenState extends State<LoginScreen> {
                       backgroundColor: Colors.deepOrange,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "Login",
-                            style: TextStyle(fontSize: 16),
-                          ),
+                        : const Text("Login"),
                   ),
                 ),
 
                 const SizedBox(height: 15),
+
+                // GOOGLE LOGIN
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: isLoading ? null : googleLogin,
+                    icon: const Icon(Icons.login),
+                    label: const Text("Continue with Google"),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
 
                 // REGISTER
                 TextButton(
@@ -246,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                   child: const Text("Create Account"),
-                )
+                ),
               ],
             ),
           ),

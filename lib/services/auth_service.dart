@@ -1,44 +1,46 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ===============================
-  // LOGIN
+  // EMAIL LOGIN
   // ===============================
   Future<User?> login(String email, String password) async {
     try {
-      var userCredential = await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return userCredential.user;
+      return result.user;
     } catch (e) {
+      print("LOGIN ERROR: $e");
       return null;
     }
   }
 
   // ===============================
-  // REGISTER (🔥 FIXED)
+  // EMAIL REGISTER
   // ===============================
   Future<User?> register(String email, String password) async {
     try {
-      var userCredential = await _auth.createUserWithEmailAndPassword(
+      final result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      User user = userCredential.user!;
+      final user = result.user!;
 
-      // ✅ SAVE TO FIRESTORE (IMPORTANT)
-      await _db.collection("users").doc(user.uid).set({
+      final doc = _db.collection("users").doc(user.uid);
+
+      await doc.set({
+        "uid": user.uid,
         "email": email,
-        "role": "tenant", // 🔥 DEFAULT ROLE
+        "role": "tenant",
         "createdAt": Timestamp.now(),
-
-        // default fields
         "job": "",
         "phone": "",
         "paymentStatus": "unpaid",
@@ -47,9 +49,8 @@ class AuthService {
         "approved": false,
         "room": "",
         "ownerId": "",
+        "ownerCode": "",
       });
-
-      await user.sendEmailVerification();
 
       return user;
     } catch (e) {
@@ -59,28 +60,50 @@ class AuthService {
   }
 
   // ===============================
-  // GET USER ROLE (🔥 ADD THIS)
+  // GOOGLE LOGIN (FIXED + AUTO FIRESTORE)
   // ===============================
-  Future<String?> getUserRole(String uid) async {
+  Future<User?> signInWithGoogle() async {
     try {
-      var doc = await _db.collection("users").doc(uid).get();
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return null;
 
-      if (!doc.exists) return null;
+      final googleAuth = await googleUser.authentication;
 
-      var data = doc.data() as Map<String, dynamic>;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
 
-      return data['role'];
+      final result = await _auth.signInWithCredential(credential);
+      final user = result.user!;
+
+      final docRef = _db.collection("users").doc(user.uid);
+      final doc = await docRef.get();
+
+      if (!doc.exists) {
+        await docRef.set({
+          "uid": user.uid,
+          "email": user.email ?? "",
+          "name": user.displayName ?? "",
+          "role": "tenant",
+          "createdAt": Timestamp.now(),
+          "job": "",
+          "phone": "",
+          "paymentStatus": "unpaid",
+          "gcashQr": null,
+          "paymayaQr": null,
+          "approved": false,
+          "room": "",
+          "ownerId": "",
+          "ownerCode": "",
+        });
+      }
+
+      return user;
     } catch (e) {
-      print("GET ROLE ERROR: $e");
+      print("GOOGLE LOGIN ERROR: $e");
       return null;
     }
-  }
-
-  // ===============================
-  // FORGOT PASSWORD
-  // ===============================
-  Future<void> sendPasswordReset(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
   }
 
   // ===============================
@@ -88,5 +111,6 @@ class AuthService {
   // ===============================
   Future<void> logout() async {
     await _auth.signOut();
+    await GoogleSignIn().signOut();
   }
 }
