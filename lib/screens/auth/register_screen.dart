@@ -52,6 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => isLoading = true);
 
     try {
+      // ✅ STEP 1: REGISTER USER
       var user = await _auth.register(
         emailController.text.trim(),
         passwordController.text.trim(),
@@ -59,6 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user == null) throw Exception("Registration failed");
 
+      // ✅ STEP 2: SAVE USER DATA (ONLY ONE WRITE)
       if (role == "owner") {
         String ownerCode = generateOwnerCode();
 
@@ -89,17 +91,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           name: nameController.text.trim(),
           email: emailController.text.trim(),
           role: "tenant",
-          room: "",
+          room: roomController.text.trim(), // ✅ FIXED
           ownerCode: ownerCodeController.text.trim(),
           ownerId: ownerDoc.id,
           approved: false,
         ));
-
-        await _firestore.connectTenantToRoom(
-          roomController.text.trim(),
-          user.uid,
-          ownerCodeController.text.trim(),
-        );
       }
 
       if (!mounted) return;
