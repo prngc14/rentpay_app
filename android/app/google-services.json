@@ -12,7 +12,20 @@
           "package_name": "com.example.rentpay_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "107362981335-nrkmcabcfdgeji00rkhdlhum0n0bt5pj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.rentpay_app",
+            "certificate_hash": "3ba869b9cba8b0599802471b7e1a6be922bb7578"
+          }
+        },
+        {
+          "client_id": "107362981335-9nh8lchg3jnaudh60emoc7kbg6j9bd85.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDEcdDs6CM3qk5yGT9DLtG_WkjFzy-1LPE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "107362981335-9nh8lchg3jnaudh60emoc7kbg6j9bd85.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
