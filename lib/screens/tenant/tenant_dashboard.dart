@@ -28,8 +28,16 @@ class _TenantDashboardState extends State<TenantDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    // ✅ FIX: Wait for user before loading UI
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      // ✅ WALANG APPBAR SA PAYMENTS
       appBar: _currentIndex == 1
           ? null
           : AppBar(
@@ -48,9 +56,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                 ),
               ],
             ),
-
       body: _screens[_currentIndex],
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: Colors.deepOrange,
