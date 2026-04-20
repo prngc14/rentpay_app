@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'tenant_home_screen.dart';
 import 'payment_screen.dart';
 import 'tenant_profile_screen.dart';
+import 'tenant_connect_screen.dart';
 
 class TenantDashboard extends StatefulWidget {
   const TenantDashboard({super.key});
@@ -30,10 +31,12 @@ class _TenantDashboardState extends State<TenantDashboard> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    // ✅ FIX: Wait for user before loading UI
+    // Wait for user before loading UI
     if (user == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
@@ -50,8 +53,24 @@ class _TenantDashboardState extends State<TenantDashboard> {
               ),
               backgroundColor: Colors.deepOrange,
               actions: [
+                // CONNECT TO OWNER BUTTON
+                IconButton(
+                  icon: const Icon(Icons.link),
+                  tooltip: "Connect Owner",
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TenantConnectScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                // LOGOUT BUTTON
                 IconButton(
                   icon: const Icon(Icons.logout),
+                  tooltip: "Logout",
                   onPressed: logout,
                 ),
               ],

@@ -21,6 +21,12 @@ class FirestoreService {
       "paymentStatus": "unpaid",
       "gcashQr": null,
       "paymayaQr": null,
+
+      // NEW FIELDS
+      "ownerId": null,
+      "room": "",
+      "approved": false,
+      "connected": false,
     });
   }
 
@@ -40,6 +46,34 @@ class FirestoreService {
   }
 
   // ===============================
+  // CONNECT TENANT USING 6 DIGIT CODE
+  // ===============================
+  Future<void> connectTenantByCode(String code) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("User not logged in");
+
+    var ownerQuery = await _db
+        .collection("users")
+        .where("ownerCode", isEqualTo: code)
+        .where("role", isEqualTo: "owner")
+        .limit(1)
+        .get();
+
+    if (ownerQuery.docs.isEmpty) {
+      throw Exception("Owner not found");
+    }
+
+    final ownerDoc = ownerQuery.docs.first;
+    final ownerId = ownerDoc.id;
+
+    await _db.collection("users").doc(user.uid).update({
+      "ownerId": ownerId,
+      "connected": true,
+      "approved": false,
+    });
+  }
+
+  // ===============================
   // GET OWNER QR
   // ===============================
   Future<Map<String, dynamic>?> getOwnerQR(String ownerId) async {
@@ -50,7 +84,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // SAVE OWNER QR (OLD METHOD)
+  // SAVE OWNER QR
   // ===============================
   Future<void> saveOwnerQR(
     String ownerId,
@@ -77,7 +111,7 @@ class FirestoreService {
   }
 
   // ===============================
-  // UPLOAD OWNER QR IMAGE USING CLOUDINARY
+  // UPLOAD OWNER QR IMAGE
   // ===============================
   Future<void> uploadOwnerQr({
     required File file,
@@ -173,6 +207,7 @@ class FirestoreService {
       "ownerId": ownerId,
       "approved": false,
       "paymentStatus": "unpaid",
+      "connected": true,
     });
   }
 
@@ -275,5 +310,14 @@ class FirestoreService {
         .where("ownerId", isEqualTo: ownerId)
         .where("role", isEqualTo: "tenant")
         .snapshots();
+  }
+
+  // ===============================
+  // GET CURRENT USER DATA
+  // ===============================
+  Stream<DocumentSnapshot> getCurrentUserData() {
+    final user = _auth.currentUser;
+
+    return _db.collection("users").doc(user!.uid).snapshots();
   }
 }
