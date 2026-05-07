@@ -25,6 +25,7 @@ class OwnerDashboard extends StatelessWidget {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
+
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',
@@ -35,7 +36,9 @@ class OwnerDashboard extends StatelessWidget {
         ],
       ),
       body: user == null
-          ? const Center(child: Text("Not logged in"))
+          ? const Center(
+              child: Text("Not logged in"),
+            )
           : StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection("users")
@@ -43,10 +46,12 @@ class OwnerDashboard extends StatelessWidget {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
                 }
 
-                var userData = snapshot.data!.data() as Map<String, dynamic>;
+                final userData = snapshot.data!.data() as Map<String, dynamic>;
 
                 String ownerCode = userData["ownerCode"] ?? "------";
                 String name = userData["name"] ?? "Owner";
@@ -55,17 +60,21 @@ class OwnerDashboard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // 👤 PROFILE + OWNER INFO
+                      // PROFILE
                       Center(
                         child: Column(
                           children: [
                             const CircleAvatar(
                               radius: 40,
-                              child: Icon(Icons.person, size: 40),
+                              child: Icon(
+                                Icons.person,
+                                size: 40,
+                              ),
                             ),
+
                             const SizedBox(height: 10),
 
-                            // NAME
+                            // OWNER NAME
                             Text(
                               name,
                               style: const TextStyle(
@@ -87,7 +96,7 @@ class OwnerDashboard extends StatelessWidget {
 
                             const SizedBox(height: 5),
 
-                            // ✅ ONLY THIS WILL SHOW (6 DIGITS)
+                            // OWNER CODE
                             Text(
                               ownerCode,
                               style: const TextStyle(
@@ -102,7 +111,7 @@ class OwnerDashboard extends StatelessWidget {
 
                       const SizedBox(height: 30),
 
-                      // ⚡ ACTION GRID
+                      // ACTION GRID
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -110,13 +119,37 @@ class OwnerDashboard extends StatelessWidget {
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                         children: [
+                          // CREATE ROOM
                           _buildActionCard(
                             context,
                             "Create Room",
                             Icons.add_home,
                             Colors.deepOrange,
-                            () => _showCreateRoomDialog(context, user.uid),
+                            () => _showCreateRoomDialog(
+                              context,
+                              user.uid,
+                            ),
                           ),
+
+                          // MY ROOMS
+                          _buildActionCard(
+                            context,
+                            "My Rooms",
+                            Icons.meeting_room,
+                            Colors.orange,
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => OwnerRoomsScreen(
+                                    ownerId: user.uid,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // UPLOAD QR
                           _buildActionCard(
                             context,
                             "Upload QR",
@@ -131,6 +164,8 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
+
+                          // PAYMENTS
                           _buildActionCard(
                             context,
                             "Payments",
@@ -145,6 +180,8 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
+
+                          // BOARDING
                           _buildActionCard(
                             context,
                             "Boarding",
@@ -179,14 +216,18 @@ class OwnerDashboard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 35),
+            Icon(
+              icon,
+              color: color,
+              size: 35,
+            ),
             const SizedBox(height: 10),
             Text(title),
           ],
@@ -195,7 +236,10 @@ class OwnerDashboard extends StatelessWidget {
     );
   }
 
-  void _showCreateRoomDialog(BuildContext context, String ownerId) {
+  void _showCreateRoomDialog(
+    BuildContext context,
+    String ownerId,
+  ) {
     final roomController = TextEditingController();
     final rentController = TextEditingController();
 
@@ -208,38 +252,50 @@ class OwnerDashboard extends StatelessWidget {
           children: [
             TextField(
               controller: roomController,
-              decoration: const InputDecoration(labelText: "Room Number"),
+              decoration: const InputDecoration(
+                labelText: "Room Number",
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: rentController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Monthly Rent"),
+              decoration: const InputDecoration(
+                labelText: "Monthly Rent",
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () async {
-              if (roomController.text.isEmpty || rentController.text.isEmpty)
+              if (roomController.text.isEmpty || rentController.text.isEmpty) {
                 return;
+              }
 
               await FirebaseFirestore.instance.collection("rooms").add({
                 "roomNumber": roomController.text.trim(),
                 "ownerId": ownerId,
                 "tenantId": null,
-                "monthlyRent": double.tryParse(rentController.text.trim()) ?? 0,
+                "monthlyRent": double.tryParse(
+                      rentController.text.trim(),
+                    ) ??
+                    0,
                 "createdAt": Timestamp.now(),
               });
 
               Navigator.pop(context);
 
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Room created successfully")),
+                const SnackBar(
+                  content: Text(
+                    "Room created successfully",
+                  ),
+                ),
               );
             },
             child: const Text("Create"),
-          )
+          ),
         ],
       ),
     );
