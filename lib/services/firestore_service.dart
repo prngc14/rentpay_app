@@ -1,10 +1,10 @@
 import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/user_model.dart';
 import 'cloudinary_service.dart';
-
-final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -44,6 +44,7 @@ class FirestoreService {
         .get();
 
     if (query.docs.isEmpty) return null;
+
     return query.docs.first;
   }
 
@@ -291,21 +292,13 @@ class FirestoreService {
     String tenantId,
   ) async {
     try {
-      // UPDATE PAYMENT STATUS
-      await FirebaseFirestore.instance
-          .collection('payments')
-          .doc(paymentId)
-          .update({
-        'status': 'verified',
+      await _db.collection("payments").doc(paymentId).update({
+        "status": "verified",
       });
 
-      // UPDATE TENANT STATUS
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(tenantId)
-          .update({
-        'approved': true,
-        'paymentStatus': 'paid',
+      await _db.collection("users").doc(tenantId).update({
+        "approved": true,
+        "paymentStatus": "paid",
       });
     } catch (e) {
       print("APPROVE PAYMENT ERROR: $e");
@@ -317,11 +310,8 @@ class FirestoreService {
   // ===============================
   Future<void> rejectPayment(String paymentId) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('payments')
-          .doc(paymentId)
-          .update({
-        'status': 'rejected',
+      await _db.collection("payments").doc(paymentId).update({
+        "status": "rejected",
       });
     } catch (e) {
       print("REJECT PAYMENT ERROR: $e");
@@ -333,10 +323,7 @@ class FirestoreService {
   // ===============================
   Future<void> deletePayment(String paymentId) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('payments')
-          .doc(paymentId)
-          .delete();
+      await _db.collection("payments").doc(paymentId).delete();
     } catch (e) {
       print("DELETE PAYMENT ERROR: $e");
     }
@@ -372,14 +359,6 @@ class FirestoreService {
         .collection("users")
         .where("ownerId", isEqualTo: ownerId)
         .where("role", isEqualTo: "tenant")
-        .snapshots();
-  }
-
-  // GET OWNER ROOMS
-  Stream<QuerySnapshot> getOwnerRooms(String ownerId) {
-    return _db
-        .collection("rooms")
-        .where("ownerId", isEqualTo: ownerId)
         .snapshots();
   }
 
