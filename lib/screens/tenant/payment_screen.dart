@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,16 +35,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
     loadTenantData();
   }
 
-  // ===============================
-  // LOAD TENANT + OWNER QR
-  // ===============================
+  // ======================================
+  // LOAD TENANT + ROOM + OWNER QR
+  // ======================================
   Future<void> loadTenantData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
 
-      // 🔥 GET TENANT INFO
-      var userDoc = await FirebaseFirestore.instance
+      if (user == null) {
+        setState(() => loading = false);
+        return;
+      }
+
+      // ==========================
+      // GET TENANT DATA
+      // ==========================
+      final userDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
           .get();
@@ -58,13 +65,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ownerId = userData?["ownerId"] ?? "";
       room = userData?["room"] ?? "";
 
+      // ==========================
+      // CHECK CONNECTION
+      // ==========================
       if (ownerId.isEmpty || room.isEmpty) {
         setState(() => loading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Connect to owner and select a room first",
+            ),
+          ),
+        );
+
         return;
       }
 
-      // 🔥 GET RENT
-      var roomQuery = await FirebaseFirestore.instance
+      // ==========================
+      // GET ROOM DATA
+      // ==========================
+      final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("roomNumber", isEqualTo: room)
           .where("ownerId", isEqualTo: ownerId)
@@ -72,33 +93,51 @@ class _PaymentScreenState extends State<PaymentScreen> {
           .get();
 
       if (roomQuery.docs.isNotEmpty) {
-        rent = (roomQuery.docs.first.data()["monthlyRent"] ?? 0).toDouble();
+        final roomData = roomQuery.docs.first.data();
+
+        rent = (roomData["monthlyRent"] ?? 0).toDouble();
+
+        // AUTO FIX IF TENANT NOT SAVED
+        if (roomData["tenantId"] == null ||
+            roomData["tenantId"].toString().isEmpty) {
+          await roomQuery.docs.first.reference.update({
+            "tenantId": user.uid,
+          });
+        }
       }
 
-      // 🔥 GET OWNER QR (FIXED)
-      var ownerDoc = await FirebaseFirestore.instance
+      // ==========================
+      // GET OWNER QR
+      // ==========================
+      final ownerDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(ownerId)
           .get();
 
       if (ownerDoc.exists) {
-        final data = ownerDoc.data();
-        gcashQR = data?["gcashQr"]; // ✅ FIXED
-        mayaQR = data?["paymayaQr"]; // ✅ FIXED
+        final ownerData = ownerDoc.data();
+
+        gcashQR = ownerData?["gcashQr"];
+        mayaQR = ownerData?["paymayaQr"];
       }
 
       setState(() => loading = false);
     } catch (e) {
+      print("LOAD PAYMENT ERROR: $e");
+
       setState(() => loading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading data: $e")),
+        SnackBar(
+          content: Text("Error: $e"),
+        ),
       );
     }
   }
 
-  // ===============================
-  // SHOW FULLSCREEN IMAGE
-  // ===============================
+  // ======================================
+  // SHOW FULL IMAGE
+  // ======================================
   void showFullImage(String url) {
     showDialog(
       context: context,
@@ -110,31 +149,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ===============================
+  // ======================================
   // UPLOAD PAYMENT
-  // ===============================
+  // ======================================
   Future<void> uploadAndSubmitPayment() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
+
       if (user == null) return;
 
-      final picked = await _picker.pickImage(source: ImageSource.gallery);
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
+
       if (picked == null) return;
 
       setState(() => uploading = true);
 
       File file = File(picked.path);
 
-      // ✅ Upload to Cloudinary
+      // UPLOAD IMAGE
       String? url = await uploadToCloudinary(file);
 
       if (url == null) {
         throw Exception("Cloudinary upload failed");
       }
 
-      // ✅ FIXED SUBMIT PAYMENT
+      // SAVE PAYMENT
       await firestore.submitPayment(
-        user.uid, // tenantId
+        user.uid,
         ownerId,
         room,
         rent,
@@ -144,26 +187,45 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() => uploading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Payment submitted")),
+        const SnackBar(
+          content: Text(
+            "Payment submitted successfully",
+          ),
+        ),
       );
     } catch (e) {
+      print("UPLOAD ERROR: $e");
+
       setState(() => uploading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Upload failed: $e")),
+        SnackBar(
+          content: Text("Upload failed: $e"),
+        ),
       );
     }
   }
 
-  // ===============================
-  // CONFIRM DIALOG
-  // ===============================
+  // ======================================
+  // CONFIRM PAYMENT
+  // ======================================
   void confirmPayment() {
+    if (rent <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No room rent found"),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Confirm Payment"),
-        content: Text("Upload proof for ₱$rent?"),
+        content: Text(
+          "Upload proof of payment for ₱$rent ?",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -181,9 +243,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ===============================
+  // ======================================
   // UI
-  // ===============================
+  // ======================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,61 +254,116 @@ class _PaymentScreenState extends State<PaymentScreen> {
         backgroundColor: Colors.deepOrange,
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // ROOM CARD
                   Card(
+                    elevation: 4,
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          Text("Room: $room"),
-                          const SizedBox(height: 10),
+                          Text(
+                            "Room: $room",
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
                           Text(
                             "Rent: ₱$rent",
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 24,
                               color: Colors.green,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 30),
+
+                  // GCASH QR
                   if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
-                        const Text("GCash"),
+                        const Text(
+                          "GCash QR",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         GestureDetector(
                           onTap: () => showFullImage(gcashQR!),
-                          child: Image.network(gcashQR!, height: 200),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              gcashQR!,
+                              height: 220,
+                            ),
+                          ),
                         ),
+                        const SizedBox(height: 30),
                       ],
                     ),
+
+                  // MAYA QR
                   if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
-                        const Text("Maya"),
+                        const Text(
+                          "Maya QR",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         GestureDetector(
                           onTap: () => showFullImage(mayaQR!),
-                          child: Image.network(mayaQR!, height: 200),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              mayaQR!,
+                              height: 220,
+                            ),
+                          ),
                         ),
+                        const SizedBox(height: 30),
                       ],
                     ),
-                  const SizedBox(height: 30),
+
+                  // UPLOAD BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: uploading ? null : confirmPayment,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
                       ),
                       child: uploading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Upload Payment Screenshot"),
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text(
+                              "Upload Payment Screenshot",
+                              style: TextStyle(
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
                 ],
