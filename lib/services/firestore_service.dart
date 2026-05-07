@@ -373,6 +373,14 @@ class FirestoreService {
         .snapshots();
   }
 
+  // GET OWNER ROOMS
+  Stream<QuerySnapshot> getOwnerRooms(String ownerId) {
+    return _db
+        .collection("rooms")
+        .where("ownerId", isEqualTo: ownerId)
+        .snapshots();
+  }
+
   // ===============================
   // GET CURRENT USER DATA
   // ===============================
