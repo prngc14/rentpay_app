@@ -46,11 +46,14 @@ class FirestoreService {
   }
 
   // ===============================
-  // CONNECT TENANT USING 6 DIGIT CODE
+  // CONNECT TENANT USING OWNER CODE
   // ===============================
   Future<void> connectTenantByCode(String code) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("User not logged in");
+
+    if (user == null) {
+      throw Exception("User not logged in");
+    }
 
     var ownerQuery = await _db
         .collection("users")
@@ -80,6 +83,7 @@ class FirestoreService {
     var doc = await _db.collection("users").doc(ownerId).get();
 
     if (!doc.exists) return null;
+
     return doc.data();
   }
 
@@ -102,11 +106,13 @@ class FirestoreService {
   // ===============================
   Future<Map<String, dynamic>?> getOwnerQrData() async {
     final user = _auth.currentUser;
+
     if (user == null) return null;
 
     final doc = await _db.collection("users").doc(user.uid).get();
 
     if (!doc.exists) return null;
+
     return doc.data();
   }
 
@@ -118,7 +124,10 @@ class FirestoreService {
     required String type,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("User not logged in");
+
+    if (user == null) {
+      throw Exception("User not logged in");
+    }
 
     final imageUrl = await uploadToCloudinary(file);
 
@@ -172,43 +181,58 @@ class FirestoreService {
     String tenantId,
     String ownerCode,
   ) async {
-    var ownerQuery = await _db
-        .collection("users")
-        .where("ownerCode", isEqualTo: ownerCode)
-        .where("role", isEqualTo: "owner")
-        .limit(1)
-        .get();
+    try {
+      // FIND OWNER
+      var ownerQuery = await _db
+          .collection("users")
+          .where("ownerCode", isEqualTo: ownerCode)
+          .where("role", isEqualTo: "owner")
+          .limit(1)
+          .get();
 
-    if (ownerQuery.docs.isEmpty) {
-      throw Exception("Owner not found");
+      if (ownerQuery.docs.isEmpty) {
+        throw Exception("Owner not found");
+      }
+
+      String ownerId = ownerQuery.docs.first.id;
+
+      // FIND ROOM
+      var roomQuery = await _db
+          .collection("rooms")
+          .where("roomNumber", isEqualTo: roomNumber)
+          .where("ownerId", isEqualTo: ownerId)
+          .limit(1)
+          .get();
+
+      if (roomQuery.docs.isEmpty) {
+        throw Exception("Room does not exist");
+      }
+
+      var roomDoc = roomQuery.docs.first;
+
+      // CHECK IF ROOM IS OCCUPIED
+      if (roomDoc["tenantId"] != null &&
+          roomDoc["tenantId"].toString().isNotEmpty) {
+        throw Exception("Room already occupied");
+      }
+
+      // SAVE TENANT TO ROOM
+      await roomDoc.reference.update({
+        "tenantId": tenantId,
+      });
+
+      // UPDATE TENANT INFO
+      await _db.collection("users").doc(tenantId).update({
+        "room": roomNumber,
+        "ownerId": ownerId,
+        "approved": false,
+        "paymentStatus": "unpaid",
+        "connected": true,
+      });
+    } catch (e) {
+      print("CONNECT ROOM ERROR: $e");
+      rethrow;
     }
-
-    String ownerId = ownerQuery.docs.first.id;
-
-    var roomQuery = await _db
-        .collection("rooms")
-        .where("roomNumber", isEqualTo: roomNumber)
-        .where("ownerId", isEqualTo: ownerId)
-        .limit(1)
-        .get();
-
-    if (roomQuery.docs.isEmpty) {
-      throw Exception("Room not found for this owner");
-    }
-
-    var roomDoc = roomQuery.docs.first;
-
-    await roomDoc.reference.update({
-      "tenantId": tenantId,
-    });
-
-    await _db.collection("users").doc(tenantId).update({
-      "room": roomNumber,
-      "ownerId": ownerId,
-      "approved": false,
-      "paymentStatus": "unpaid",
-      "connected": true,
-    });
   }
 
   // ===============================
@@ -299,6 +323,20 @@ class FirestoreService {
       });
     } catch (e) {
       print("REJECT PAYMENT ERROR: $e");
+    }
+  }
+
+  // ===============================
+  // DELETE PAYMENT
+  // ===============================
+  Future<void> deletePayment(String paymentId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('payments')
+          .doc(paymentId)
+          .delete();
+    } catch (e) {
+      print("DELETE PAYMENT ERROR: $e");
     }
   }
 
