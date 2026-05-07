@@ -11,14 +11,25 @@ class TenantConnectScreen extends StatefulWidget {
 
 class _TenantConnectScreenState extends State<TenantConnectScreen> {
   final TextEditingController codeController = TextEditingController();
+
   bool loading = false;
 
+  List<QueryDocumentSnapshot> availableRooms = [];
+
+  String? selectedRoom;
+  String? ownerId;
+
+  // =========================
+  // CONNECT OWNER
+  // =========================
   Future<void> connectToOwner() async {
     String code = codeController.text.trim();
 
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter owner code")),
+        const SnackBar(
+          content: Text("Enter owner code"),
+        ),
       );
       return;
     }
@@ -26,7 +37,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
     setState(() => loading = true);
 
     try {
-      // 🔍 hanapin owner gamit 6-digit code
+      // FIND OWNER
       final query = await FirebaseFirestore.instance
           .collection("users")
           .where("ownerCode", isEqualTo: code)
@@ -39,33 +50,97 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
       }
 
       final ownerDoc = query.docs.first;
-      final ownerUID = ownerDoc.id; // 🔥 ito ang UID
 
-      final user = FirebaseAuth.instance.currentUser!;
-      final userRef =
-          FirebaseFirestore.instance.collection("users").doc(user.uid);
+      ownerId = ownerDoc.id;
 
-      // ✅ save connection
-      await userRef.update({
-        "ownerId": ownerUID,
-        "ownerCode": code,
-        "approved": true, // optional
-      });
+      // GET AVAILABLE ROOMS
+      final roomQuery = await FirebaseFirestore.instance
+          .collection("rooms")
+          .where("ownerId", isEqualTo: ownerId)
+          .where("tenantId", isEqualTo: null)
+          .get();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Connected successfully!")),
-      );
+      availableRooms = roomQuery.docs;
 
-      Navigator.pop(context);
+      if (availableRooms.isEmpty) {
+        throw "No available rooms";
+      }
+
+      setState(() {});
     } catch (e) {
       print("CONNECT ERROR: $e");
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(
+          content: Text("$e"),
+        ),
       );
     }
 
     setState(() => loading = false);
+  }
+
+  // =========================
+  // ASSIGN ROOM
+  // =========================
+  Future<void> assignRoom() async {
+    if (selectedRoom == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Select a room"),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser!;
+
+      final roomDoc = availableRooms.firstWhere(
+        (room) => room.id == selectedRoom,
+      );
+
+      final roomData = roomDoc.data() as Map<String, dynamic>;
+
+      // UPDATE ROOM
+      await FirebaseFirestore.instance
+          .collection("rooms")
+          .doc(roomDoc.id)
+          .update({
+        "tenantId": user.uid,
+      });
+
+      // UPDATE USER
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .update({
+        "ownerId": ownerId,
+        "ownerCode": codeController.text.trim(),
+        "room": roomData["roomNumber"],
+        "approved": true,
+        "connected": true,
+        "paymentStatus": "unpaid",
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Room connected successfully!",
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      print("ROOM ASSIGN ERROR: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("$e"),
+        ),
+      );
+    }
   }
 
   @override
@@ -79,29 +154,88 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Text(
-              "Enter Owner Code",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
+            // OWNER CODE
             TextField(
               controller: codeController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: "6-digit code",
+                hintText: "Enter 6-digit owner code",
               ),
             ),
+
             const SizedBox(height: 20),
+
+            // CONNECT BUTTON
             ElevatedButton(
               onPressed: loading ? null : connectToOwner,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrange,
               ),
               child: loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Connect"),
+                  ? const CircularProgressIndicator(
+                      color: Colors.white,
+                    )
+                  : const Text("Find Rooms"),
             ),
+
+            const SizedBox(height: 30),
+
+            // AVAILABLE ROOMS
+            if (availableRooms.isNotEmpty)
+              Expanded(
+                child: Column(
+                  children: [
+                    const Text(
+                      "Available Rooms",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: availableRooms.length,
+                        itemBuilder: (context, index) {
+                          final room = availableRooms[index].data()
+                              as Map<String, dynamic>;
+
+                          return Card(
+                            child: RadioListTile(
+                              value: availableRooms[index].id,
+                              groupValue: selectedRoom,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedRoom = value.toString();
+                                });
+                              },
+                              title: Text(
+                                "Room ${room["roomNumber"]}",
+                              ),
+                              subtitle: Text(
+                                "Rent: ₱${room["monthlyRent"]}",
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: assignRoom,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrange,
+                        ),
+                        child: const Text(
+                          "Connect Room",
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
