@@ -260,23 +260,46 @@ class FirestoreService {
   // ===============================
   // APPROVE PAYMENT
   // ===============================
-  Future<void> approvePayment(String paymentId, String tenantId) async {
-    await _db.collection("payments").doc(paymentId).update({
-      "status": "verified",
-    });
+  Future<void> approvePayment(
+    String paymentId,
+    String tenantId,
+  ) async {
+    try {
+      // UPDATE PAYMENT STATUS
+      await FirebaseFirestore.instance
+          .collection('payments')
+          .doc(paymentId)
+          .update({
+        'status': 'verified',
+      });
 
-    await _db.collection("users").doc(tenantId).update({
-      "paymentStatus": "paid",
-    });
+      // UPDATE TENANT STATUS
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(tenantId)
+          .update({
+        'approved': true,
+        'paymentStatus': 'paid',
+      });
+    } catch (e) {
+      print("APPROVE PAYMENT ERROR: $e");
+    }
   }
 
   // ===============================
   // REJECT PAYMENT
   // ===============================
   Future<void> rejectPayment(String paymentId) async {
-    await _db.collection("payments").doc(paymentId).update({
-      "status": "rejected",
-    });
+    try {
+      await FirebaseFirestore.instance
+          .collection('payments')
+          .doc(paymentId)
+          .update({
+        'status': 'rejected',
+      });
+    } catch (e) {
+      print("REJECT PAYMENT ERROR: $e");
+    }
   }
 
   // ===============================
