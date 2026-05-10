@@ -17,36 +17,45 @@ class TenantQRScreen extends StatelessWidget {
             .doc("payment_qr")
             .snapshots(),
         builder: (context, snapshot) {
-          // 🔄 loading
+          // 🔄 LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
-          // ❌ no data
+          // ❌ NO DATA
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text("No QR uploaded"));
+            return const Center(
+              child: Text("No QR uploaded"),
+            );
           }
 
-          // ✅ get data
+          // ✅ GET DATA
           final data = snapshot.data!.data() as Map<String, dynamic>;
 
           String? gcashQr = data["gcashQr"];
           String? paymayaQr = data["paymayaQr"];
-
-          // 🔥 DEBUG (check terminal)
-          print("FIRESTORE DATA: $data");
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 // ================= GCash =================
-                buildQR("GCash", gcashQr),
+                buildQR(
+                  context,
+                  "GCash",
+                  gcashQr,
+                ),
 
                 const SizedBox(height: 30),
 
                 // ================= PayMaya =================
-                buildQR("PayMaya", paymayaQr),
+                buildQR(
+                  context,
+                  "PayMaya",
+                  paymayaQr,
+                ),
               ],
             ),
           );
@@ -56,47 +65,92 @@ class TenantQRScreen extends StatelessWidget {
   }
 
   // ================= QR WIDGET =================
-  Widget buildQR(String title, String? qrUrl) {
+  Widget buildQR(
+    BuildContext context,
+    String title,
+    String? qrUrl,
+  ) {
     return Column(
       children: [
         Text(
           "$title QR",
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 10),
-
-        // 🔥 FINAL FIX (THIS IS WHERE YOUR CODE GOES)
+        const SizedBox(height: 15),
         qrUrl != null && qrUrl.isNotEmpty
-            ? Column(
-                children: [
-                  Image.network(
+            ? GestureDetector(
+                onTap: () {
+                  // 🔥 ENLARGE IMAGE WHEN CLICKED
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      backgroundColor: Colors.black,
+                      child: InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 5,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            qrUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Text(
+                                  "Failed to load image",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
                     qrUrl,
-                    height: 200,
-
-                    // 🔥 SHOW ERROR IF FAILS
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      print("IMAGE ERROR: $error");
-
-                      return const Text(
-                        "Failed to load image",
-                        style: TextStyle(color: Colors.red),
+                      return Container(
+                        height: 200,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                        child: const Center(
+                          child: Text(
+                            "Failed to load image",
+                            style: TextStyle(
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),
-
-                  const SizedBox(height: 10),
-
-                  // 🔥 SHOW URL FOR DEBUG
-                  Text(
-                    qrUrl,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ],
+                ),
               )
-            : const Text("No QR uploaded"),
+            : const Text(
+                "No QR uploaded",
+                style: TextStyle(fontSize: 16),
+              ),
+        const SizedBox(height: 12),
+        const Text(
+          "Tap image to enlarge",
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }
