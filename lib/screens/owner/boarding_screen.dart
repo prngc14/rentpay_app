@@ -23,20 +23,25 @@ class BoardingScreen extends StatelessWidget {
               stream: firestore.getOwnerTenants(user.uid),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
                 }
 
                 var tenants = snapshot.data!.docs;
 
                 if (tenants.isEmpty) {
-                  return const Center(child: Text("No tenants yet"));
+                  return const Center(
+                    child: Text("No tenants yet"),
+                  );
                 }
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: tenants.length,
                   itemBuilder: (context, index) {
-                    var data = tenants[index].data() as Map<String, dynamic>;
+                    var data =
+                        tenants[index].data() as Map<String, dynamic>;
 
                     return Card(
                       shape: RoundedRectangleBorder(
@@ -48,10 +53,70 @@ class BoardingScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            const Icon(Icons.person, size: 40),
+
+                            // DELETE BUTTON
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () async {
+
+                                  bool? confirm = await showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text("Remove Tenant"),
+                                      content: const Text(
+                                        "Are you sure you want to remove this tenant?",
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, false);
+                                          },
+                                          child: const Text("Cancel"),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, true);
+                                          },
+                                          child: const Text("Remove"),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+
+                                    String tenantId =
+                                        tenants[index].id;
+
+                                    await firestore
+                                        .deletePayment(tenantId);
+
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Tenant removed",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+
+                            const Icon(
+                              Icons.person,
+                              size: 40,
+                            ),
+
                             const SizedBox(height: 10),
 
-                            // 👤 NAME
+                            // NAME
                             Text(
                               data["name"] ?? "No Name",
                               style: const TextStyle(
@@ -62,25 +127,29 @@ class BoardingScreen extends StatelessWidget {
 
                             const SizedBox(height: 5),
 
-                            // ✅ FIXED HERE (SHOW OWNER CODE)
+                            // OWNER CODE
                             Text(
                               "Owner Code: ${data["ownerCode"] ?? "------"}",
-                              style: const TextStyle(color: Colors.grey),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                              ),
                             ),
 
                             const SizedBox(height: 10),
 
-                            // 🏠 ROOM
-                            Text("Room: ${data["room"] ?? "-"}"),
+                            // ROOM
+                            Text(
+                              "Room: ${data["room"] ?? "-"}",
+                            ),
 
-                            // 📌 STATUS
+                            // STATUS
                             Text(
                               data["approved"] == true
                                   ? "Status: Approved"
                                   : "Status: Pending",
                             ),
 
-                            // 💰 PAYMENT
+                            // PAYMENT
                             Text(
                               "Payment: ${data["paymentStatus"] ?? "unpaid"}",
                             ),
