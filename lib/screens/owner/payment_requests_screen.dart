@@ -69,6 +69,7 @@ class PaymentRequestsScreen extends StatelessWidget {
               final Timestamp? date = data["date"];
 
               Color statusColor;
+
               if (status == "verified") {
                 statusColor = Colors.green;
               } else if (status == "rejected") {
@@ -89,7 +90,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                   if (tenantSnapshot.hasData && tenantSnapshot.data!.exists) {
                     final tenantData =
                         tenantSnapshot.data!.data() as Map<String, dynamic>;
+
                     tenantName = tenantData["name"] ?? "Unnamed Tenant";
+
                     tenantEmail = tenantData["email"] ?? "";
                   }
 
@@ -112,10 +115,13 @@ class PaymentRequestsScreen extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+
                           if (tenantEmail.isNotEmpty)
                             Text(
                               tenantEmail,
-                              style: const TextStyle(color: Colors.grey),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                              ),
                             ),
 
                           const SizedBox(height: 10),
@@ -173,8 +179,11 @@ class PaymentRequestsScreen extends StatelessWidget {
                                           child: Image.network(
                                             screenshot,
                                             fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) {
                                               return const Padding(
                                                 padding: EdgeInsets.all(20),
                                                 child: Text(
@@ -195,14 +204,19 @@ class PaymentRequestsScreen extends StatelessWidget {
                                       height: 220,
                                       width: double.infinity,
                                       fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
                                         return Container(
                                           height: 180,
                                           width: double.infinity,
                                           color: Colors.grey.shade300,
                                           child: const Center(
-                                            child: Text("Image not available"),
+                                            child: Text(
+                                              "Image not available",
+                                            ),
                                           ),
                                         );
                                       },
@@ -220,7 +234,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Center(
-                                child: Text("No screenshot uploaded"),
+                                child: Text(
+                                  "No screenshot uploaded",
+                                ),
                               ),
                             ),
 
@@ -231,7 +247,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                             children: [
                               const Text(
                                 "Status: ",
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 status.toUpperCase(),
@@ -260,7 +278,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         const SnackBar(
-                                          content: Text("✅ Payment approved"),
+                                          content: Text(
+                                            "✅ Payment approved",
+                                          ),
                                         ),
                                       );
                                     },
@@ -278,12 +298,16 @@ class PaymentRequestsScreen extends StatelessWidget {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () async {
-                                      await firestore.rejectPayment(p.id);
+                                      await firestore.rejectPayment(
+                                        p.id,
+                                      );
 
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         const SnackBar(
-                                          content: Text("❌ Payment rejected"),
+                                          content: Text(
+                                            "❌ Payment rejected",
+                                          ),
                                         ),
                                       );
                                     },
@@ -299,6 +323,77 @@ class PaymentRequestsScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
+
+                          const SizedBox(height: 12),
+
+                          // 🗑 DELETE BUTTON
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final confirm = await showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text(
+                                        "Delete Payment",
+                                      ),
+                                      content: const Text(
+                                        "Are you sure you want to delete this payment request?",
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(
+                                              context,
+                                              false,
+                                            );
+                                          },
+                                          child: const Text("Cancel"),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(
+                                              context,
+                                              true,
+                                            );
+                                          },
+                                          child: const Text("Delete"),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (confirm == true) {
+                                  await FirebaseFirestore.instance
+                                      .collection("payments")
+                                      .doc(p.id)
+                                      .delete();
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "🗑 Payment deleted successfully",
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                              icon: const Icon(Icons.delete),
+                              label: const Text("Delete Payment"),
+                            ),
+                          ),
                         ],
                       ),
                     ),
