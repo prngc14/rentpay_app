@@ -34,7 +34,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       if (data != null) {
         setState(() {
           gcashUrl = data['gcashQr'];
-          mayaUrl = data['paymayaQr']; // ✅ FIXED HERE
+          mayaUrl = data['paymayaQr'];
         });
       }
     } catch (e) {
@@ -47,7 +47,9 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
   }
 
   Future<void> pickImage(String type) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
 
     if (picked != null) {
       setState(() {
@@ -70,11 +72,17 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
       if (selectedFile == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Please select a $type QR image first")),
+          SnackBar(
+            content: Text(
+              "Please select a $type QR image first",
+            ),
+          ),
         );
+
         setState(() {
           isLoading = false;
         });
+
         return;
       }
 
@@ -87,12 +95,16 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("${type.toUpperCase()} QR uploaded successfully"),
+          content: Text(
+            "${type.toUpperCase()} QR uploaded successfully",
+          ),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Upload failed: $e")),
+        SnackBar(
+          content: Text("Upload failed: $e"),
+        ),
       );
     }
 
@@ -136,27 +148,81 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: localFile != null
-                    ? Image.file(localFile, fit: BoxFit.contain)
-                    : (networkUrl != null && networkUrl.isNotEmpty)
-                        ? Image.network(
-                            networkUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Text(
-                                  "Failed to load QR image",
-                                  style: TextStyle(color: Colors.red),
+                child: GestureDetector(
+                  onTap: () {
+                    if (localFile != null ||
+                        (networkUrl != null && networkUrl.isNotEmpty)) {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          backgroundColor: Colors.black,
+                          insetPadding: const EdgeInsets.all(10),
+                          child: Stack(
+                            children: [
+                              InteractiveViewer(
+                                child: localFile != null
+                                    ? Image.file(
+                                        localFile,
+                                        fit: BoxFit.contain,
+                                      )
+                                    : Image.network(
+                                        networkUrl!,
+                                        fit: BoxFit.contain,
+                                      ),
+                              ),
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
                                 ),
-                              );
-                            },
-                          )
-                        : const Center(
-                            child: Text(
-                              "No QR uploaded yet",
-                              style: TextStyle(fontSize: 16),
-                            ),
+                              ),
+                            ],
                           ),
+                        ),
+                      );
+                    }
+                  },
+                  child: localFile != null
+                      ? Image.file(
+                          localFile,
+                          fit: BoxFit.contain,
+                        )
+                      : (networkUrl != null && networkUrl.isNotEmpty)
+                          ? Image.network(
+                              networkUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (
+                                context,
+                                error,
+                                stackTrace,
+                              ) {
+                                return const Center(
+                                  child: Text(
+                                    "Failed to load QR image",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : const Center(
+                              child: Text(
+                                "No QR uploaded yet",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -166,14 +232,20 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                 onPressed: onPick,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: buttonColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(
+                      30,
+                    ),
                   ),
                 ),
                 child: const Text(
                   "Select Image",
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ),
@@ -184,14 +256,20 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                 onPressed: onUpload,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(
+                      30,
+                    ),
                   ),
                 ),
                 child: const Text(
                   "Upload QR",
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ),
@@ -209,7 +287,9 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
         backgroundColor: Colors.deepOrange,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
