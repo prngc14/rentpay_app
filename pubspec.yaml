@@ -27,6 +27,9 @@ dependencies:
   image_picker: ^1.0.7
   http: ^1.2.1
 
+  # Blur Detection
+  flutter_image_compress: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

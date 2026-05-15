@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
@@ -136,6 +138,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   // ======================================
+  // CHECK IF IMAGE IS POSSIBLY BLURRED
+  // ======================================
+  Future<bool> isImageBlurred(File file) async {
+    try {
+      Uint8List? compressed = await FlutterImageCompress.compressWithFile(
+        file.absolute.path,
+        quality: 1,
+      );
+
+      if (compressed == null) {
+        return true;
+      }
+
+      // CHECK FILE SIZE
+      int originalSize = await file.length();
+
+      // TOO SMALL = POSSIBLY BLURRY
+      if (originalSize < 80000) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  // ======================================
   // SHOW FULL IMAGE
   // ======================================
   void showFullImage(String url) {
@@ -168,14 +198,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       File file = File(picked.path);
 
+      // ======================================
+      // CHECK BLUR
+      // ======================================
+      bool blurred = await isImageBlurred(file);
+
+      if (blurred) {
+        setState(() => uploading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Blurred or low quality receipt detected",
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      // ======================================
       // UPLOAD IMAGE
+      // ======================================
       String? url = await uploadToCloudinary(file);
 
       if (url == null) {
         throw Exception("Cloudinary upload failed");
       }
 
+      // ======================================
       // SAVE PAYMENT
+      // ======================================
       await firestore.submitPayment(
         user.uid,
         ownerId,
