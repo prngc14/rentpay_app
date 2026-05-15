@@ -53,14 +53,15 @@ class OwnerDashboard extends StatelessWidget {
                 final userData = snapshot.data!.data() as Map<String, dynamic>;
 
                 String ownerCode = userData["ownerCode"] ?? "------";
-
                 String name = userData["name"] ?? "Owner";
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      // =========================
                       // PROFILE
+                      // =========================
                       Center(
                         child: Column(
                           children: [
@@ -103,7 +104,7 @@ class OwnerDashboard extends StatelessWidget {
                       const SizedBox(height: 25),
 
                       // =========================
-                      // TENANT INFO BOX
+                      // TENANT INFORMATION BOX
                       // =========================
                       Container(
                         width: double.infinity,
@@ -121,13 +122,13 @@ class OwnerDashboard extends StatelessWidget {
                         child: Column(
                           children: [
                             const Icon(
-                              Icons.people,
+                              Icons.badge,
                               size: 40,
                               color: Colors.deepOrange,
                             ),
                             const SizedBox(height: 10),
                             const Text(
-                              "Tenant Information",
+                              "Tenant Verification",
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -135,7 +136,7 @@ class OwnerDashboard extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              "View all tenant personal information",
+                              "View uploaded tenant valid IDs",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.grey,
@@ -154,7 +155,7 @@ class OwnerDashboard extends StatelessWidget {
                               },
                               icon: const Icon(Icons.visibility),
                               label: const Text(
-                                "View Tenants",
+                                "View IDs",
                               ),
                             ),
                           ],
@@ -163,7 +164,9 @@ class OwnerDashboard extends StatelessWidget {
 
                       const SizedBox(height: 25),
 
+                      // =========================
                       // ACTION GRID
+                      // =========================
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -171,7 +174,6 @@ class OwnerDashboard extends StatelessWidget {
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                         children: [
-                          // CREATE ROOM
                           _buildActionCard(
                             context,
                             "Create Room",
@@ -182,8 +184,6 @@ class OwnerDashboard extends StatelessWidget {
                               user.uid,
                             ),
                           ),
-
-                          // MY ROOMS
                           _buildActionCard(
                             context,
                             "My Rooms",
@@ -200,8 +200,6 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
-
-                          // UPLOAD QR
                           _buildActionCard(
                             context,
                             "Upload QR",
@@ -216,8 +214,6 @@ class OwnerDashboard extends StatelessWidget {
                               );
                             },
                           ),
-
-                          // PAYMENTS
                           _buildActionCard(
                             context,
                             "Payments",
@@ -243,7 +239,7 @@ class OwnerDashboard extends StatelessWidget {
   }
 
   // =====================================================
-  // TENANTS DIALOG
+  // SHOW TENANTS
   // =====================================================
   void _showTenantsDialog(
     BuildContext context,
@@ -253,7 +249,7 @@ class OwnerDashboard extends StatelessWidget {
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: const Text("Tenant Information"),
+          title: const Text("Tenant Verification"),
           content: SizedBox(
             width: double.maxFinite,
             child: StreamBuilder<QuerySnapshot>(
@@ -271,9 +267,7 @@ class OwnerDashboard extends StatelessWidget {
 
                 if (snapshot.data!.docs.isEmpty) {
                   return const Center(
-                    child: Text(
-                      "No tenants found",
-                    ),
+                    child: Text("No tenants found"),
                   );
                 }
 
@@ -292,31 +286,76 @@ class OwnerDashboard extends StatelessWidget {
                     String image = data["workIdUrl"] ?? "";
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              radius: 35,
-                              backgroundImage:
-                                  image.isNotEmpty ? NetworkImage(image) : null,
-                              child: image.isEmpty
-                                  ? const Icon(Icons.person)
-                                  : null,
+                            // =========================
+                            // ID IMAGE
+                            // =========================
+                            GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) {
+                                    return Dialog(
+                                      child: InteractiveViewer(
+                                        panEnabled: true,
+                                        minScale: 0.5,
+                                        maxScale: 4,
+                                        child: Image.network(
+                                          image,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: 180,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  image: image.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(image),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child: image.isEmpty
+                                    ? const Center(
+                                        child: Icon(
+                                          Icons.image,
+                                          size: 50,
+                                          color: Colors.grey,
+                                        ),
+                                      )
+                                    : null,
+                              ),
                             ),
-                            const SizedBox(height: 10),
+
+                            const SizedBox(height: 15),
+
                             Text(
                               name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 20,
                               ),
                             ),
-                            const SizedBox(height: 8),
+
+                            const SizedBox(height: 10),
+
                             Row(
                               children: [
                                 const Icon(Icons.work, size: 18),
@@ -326,7 +365,9 @@ class OwnerDashboard extends StatelessWidget {
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 5),
+
                             Row(
                               children: [
                                 const Icon(Icons.phone, size: 18),
@@ -336,10 +377,15 @@ class OwnerDashboard extends StatelessWidget {
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 5),
+
                             Row(
                               children: [
-                                const Icon(Icons.meeting_room, size: 18),
+                                const Icon(
+                                  Icons.meeting_room,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 5),
                                 Expanded(
                                   child: Text(
@@ -370,6 +416,9 @@ class OwnerDashboard extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // ACTION CARD
+  // =====================================================
   Widget _buildActionCard(
     BuildContext context,
     String title,
@@ -400,6 +449,9 @@ class OwnerDashboard extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // CREATE ROOM
+  // =====================================================
   void _showCreateRoomDialog(
     BuildContext context,
     String ownerId,
