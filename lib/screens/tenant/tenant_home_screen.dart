@@ -94,189 +94,127 @@ class TenantHomeScreen extends StatelessWidget {
               double totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
               return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // =========================
-                    // HEADER
-                    // =========================
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.only(
-                        top: 45,
-                        left: 20,
-                        right: 20,
-                        bottom: 25,
-                      ),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xffFF5F1F),
-                            Color(0xffFF7B3D),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(28),
-                          bottomRight: Radius.circular(28),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+
+                      // =========================
+                      // TITLE
+                      // =========================
+                      const Text(
+                        "Monthly Billing",
+                        style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff1D1D1F),
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Home",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.notifications_none,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
+
+                      const SizedBox(height: 5),
+
+                      const Text(
+                        "Here’s your billing breakdown for this month.",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // =========================
+                      // ROOM CARD
+                      // =========================
+                      _buildBillCard(
+                        icon: Icons.apartment,
+                        iconColor: Colors.deepOrange,
+                        title: "Room $room",
+                        subtitle: "Monthly Rent",
+                        amount: "₱${rent.toStringAsFixed(2)}",
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // =========================
+                      // ELECTRICITY CARD
+                      // =========================
+                      _buildBillCard(
+                        icon: Icons.flash_on,
+                        iconColor: Colors.orange,
+                        title: "Electricity",
+                        subtitle:
+                            "Consumption: ${electricConsumption.toStringAsFixed(1)} kWh",
+                        amount: "₱${electricBill.toStringAsFixed(2)}",
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // =========================
+                      // WATER CARD
+                      // =========================
+                      _buildBillCard(
+                        icon: Icons.water_drop,
+                        iconColor: Colors.blue,
+                        title: "Water",
+                        subtitle:
+                            "Consumption: ${waterConsumption.toStringAsFixed(1)} m³",
+                        amount: "₱${waterBill.toStringAsFixed(2)}",
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      // =========================
+                      // TOTAL BILL CARD
+                      // =========================
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xff39B54A),
+                              Color(0xff5EDB72),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "Manage your monthly billing",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withOpacity(0.25),
+                              blurRadius: 14,
+                              offset: const Offset(0, 8),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Monthly Billing",
-                            style: TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xff1D1D1F),
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          const Text(
-                            "Here’s your billing breakdown for this month.",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // =========================
-                          // ROOM CARD
-                          // =========================
-                          _buildBillCard(
-                            icon: Icons.apartment,
-                            iconColor: Colors.deepOrange,
-                            title: "Room $room",
-                            subtitle: "Monthly Rent",
-                            amount: "₱${rent.toStringAsFixed(2)}",
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // =========================
-                          // ELECTRICITY CARD
-                          // =========================
-                          _buildBillCard(
-                            icon: Icons.flash_on,
-                            iconColor: Colors.orange,
-                            title: "Electricity",
-                            subtitle:
-                                "Consumption: ${electricConsumption.toStringAsFixed(1)} kWh",
-                            amount: "₱${electricBill.toStringAsFixed(2)}",
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // =========================
-                          // WATER CARD
-                          // =========================
-                          _buildBillCard(
-                            icon: Icons.water_drop,
-                            iconColor: Colors.blue,
-                            title: "Water",
-                            subtitle:
-                                "Consumption: ${waterConsumption.toStringAsFixed(1)} m³",
-                            amount: "₱${waterBill.toStringAsFixed(2)}",
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          // =========================
-                          // TOTAL BILL CARD
-                          // =========================
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(22),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xff39B54A),
-                                  Color(0xff5EDB72),
-                                ],
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              "TOTAL BILL",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
                               ),
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.green.withOpacity(0.25),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
                             ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  "TOTAL BILL",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                Text(
-                                  "₱${totalBill.toStringAsFixed(2)}",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 14),
+                            Text(
+                              "₱${totalBill.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-
-                          const SizedBox(height: 20),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               );
             },
