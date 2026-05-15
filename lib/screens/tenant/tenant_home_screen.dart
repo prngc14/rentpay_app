@@ -18,6 +18,7 @@ class TenantHomeScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xffF5F6FA),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection("users")
@@ -39,7 +40,6 @@ class TenantHomeScreen extends StatelessWidget {
           }
 
           final room = userData["room"] ?? "";
-
           final ownerId = userData["ownerId"] ?? "";
 
           if (room.isEmpty || ownerId.isEmpty) {
@@ -53,14 +53,8 @@ class TenantHomeScreen extends StatelessWidget {
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("rooms")
-                .where(
-                  "roomNumber",
-                  isEqualTo: room,
-                )
-                .where(
-                  "ownerId",
-                  isEqualTo: ownerId,
-                )
+                .where("roomNumber", isEqualTo: room)
+                .where("ownerId", isEqualTo: ownerId)
                 .limit(1)
                 .snapshots(),
             builder: (context, roomSnapshot) {
@@ -94,185 +88,185 @@ class TenantHomeScreen extends StatelessWidget {
               double totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(
-                      height: 10,
-                    ),
-
-                    const Text(
-                      "Monthly Billing",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    // =========================
+                    // HEADER
+                    // =========================
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(
+                        top: 60,
+                        left: 25,
+                        right: 25,
+                        bottom: 35,
                       ),
-                    ),
-
-                    const SizedBox(
-                      height: 20,
-                    ),
-
-                    // ======================================
-                    // ROOM INFO
-                    // ======================================
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          20,
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              "Room $room",
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Text(
-                              "Monthly Rent: ₱$rent",
-                              style: const TextStyle(
-                                fontSize: 18,
-                              ),
-                            ),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xffFF5F1F),
+                            Color(0xffFF7B3D),
                           ],
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(
-                      height: 20,
-                    ),
-
-                    // ======================================
-                    // ELECTRIC BILL
-                    // ======================================
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          20,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Electricity",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 15,
-                            ),
-                            Text(
-                              "Consumption: $electricConsumption kWh",
-                            ),
-                            const SizedBox(
-                              height: 8,
-                            ),
-                            Text(
-                              "Bill: ₱$electricBill",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ],
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(
-                      height: 20,
-                    ),
-
-                    // ======================================
-                    // WATER BILL
-                    // ======================================
-                    Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          20,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Water",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 15,
-                            ),
-                            Text(
-                              "Consumption: $waterConsumption m³",
-                            ),
-                            const SizedBox(
-                              height: 8,
-                            ),
-                            Text(
-                              "Bill: ₱$waterBill",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(
-                      height: 25,
-                    ),
-
-                    // ======================================
-                    // TOTAL BILL
-                    // ======================================
-                    Card(
-                      color: Colors.green,
-                      elevation: 6,
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          25,
-                        ),
-                        child: Center(
-                          child: Column(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                "TOTAL BILL",
+                                "Home",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 22,
+                                  fontSize: 32,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(
-                                height: 15,
-                              ),
-                              Text(
-                                "₱$totalBill",
-                                style: const TextStyle(
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_none,
                                   color: Colors.white,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Manage your monthly billing",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Monthly Billing",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xff1D1D1F),
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          const Text(
+                            "Here’s your billing breakdown for this month.",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 15,
+                            ),
+                          ),
+
+                          const SizedBox(height: 25),
+
+                          // =========================
+                          // ROOM CARD
+                          // =========================
+                          _buildBillCard(
+                            icon: Icons.apartment,
+                            iconColor: Colors.deepOrange,
+                            title: "Room $room",
+                            subtitle: "Monthly Rent",
+                            amount: "₱${rent.toStringAsFixed(2)}",
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // =========================
+                          // ELECTRICITY CARD
+                          // =========================
+                          _buildBillCard(
+                            icon: Icons.flash_on,
+                            iconColor: Colors.orange,
+                            title: "Electricity",
+                            subtitle:
+                                "Consumption: ${electricConsumption.toStringAsFixed(1)} kWh",
+                            amount: "₱${electricBill.toStringAsFixed(2)}",
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // =========================
+                          // WATER CARD
+                          // =========================
+                          _buildBillCard(
+                            icon: Icons.water_drop,
+                            iconColor: Colors.blue,
+                            title: "Water",
+                            subtitle:
+                                "Consumption: ${waterConsumption.toStringAsFixed(1)} m³",
+                            amount: "₱${waterBill.toStringAsFixed(2)}",
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          // =========================
+                          // TOTAL BILL CARD
+                          // =========================
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(25),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xff39B54A),
+                                  Color(0xff5EDB72),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(25),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.green.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "TOTAL BILL",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  "₱${totalBill.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
                   ],
@@ -281,6 +275,81 @@ class TenantHomeScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  // =========================
+  // CUSTOM CARD WIDGET
+  // =========================
+  Widget _buildBillCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required String amount,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xff1D1D1F),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
