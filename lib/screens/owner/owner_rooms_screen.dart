@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../services/firestore_service.dart';
 
 class OwnerRoomsScreen extends StatelessWidget {
@@ -42,8 +43,11 @@ class OwnerRoomsScreen extends StatelessWidget {
               final roomDoc = rooms[index];
               final room = roomDoc.data() as Map<String, dynamic>;
 
+              final tenantId = room['tenantId'];
+
               return Card(
                 margin: const EdgeInsets.all(10),
+                elevation: 4,
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Column(
@@ -56,7 +60,7 @@ class OwnerRoomsScreen extends StatelessWidget {
                         subtitle: Text(
                           "Monthly Rent: ₱${room['monthlyRent']}",
                         ),
-                        trailing: room['tenantId'] == null
+                        trailing: tenantId == null
                             ? const Text(
                                 "Available",
                                 style: TextStyle(
@@ -72,7 +76,116 @@ class OwnerRoomsScreen extends StatelessWidget {
                                 ),
                               ),
                       ),
+
+                      // ===============================
+                      // TENANT INFO
+                      // ===============================
+                      if (tenantId != null)
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection("users")
+                              .doc(tenantId)
+                              .get(),
+                          builder: (context, tenantSnapshot) {
+                            if (!tenantSnapshot.hasData) {
+                              return const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            final tenantData = tenantSnapshot.data!.data()
+                                as Map<String, dynamic>?;
+
+                            if (tenantData == null) {
+                              return const SizedBox();
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Divider(),
+
+                                const SizedBox(height: 10),
+
+                                const Text(
+                                  "Tenant Information",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                Text(
+                                  "Name: ${tenantData["name"] ?? ""}",
+                                ),
+
+                                Text(
+                                  "Job: ${tenantData["job"] ?? ""}",
+                                ),
+
+                                Text(
+                                  "Phone: ${tenantData["phone"] ?? ""}",
+                                ),
+
+                                const SizedBox(height: 15),
+
+                                // ===============================
+                                // WORK ID IMAGE
+                                // ===============================
+                                if (tenantData["workIdUrl"] != null)
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Tenant Work ID",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      GestureDetector(
+                                        onTap: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => Dialog(
+                                              child: InteractiveViewer(
+                                                child: Image.network(
+                                                  tenantData["workIdUrl"],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            tenantData["workIdUrl"],
+                                            height: 200,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                const SizedBox(height: 15),
+                              ],
+                            );
+                          },
+                        ),
+
                       const SizedBox(height: 10),
+
+                      // ===============================
+                      // DELETE BUTTON
+                      // ===============================
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -92,7 +205,10 @@ class OwnerRoomsScreen extends StatelessWidget {
                                   actions: [
                                     TextButton(
                                       onPressed: () {
-                                        Navigator.pop(context, false);
+                                        Navigator.pop(
+                                          context,
+                                          false,
+                                        );
                                       },
                                       child: const Text("Cancel"),
                                     ),
@@ -101,7 +217,10 @@ class OwnerRoomsScreen extends StatelessWidget {
                                         backgroundColor: Colors.red,
                                       ),
                                       onPressed: () {
-                                        Navigator.pop(context, true);
+                                        Navigator.pop(
+                                          context,
+                                          true,
+                                        );
                                       },
                                       child: const Text("Delete"),
                                     ),
@@ -118,7 +237,9 @@ class OwnerRoomsScreen extends StatelessWidget {
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text("Room deleted successfully"),
+                                  content: Text(
+                                    "Room deleted successfully",
+                                  ),
                                 ),
                               );
                             }
