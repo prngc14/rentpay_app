@@ -60,9 +60,7 @@ class OwnerDashboard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // =========================
                       // PROFILE
-                      // =========================
                       Center(
                         child: Column(
                           children: [
@@ -102,11 +100,70 @@ class OwnerDashboard extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 25),
 
                       // =========================
-                      // ACTION GRID
+                      // TENANT INFO BOX
                       // =========================
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.people,
+                              size: 40,
+                              color: Colors.deepOrange,
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "Tenant Information",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "View all tenant personal information",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                              ),
+                              onPressed: () {
+                                _showTenantsDialog(
+                                  context,
+                                  user.uid,
+                                );
+                              },
+                              icon: const Icon(Icons.visibility),
+                              label: const Text(
+                                "View Tenants",
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      // ACTION GRID
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -185,6 +242,134 @@ class OwnerDashboard extends StatelessWidget {
     );
   }
 
+  // =====================================================
+  // TENANTS DIALOG
+  // =====================================================
+  void _showTenantsDialog(
+    BuildContext context,
+    String ownerId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Tenant Information"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection("users")
+                  .where("ownerId", isEqualTo: ownerId)
+                  .where("role", isEqualTo: "tenant")
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "No tenants found",
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    final tenant = snapshot.data!.docs[index];
+
+                    final data = tenant.data() as Map<String, dynamic>;
+
+                    String name = data["name"] ?? "No Name";
+                    String job = data["job"] ?? "No Work";
+                    String phone = data["phone"] ?? "No Phone";
+                    String room = data["room"] ?? "No Room";
+                    String image = data["validId"] ?? "";
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 35,
+                              backgroundImage:
+                                  image.isNotEmpty ? NetworkImage(image) : null,
+                              child: image.isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.work, size: 18),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(job),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Row(
+                              children: [
+                                const Icon(Icons.phone, size: 18),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(phone),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Row(
+                              children: [
+                                const Icon(Icons.meeting_room, size: 18),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    "Room: $room",
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildActionCard(
     BuildContext context,
     String title,
@@ -195,7 +380,7 @@ class OwnerDashboard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        color: color.withValues(alpha: 0.15),
+        color: color.withOpacity(0.15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
