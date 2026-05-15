@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/firestore_service.dart';
 
-class OwnerRoomsScreen extends StatelessWidget {
+class OwnerRoomsScreen extends StatefulWidget {
   final String ownerId;
 
   const OwnerRoomsScreen({
@@ -12,16 +12,180 @@ class OwnerRoomsScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final firestore = FirestoreService();
+  State<OwnerRoomsScreen> createState() => _OwnerRoomsScreenState();
+}
 
+class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
+  final firestore = FirestoreService();
+
+  // ======================================
+  // SHOW BILLING DIALOG
+  // ======================================
+  void showBillingDialog(
+    String roomId,
+    Map<String, dynamic> room,
+  ) {
+    final prevElectricController = TextEditingController(
+      text: room["previousElectric"].toString(),
+    );
+
+    final currentElectricController = TextEditingController(
+      text: room["currentElectric"].toString(),
+    );
+
+    final prevWaterController = TextEditingController(
+      text: room["previousWater"].toString(),
+    );
+
+    final currentWaterController = TextEditingController(
+      text: room["currentWater"].toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Update Billing"),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              // ======================================
+              // ELECTRIC
+              // ======================================
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Electric Meter",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: prevElectricController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Previous Electric Reading",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: currentElectricController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Current Electric Reading",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ======================================
+              // WATER
+              // ======================================
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Water Meter",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: prevWaterController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Previous Water Reading",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: currentWaterController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Current Water Reading",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepOrange,
+            ),
+            onPressed: () async {
+              double previousElectric = double.tryParse(
+                    prevElectricController.text,
+                  ) ??
+                  0;
+
+              double currentElectric = double.tryParse(
+                    currentElectricController.text,
+                  ) ??
+                  0;
+
+              double previousWater = double.tryParse(
+                    prevWaterController.text,
+                  ) ??
+                  0;
+
+              double currentWater = double.tryParse(
+                    currentWaterController.text,
+                  ) ??
+                  0;
+
+              await firestore.updateRoomBilling(
+                roomId: roomId,
+                previousElectric: previousElectric,
+                currentElectric: currentElectric,
+                previousWater: previousWater,
+                currentWater: currentWater,
+              );
+
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    "Billing updated successfully",
+                  ),
+                ),
+              );
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Rooms"),
         backgroundColor: Colors.deepOrange,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: firestore.getOwnerRooms(ownerId),
+        stream: firestore.getOwnerRooms(widget.ownerId),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
@@ -41,24 +205,26 @@ class OwnerRoomsScreen extends StatelessWidget {
             itemCount: rooms.length,
             itemBuilder: (context, index) {
               final roomDoc = rooms[index];
+
               final room = roomDoc.data() as Map<String, dynamic>;
 
-              final tenantId = room['tenantId'];
+              final tenantId = room["tenantId"];
 
               return Card(
                 margin: const EdgeInsets.all(10),
                 elevation: 4,
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ListTile(
                         leading: const Icon(Icons.home),
                         title: Text(
-                          "Room ${room['roomNumber']}",
+                          "Room ${room["roomNumber"]}",
                         ),
                         subtitle: Text(
-                          "Monthly Rent: ₱${room['monthlyRent']}",
+                          "Monthly Rent: ₱${room["monthlyRent"]}",
                         ),
                         trailing: tenantId == null
                             ? const Text(
@@ -77,115 +243,82 @@ class OwnerRoomsScreen extends StatelessWidget {
                               ),
                       ),
 
-                      // ===============================
-                      // TENANT INFO
-                      // ===============================
-                      if (tenantId != null)
-                        FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance
-                              .collection("users")
-                              .doc(tenantId)
-                              .get(),
-                          builder: (context, tenantSnapshot) {
-                            if (!tenantSnapshot.hasData) {
-                              return const Padding(
-                                padding: EdgeInsets.all(10),
-                                child: CircularProgressIndicator(),
-                              );
-                            }
+                      const Divider(),
 
-                            final tenantData = tenantSnapshot.data!.data()
-                                as Map<String, dynamic>?;
-
-                            if (tenantData == null) {
-                              return const SizedBox();
-                            }
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Divider(),
-
-                                const SizedBox(height: 10),
-
-                                const Text(
-                                  "Tenant Information",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 10),
-
-                                Text(
-                                  "Name: ${tenantData["name"] ?? ""}",
-                                ),
-
-                                Text(
-                                  "Job: ${tenantData["job"] ?? ""}",
-                                ),
-
-                                Text(
-                                  "Phone: ${tenantData["phone"] ?? ""}",
-                                ),
-
-                                const SizedBox(height: 15),
-
-                                // ===============================
-                                // WORK ID IMAGE
-                                // ===============================
-                                if (tenantData["workIdUrl"] != null)
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "Tenant Work ID",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      GestureDetector(
-                                        onTap: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => Dialog(
-                                              child: InteractiveViewer(
-                                                child: Image.network(
-                                                  tenantData["workIdUrl"],
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          child: Image.network(
-                                            tenantData["workIdUrl"],
-                                            height: 200,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                const SizedBox(height: 15),
-                              ],
-                            );
-                          },
+                      // ======================================
+                      // BILLING INFO
+                      // ======================================
+                      const Text(
+                        "Utility Billing",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
+                      ),
 
                       const SizedBox(height: 10),
 
-                      // ===============================
-                      // DELETE BUTTON
-                      // ===============================
+                      Text(
+                        "Electric Consumption: ${room["electricConsumption"] ?? 0} kWh",
+                      ),
+
+                      Text(
+                        "Electric Bill: ₱${room["electricBill"] ?? 0}",
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Text(
+                        "Water Consumption: ${room["waterConsumption"] ?? 0} m³",
+                      ),
+
+                      Text(
+                        "Water Bill: ₱${room["waterBill"] ?? 0}",
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Text(
+                        "TOTAL BILL: ₱${room["totalBill"] ?? 0}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                          fontSize: 18,
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // ======================================
+                      // UPDATE BILLING BUTTON
+                      // ======================================
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            showBillingDialog(
+                              roomDoc.id,
+                              room,
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.electric_bolt,
+                          ),
+                          label: const Text(
+                            "Update Billing",
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // ======================================
+                      // DELETE ROOM
+                      // ======================================
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -198,7 +331,9 @@ class OwnerRoomsScreen extends StatelessWidget {
                               context: context,
                               builder: (context) {
                                 return AlertDialog(
-                                  title: const Text("Delete Room"),
+                                  title: const Text(
+                                    "Delete Room",
+                                  ),
                                   content: const Text(
                                     "Are you sure you want to delete this room?",
                                   ),
@@ -210,7 +345,9 @@ class OwnerRoomsScreen extends StatelessWidget {
                                           false,
                                         );
                                       },
-                                      child: const Text("Cancel"),
+                                      child: const Text(
+                                        "Cancel",
+                                      ),
                                     ),
                                     ElevatedButton(
                                       style: ElevatedButton.styleFrom(
@@ -222,7 +359,9 @@ class OwnerRoomsScreen extends StatelessWidget {
                                           true,
                                         );
                                       },
-                                      child: const Text("Delete"),
+                                      child: const Text(
+                                        "Delete",
+                                      ),
                                     ),
                                   ],
                                 );
@@ -231,7 +370,7 @@ class OwnerRoomsScreen extends StatelessWidget {
 
                             if (confirm == true) {
                               await FirebaseFirestore.instance
-                                  .collection('rooms')
+                                  .collection("rooms")
                                   .doc(roomDoc.id)
                                   .delete();
 
