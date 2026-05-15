@@ -53,8 +53,14 @@ class TenantHomeScreen extends StatelessWidget {
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("rooms")
-                .where("roomNumber", isEqualTo: room)
-                .where("ownerId", isEqualTo: ownerId)
+                .where(
+                  "roomNumber",
+                  isEqualTo: room,
+                )
+                .where(
+                  "ownerId",
+                  isEqualTo: ownerId,
+                )
                 .limit(1)
                 .snapshots(),
             builder: (context, roomSnapshot) {
@@ -96,10 +102,10 @@ class TenantHomeScreen extends StatelessWidget {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.only(
-                        top: 60,
-                        left: 25,
-                        right: 25,
-                        bottom: 35,
+                        top: 45,
+                        left: 20,
+                        right: 20,
+                        bottom: 25,
                       ),
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
@@ -109,8 +115,8 @@ class TenantHomeScreen extends StatelessWidget {
                           ],
                         ),
                         borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(30),
-                          bottomRight: Radius.circular(30),
+                          bottomLeft: Radius.circular(28),
+                          bottomRight: Radius.circular(28),
                         ),
                       ),
                       child: Column(
@@ -123,12 +129,12 @@ class TenantHomeScreen extends StatelessWidget {
                                 "Home",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 32,
+                                  fontSize: 26,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
@@ -136,16 +142,17 @@ class TenantHomeScreen extends StatelessWidget {
                                 child: const Icon(
                                   Icons.notifications_none,
                                   color: Colors.white,
+                                  size: 22,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 6),
                           Text(
                             "Manage your monthly billing",
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -153,30 +160,30 @@ class TenantHomeScreen extends StatelessWidget {
                     ),
 
                     Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             "Monthly Billing",
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 23,
                               fontWeight: FontWeight.bold,
                               color: Color(0xff1D1D1F),
                             ),
                           ),
 
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
 
                           const Text(
                             "Here’s your billing breakdown for this month.",
                             style: TextStyle(
                               color: Colors.grey,
-                              fontSize: 15,
+                              fontSize: 13,
                             ),
                           ),
 
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 20),
 
                           // =========================
                           // ROOM CARD
@@ -189,7 +196,7 @@ class TenantHomeScreen extends StatelessWidget {
                             amount: "₱${rent.toStringAsFixed(2)}",
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
 
                           // =========================
                           // ELECTRICITY CARD
@@ -203,7 +210,7 @@ class TenantHomeScreen extends StatelessWidget {
                             amount: "₱${electricBill.toStringAsFixed(2)}",
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
 
                           // =========================
                           // WATER CARD
@@ -217,14 +224,14 @@ class TenantHomeScreen extends StatelessWidget {
                             amount: "₱${waterBill.toStringAsFixed(2)}",
                           ),
 
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 22),
 
                           // =========================
                           // TOTAL BILL CARD
                           // =========================
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(25),
+                            padding: const EdgeInsets.all(22),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [
@@ -232,11 +239,11 @@ class TenantHomeScreen extends StatelessWidget {
                                   Color(0xff5EDB72),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(25),
+                              borderRadius: BorderRadius.circular(22),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.green.withOpacity(0.3),
-                                  blurRadius: 15,
+                                  color: Colors.green.withOpacity(0.25),
+                                  blurRadius: 14,
                                   offset: const Offset(0, 8),
                                 ),
                               ],
@@ -247,17 +254,17 @@ class TenantHomeScreen extends StatelessWidget {
                                   "TOTAL BILL",
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 14),
                                 Text(
                                   "₱${totalBill.toStringAsFixed(2)}",
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 40,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -290,33 +297,33 @@ class TenantHomeScreen extends StatelessWidget {
     required String amount,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               icon,
               color: iconColor,
-              size: 32,
+              size: 26,
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,24 +331,24 @@ class TenantHomeScreen extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xff1D1D1F),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 13,
                     color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   amount,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: iconColor,
                   ),
