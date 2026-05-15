@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
-import 'boarding_screen.dart';
 
 class OwnerDashboard extends StatelessWidget {
   const OwnerDashboard({super.key});
@@ -54,13 +53,16 @@ class OwnerDashboard extends StatelessWidget {
                 final userData = snapshot.data!.data() as Map<String, dynamic>;
 
                 String ownerCode = userData["ownerCode"] ?? "------";
+
                 String name = userData["name"] ?? "Owner";
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      // =========================
                       // PROFILE
+                      // =========================
                       Center(
                         child: Column(
                           children: [
@@ -71,10 +73,7 @@ class OwnerDashboard extends StatelessWidget {
                                 size: 40,
                               ),
                             ),
-
                             const SizedBox(height: 10),
-
-                            // OWNER NAME
                             Text(
                               name,
                               style: const TextStyle(
@@ -82,10 +81,7 @@ class OwnerDashboard extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-
                             const SizedBox(height: 15),
-
-                            // LABEL
                             const Text(
                               "Owner Code",
                               style: TextStyle(
@@ -93,10 +89,7 @@ class OwnerDashboard extends StatelessWidget {
                                 fontSize: 14,
                               ),
                             ),
-
                             const SizedBox(height: 5),
-
-                            // OWNER CODE
                             Text(
                               ownerCode,
                               style: const TextStyle(
@@ -111,7 +104,9 @@ class OwnerDashboard extends StatelessWidget {
 
                       const SizedBox(height: 30),
 
+                      // =========================
                       // ACTION GRID
+                      // =========================
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -176,22 +171,6 @@ class OwnerDashboard extends StatelessWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => const PaymentRequestsScreen(),
-                                ),
-                              );
-                            },
-                          ),
-
-                          // BOARDING
-                          _buildActionCard(
-                            context,
-                            "Boarding",
-                            Icons.apartment,
-                            Colors.purple,
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const BoardingScreen(),
                                 ),
                               );
                             },
