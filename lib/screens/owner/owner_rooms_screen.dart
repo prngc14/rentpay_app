@@ -246,6 +246,132 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                       const Divider(),
 
                       // ======================================
+                      // TENANT INFORMATION
+                      // ======================================
+                      if (tenantId != null)
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection("users")
+                              .doc(tenantId)
+                              .get(),
+                          builder: (context, tenantSnapshot) {
+                            if (!tenantSnapshot.hasData) {
+                              return const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            final tenantData = tenantSnapshot.data!.data()
+                                as Map<String, dynamic>?;
+
+                            if (tenantData == null) {
+                              return const SizedBox();
+                            }
+
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(
+                                bottom: 15,
+                              ),
+                              padding: const EdgeInsets.all(
+                                15,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(
+                                  15,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Tenant Information",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    height: 15,
+                                  ),
+
+                                  // NAME
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.person,
+                                      ),
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          tenantData["name"] ?? "No Name",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(
+                                    height: 12,
+                                  ),
+
+                                  // PHONE
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.phone,
+                                      ),
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          tenantData["phone"] ?? "No Phone",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(
+                                    height: 12,
+                                  ),
+
+                                  // JOB
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.work,
+                                      ),
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          tenantData["job"] ?? "No Work",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                      // ======================================
                       // BILLING INFO
                       // ======================================
                       const Text(
@@ -383,8 +509,12 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                               );
                             }
                           },
-                          icon: const Icon(Icons.delete),
-                          label: const Text("Delete Room"),
+                          icon: const Icon(
+                            Icons.delete,
+                          ),
+                          label: const Text(
+                            "Delete Room",
+                          ),
                         ),
                       ),
                     ],
