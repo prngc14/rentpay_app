@@ -30,6 +30,7 @@ dependencies:
   # Blur Detection
   flutter_image_compress: ^2.3.0
 
+  fl_chart: ^0.68.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
