@@ -459,9 +459,8 @@ class FirestoreService {
     }
   }
 
-  
   // GET TENANT PAYMENTS
-  
+
   Stream<QuerySnapshot> getTenantPayments(
     String tenantId,
   ) {
