@@ -39,7 +39,10 @@ class TenantRoomScreen extends StatelessWidget {
           return FutureBuilder<QuerySnapshot>(
             future: FirebaseFirestore.instance
                 .collection("rooms")
-                .where("roomNumber", isEqualTo: roomNumber)
+                .where(
+                  "roomNumber",
+                  isEqualTo: roomNumber,
+                )
                 .limit(1)
                 .get(),
             builder: (context, roomSnapshot) {
@@ -58,34 +61,269 @@ class TenantRoomScreen extends StatelessWidget {
               final room =
                   roomSnapshot.data!.docs.first.data() as Map<String, dynamic>;
 
-              return Center(
+              double monthlyRent = (room["monthlyRent"] ?? 0).toDouble();
+
+              double electricRate = (room["electricRate"] ?? 0).toDouble();
+
+              double waterRate = (room["waterRate"] ?? 0).toDouble();
+
+              double electricConsumption =
+                  (room["electricConsumption"] ?? 0).toDouble();
+
+              double waterConsumption =
+                  (room["waterConsumption"] ?? 0).toDouble();
+
+              double electricBill = (room["electricBill"] ?? 0).toDouble();
+
+              double waterBill = (room["waterBill"] ?? 0).toDouble();
+
+              double totalBill = (room["totalBill"] ?? 0).toDouble();
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
                 child: Card(
-                  margin: const EdgeInsets.all(20),
+                  elevation: 5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.home,
-                          size: 80,
-                          color: Colors.deepOrange,
+                        const Center(
+                          child: Icon(
+                            Icons.home,
+                            size: 80,
+                            color: Colors.deepOrange,
+                          ),
                         ),
+
                         const SizedBox(height: 20),
-                        Text(
-                          "Room ${room['roomNumber']}",
-                          style: const TextStyle(
-                            fontSize: 28,
+
+                        Center(
+                          child: Text(
+                            "Room ${room["roomNumber"]}",
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 25),
+
+                        // ====================================
+                        // TENANT INFO
+                        // ====================================
+                        const Text(
+                          "Tenant Information",
+                          style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 15),
+
+                        const SizedBox(height: 10),
+
+                        ListTile(
+                          leading: const Icon(Icons.person),
+                          title: Text(
+                            userData["name"] ?? "No Name",
+                          ),
+                        ),
+
+                        ListTile(
+                          leading: const Icon(Icons.phone),
+                          title: Text(
+                            userData["phone"] ?? "No Phone",
+                          ),
+                        ),
+
+                        ListTile(
+                          leading: const Icon(Icons.email),
+                          title: Text(
+                            userData["email"] ?? "No Email",
+                          ),
+                        ),
+
+                        const Divider(height: 40),
+
+                        // ====================================
+                        // RENT
+                        // ====================================
+                        const Text(
+                          "Monthly Rent",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
                         Text(
-                          "Monthly Rent: ₱${room['monthlyRent']}",
+                          "₱${monthlyRent.toStringAsFixed(2)}",
                           style: const TextStyle(
-                            fontSize: 22,
+                            fontSize: 26,
                             color: Colors.green,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const Divider(height: 40),
+
+                        // ====================================
+                        // ELECTRIC BILL
+                        // ====================================
+                        const Text(
+                          "Electric Billing",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Text(
+                          "Previous Reading: ${room["previousElectric"]}",
+                        ),
+
+                        Text(
+                          "Current Reading: ${room["currentElectric"]}",
+                        ),
+
+                        Text(
+                          "Consumption: ${electricConsumption.toStringAsFixed(2)} kWh",
+                        ),
+
+                        Text(
+                          "Rate per kWh: ₱${electricRate.toStringAsFixed(2)}",
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "${electricConsumption.toStringAsFixed(2)} × ₱${electricRate.toStringAsFixed(2)} = ₱${electricBill.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        const Divider(height: 40),
+
+                        // ====================================
+                        // WATER BILL
+                        // ====================================
+                        const Text(
+                          "Water Billing",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Text(
+                          "Previous Reading: ${room["previousWater"]}",
+                        ),
+
+                        Text(
+                          "Current Reading: ${room["currentWater"]}",
+                        ),
+
+                        Text(
+                          "Consumption: ${waterConsumption.toStringAsFixed(2)} m³",
+                        ),
+
+                        Text(
+                          "Rate per m³: ₱${waterRate.toStringAsFixed(2)}",
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "${waterConsumption.toStringAsFixed(2)} × ₱${waterRate.toStringAsFixed(2)} = ₱${waterBill.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        const Divider(height: 40),
+
+                        // ====================================
+                        // TOTAL BILL
+                        // ====================================
+                        const Text(
+                          "Total Billing Summary",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Text(
+                          "Monthly Rent: ₱${monthlyRent.toStringAsFixed(2)}",
+                        ),
+
+                        Text(
+                          "Electric Bill: ₱${electricBill.toStringAsFixed(2)}",
+                        ),
+
+                        Text(
+                          "Water Bill: ₱${waterBill.toStringAsFixed(2)}",
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                "TOTAL BILL",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                "₱${totalBill.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
