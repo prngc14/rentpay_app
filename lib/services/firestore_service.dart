@@ -38,7 +38,9 @@ class FirestoreService {
   // ===============================
   // GET OWNER BY CODE
   // ===============================
-  Future<QueryDocumentSnapshot?> getOwnerByCode(String code) async {
+  Future<QueryDocumentSnapshot?> getOwnerByCode(
+    String code,
+  ) async {
     var query = await _db
         .collection("users")
         .where(
@@ -104,7 +106,9 @@ class FirestoreService {
   // ===============================
   // GET OWNER QR
   // ===============================
-  Future<Map<String, dynamic>?> getOwnerQR(String ownerId) async {
+  Future<Map<String, dynamic>?> getOwnerQR(
+    String ownerId,
+  ) async {
     var doc = await _db.collection("users").doc(ownerId).get();
 
     if (!doc.exists) return null;
@@ -208,6 +212,9 @@ class FirestoreService {
       // TOTAL
       "totalBill": monthlyRent,
 
+      // HISTORY
+      "history": {},
+
       "createdAt": Timestamp.now(),
     });
   }
@@ -234,36 +241,70 @@ class FirestoreService {
 
     double monthlyRent = (data["monthlyRent"] ?? 0).toDouble();
 
+    // ===============================
     // ELECTRIC
+    // ===============================
     double electricConsumption = currentElectric - previousElectric;
 
     double electricBill = electricConsumption * electricRate;
 
+    // ===============================
     // WATER
+    // ===============================
     double waterConsumption = currentWater - previousWater;
 
     double waterBill = waterConsumption * waterRate;
 
+    // ===============================
     // TOTAL
+    // ===============================
     double totalBill = monthlyRent + electricBill + waterBill;
 
+    // ===============================
+    // MONTH KEY
+    // ===============================
+    String monthKey =
+        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+
+    // ===============================
+    // UPDATE FIRESTORE
+    // ===============================
     await _db.collection("rooms").doc(roomId).update({
+      // ELECTRIC
       "previousElectric": previousElectric,
       "currentElectric": currentElectric,
       "electricConsumption": electricConsumption,
       "electricBill": electricBill,
+
+      // WATER
       "previousWater": previousWater,
       "currentWater": currentWater,
       "waterConsumption": waterConsumption,
       "waterBill": waterBill,
+
+      // TOTAL
       "totalBill": totalBill,
+
+      // ===============================
+      // HISTORY FOR ANALYTICS
+      // ===============================
+      "history.$monthKey": {
+        "month": monthKey,
+        "electricConsumption": electricConsumption,
+        "waterConsumption": waterConsumption,
+        "electricBill": electricBill,
+        "waterBill": waterBill,
+        "totalBill": totalBill,
+      },
     });
   }
 
   // ===============================
   // GET OWNER ROOMS
   // ===============================
-  Stream<QuerySnapshot> getOwnerRooms(String ownerId) {
+  Stream<QuerySnapshot> getOwnerRooms(
+    String ownerId,
+  ) {
     return _db
         .collection("rooms")
         .where(
@@ -348,9 +389,7 @@ class FirestoreService {
         "connected": true,
       });
     } catch (e) {
-      print(
-        "CONNECT ROOM ERROR: $e",
-      );
+      print("CONNECT ROOM ERROR: $e");
 
       rethrow;
     }
@@ -421,9 +460,7 @@ class FirestoreService {
         "paymentStatus": "paid",
       });
     } catch (e) {
-      print(
-        "APPROVE PAYMENT ERROR: $e",
-      );
+      print("APPROVE PAYMENT ERROR: $e");
     }
   }
 
@@ -438,9 +475,7 @@ class FirestoreService {
         "status": "rejected",
       });
     } catch (e) {
-      print(
-        "REJECT PAYMENT ERROR: $e",
-      );
+      print("REJECT PAYMENT ERROR: $e");
     }
   }
 
@@ -453,14 +488,13 @@ class FirestoreService {
     try {
       await _db.collection("payments").doc(paymentId).delete();
     } catch (e) {
-      print(
-        "DELETE PAYMENT ERROR: $e",
-      );
+      print("DELETE PAYMENT ERROR: $e");
     }
   }
 
+  // ===============================
   // GET TENANT PAYMENTS
-
+  // ===============================
   Stream<QuerySnapshot> getTenantPayments(
     String tenantId,
   ) {
