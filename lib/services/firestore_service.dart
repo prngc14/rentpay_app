@@ -241,34 +241,24 @@ class FirestoreService {
 
     double monthlyRent = (data["monthlyRent"] ?? 0).toDouble();
 
-    // ===============================
     // ELECTRIC
-    // ===============================
     double electricConsumption = currentElectric - previousElectric;
 
     double electricBill = electricConsumption * electricRate;
 
-    // ===============================
     // WATER
-    // ===============================
     double waterConsumption = currentWater - previousWater;
 
     double waterBill = waterConsumption * waterRate;
 
-    // ===============================
     // TOTAL
-    // ===============================
     double totalBill = monthlyRent + electricBill + waterBill;
 
-    // ===============================
     // MONTH KEY
-    // ===============================
     String monthKey =
         "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
 
-    // ===============================
-    // UPDATE FIRESTORE
-    // ===============================
+    // UPDATE ROOM
     await _db.collection("rooms").doc(roomId).update({
       // ELECTRIC
       "previousElectric": previousElectric,
@@ -285,9 +275,7 @@ class FirestoreService {
       // TOTAL
       "totalBill": totalBill,
 
-      // ===============================
-      // HISTORY FOR ANALYTICS
-      // ===============================
+      // HISTORY
       "history.$monthKey": {
         "month": monthKey,
         "electricConsumption": electricConsumption,
