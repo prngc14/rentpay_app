@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class TenantRoomScreen extends StatelessWidget {
   const TenantRoomScreen({super.key});
@@ -58,8 +59,9 @@ class TenantRoomScreen extends StatelessWidget {
                 );
               }
 
-              final room =
-                  roomSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+              final roomDoc = roomSnapshot.data!.docs.first;
+
+              final room = roomDoc.data() as Map<String, dynamic>;
 
               double monthlyRent = (room["monthlyRent"] ?? 0).toDouble();
 
@@ -141,9 +143,9 @@ class TenantRoomScreen extends StatelessWidget {
                         ),
 
                         ListTile(
-                          leading: const Icon(Icons.email),
+                          leading: const Icon(Icons.work),
                           title: Text(
-                            userData["email"] ?? "No Email",
+                            userData["job"] ?? "No Work",
                           ),
                         ),
 
@@ -270,6 +272,101 @@ class TenantRoomScreen extends StatelessWidget {
                         ),
 
                         const Divider(height: 40),
+
+                        // ====================================
+                        // MONTHLY ANALYTICS
+                        // ====================================
+                        const Text(
+                          "Monthly Analytics",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        SizedBox(
+                          height: 250,
+                          child: StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection("rooms")
+                                .doc(roomDoc.id)
+                                .collection("billingHistory")
+                                .orderBy("createdAt")
+                                .snapshots(),
+                            builder: (context, chartSnapshot) {
+                              if (!chartSnapshot.hasData) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              final docs = chartSnapshot.data!.docs;
+
+                              if (docs.isEmpty) {
+                                return const Center(
+                                  child: Text(
+                                    "No analytics data yet",
+                                  ),
+                                );
+                              }
+
+                              List<FlSpot> electricSpots = [];
+
+                              List<FlSpot> waterSpots = [];
+
+                              for (int i = 0; i < docs.length; i++) {
+                                final data =
+                                    docs[i].data() as Map<String, dynamic>;
+
+                                electricSpots.add(
+                                  FlSpot(
+                                    i.toDouble(),
+                                    (data["electricConsumption"] ?? 0)
+                                        .toDouble(),
+                                  ),
+                                );
+
+                                waterSpots.add(
+                                  FlSpot(
+                                    i.toDouble(),
+                                    (data["waterConsumption"] ?? 0).toDouble(),
+                                  ),
+                                );
+                              }
+
+                              return LineChart(
+                                LineChartData(
+                                  gridData: FlGridData(show: true),
+                                  borderData: FlBorderData(show: true),
+                                  titlesData: FlTitlesData(show: true),
+                                  lineBarsData: [
+                                    // ELECTRIC
+                                    LineChartBarData(
+                                      spots: electricSpots,
+                                      isCurved: true,
+                                      barWidth: 4,
+                                      dotData: FlDotData(show: true),
+                                      color: Colors.orange,
+                                    ),
+
+                                    // WATER
+                                    LineChartBarData(
+                                      spots: waterSpots,
+                                      isCurved: true,
+                                      barWidth: 4,
+                                      dotData: FlDotData(show: true),
+                                      color: Colors.blue,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
 
                         // ====================================
                         // TOTAL BILL
