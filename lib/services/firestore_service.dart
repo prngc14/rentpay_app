@@ -24,6 +24,7 @@ class FirestoreService {
       "job": "",
       "phone": "",
       "paymentStatus": "unpaid",
+      "lastPaymentDate": null,
       "gcashQr": null,
       "paymayaQr": null,
 
@@ -212,6 +213,10 @@ class FirestoreService {
       // TOTAL
       "totalBill": monthlyRent,
 
+      // PAYMENT STATUS
+      "paymentStatus": "unpaid",
+      "paidAt": null,
+
       // HISTORY
       "history": {},
 
@@ -274,6 +279,10 @@ class FirestoreService {
 
       // TOTAL
       "totalBill": totalBill,
+
+      // RESET PAYMENT STATUS EVERY BILLING UPDATE
+      "paymentStatus": "unpaid",
+      "paidAt": null,
 
       // HISTORY
       "history.$monthKey": {
@@ -366,6 +375,8 @@ class FirestoreService {
       // SAVE TENANT
       await roomDoc.reference.update({
         "tenantId": tenantId,
+        "paymentStatus": "unpaid",
+        "paidAt": null,
       });
 
       // UPDATE TENANT
@@ -374,6 +385,7 @@ class FirestoreService {
         "ownerId": ownerId,
         "approved": false,
         "paymentStatus": "unpaid",
+        "lastPaymentDate": null,
         "connected": true,
       });
     } catch (e) {
@@ -439,14 +451,43 @@ class FirestoreService {
     String tenantId,
   ) async {
     try {
+      final paymentDoc = await _db.collection("payments").doc(paymentId).get();
+
+      final paymentData = paymentDoc.data();
+
+      if (paymentData == null) return;
+
+      String roomNumber = paymentData["room"] ?? "";
+
+      Timestamp paidTime = Timestamp.now();
+
+      // UPDATE PAYMENT
       await _db.collection("payments").doc(paymentId).update({
         "status": "verified",
+        "verifiedAt": paidTime,
       });
 
+      // UPDATE USER
       await _db.collection("users").doc(tenantId).update({
         "approved": true,
         "paymentStatus": "paid",
+        "lastPaymentDate": paidTime,
       });
+
+      // FIND ROOM
+      final roomQuery = await _db
+          .collection("rooms")
+          .where("roomNumber", isEqualTo: roomNumber)
+          .where("tenantId", isEqualTo: tenantId)
+          .limit(1)
+          .get();
+
+      if (roomQuery.docs.isNotEmpty) {
+        await roomQuery.docs.first.reference.update({
+          "paymentStatus": "paid",
+          "paidAt": paidTime,
+        });
+      }
     } catch (e) {
       print("APPROVE PAYMENT ERROR: $e");
     }
