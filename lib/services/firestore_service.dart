@@ -188,6 +188,15 @@ class FirestoreService {
     String ownerId,
     double monthlyRent,
   ) async {
+    DateTime now = DateTime.now();
+
+    // DEFAULT DUE DATE
+    DateTime dueDate = DateTime(
+      now.year,
+      now.month,
+      5,
+    );
+
     await _db.collection("rooms").add({
       "roomNumber": roomNumber,
       "ownerId": ownerId,
@@ -213,9 +222,18 @@ class FirestoreService {
       // TOTAL
       "totalBill": monthlyRent,
 
-      // PAYMENT STATUS
+      // PAYMENT
       "paymentStatus": "unpaid",
       "paidAt": null,
+
+      // DUE DATE
+      "dueDate": Timestamp.fromDate(dueDate),
+
+      // OVERDUE
+      "isOverdue": false,
+
+      // BILLING MONTH
+      "billingMonth": "${now.year}-${now.month.toString().padLeft(2, '0')}",
 
       // HISTORY
       "history": {},
@@ -259,9 +277,17 @@ class FirestoreService {
     // TOTAL
     double totalBill = monthlyRent + electricBill + waterBill;
 
+    DateTime now = DateTime.now();
+
+    // DUE DATE
+    DateTime dueDate = DateTime(
+      now.year,
+      now.month,
+      5,
+    );
+
     // MONTH KEY
-    String monthKey =
-        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+    String monthKey = "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
     // UPDATE ROOM
     await _db.collection("rooms").doc(roomId).update({
@@ -280,9 +306,18 @@ class FirestoreService {
       // TOTAL
       "totalBill": totalBill,
 
-      // RESET PAYMENT STATUS EVERY BILLING UPDATE
+      // RESET PAYMENT
       "paymentStatus": "unpaid",
       "paidAt": null,
+
+      // DUE DATE
+      "dueDate": Timestamp.fromDate(dueDate),
+
+      // OVERDUE
+      "isOverdue": false,
+
+      // MONTH
+      "billingMonth": monthKey,
 
       // HISTORY
       "history.$monthKey": {
@@ -292,6 +327,8 @@ class FirestoreService {
         "electricBill": electricBill,
         "waterBill": waterBill,
         "totalBill": totalBill,
+        "paymentStatus": "unpaid",
+        "paidAt": null,
       },
     });
   }
@@ -432,14 +469,25 @@ class FirestoreService {
     double amount,
     String screenshotUrl,
   ) async {
+    DateTime now = DateTime.now();
+
+    String paymentMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
+
     await _db.collection("payments").add({
       "tenantId": tenantId,
       "ownerId": ownerId,
       "room": room,
       "amount": amount,
       "screenshot": screenshotUrl,
+
+      // STATUS
       "status": "pending",
+
+      // DATE
       "date": Timestamp.now(),
+
+      // MONTH
+      "paymentMonth": paymentMonth,
     });
   }
 
@@ -460,6 +508,8 @@ class FirestoreService {
       String roomNumber = paymentData["room"] ?? "";
 
       Timestamp paidTime = Timestamp.now();
+
+      String paymentMonth = paymentData["paymentMonth"] ?? "";
 
       // UPDATE PAYMENT
       await _db.collection("payments").doc(paymentId).update({
@@ -483,9 +533,16 @@ class FirestoreService {
           .get();
 
       if (roomQuery.docs.isNotEmpty) {
-        await roomQuery.docs.first.reference.update({
+        final roomRef = roomQuery.docs.first.reference;
+
+        await roomRef.update({
           "paymentStatus": "paid",
           "paidAt": paidTime,
+          "isOverdue": false,
+
+          // HISTORY
+          "history.$paymentMonth.paymentStatus": "paid",
+          "history.$paymentMonth.paidAt": paidTime,
         });
       }
     } catch (e) {
@@ -518,6 +575,33 @@ class FirestoreService {
       await _db.collection("payments").doc(paymentId).delete();
     } catch (e) {
       print("DELETE PAYMENT ERROR: $e");
+    }
+  }
+
+  // ===============================
+  // CHECK OVERDUE
+  // ===============================
+  Future<void> checkOverdueRooms() async {
+    final rooms = await _db.collection("rooms").get();
+
+    DateTime now = DateTime.now();
+
+    for (var room in rooms.docs) {
+      final data = room.data();
+
+      Timestamp? dueTimestamp = data["dueDate"];
+
+      if (dueTimestamp == null) continue;
+
+      DateTime dueDate = dueTimestamp.toDate();
+
+      String paymentStatus = data["paymentStatus"] ?? "unpaid";
+
+      bool overdue = now.isAfter(dueDate) && paymentStatus != "paid";
+
+      await room.reference.update({
+        "isOverdue": overdue,
+      });
     }
   }
 
