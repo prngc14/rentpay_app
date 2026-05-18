@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class TenantHomeScreen extends StatelessWidget {
   const TenantHomeScreen({super.key});
@@ -93,6 +94,34 @@ class TenantHomeScreen extends StatelessWidget {
 
               double totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
+              String paymentStatus = roomData["paymentStatus"] ?? "unpaid";
+
+              bool isOverdue = roomData["isOverdue"] ?? false;
+
+              Timestamp? dueTimestamp = roomData["dueDate"];
+
+              Timestamp? paidAt = roomData["paidAt"];
+
+              String dueDate = "No due date";
+
+              if (dueTimestamp != null) {
+                dueDate = DateFormat(
+                  "MMMM dd, yyyy",
+                ).format(
+                  dueTimestamp.toDate(),
+                );
+              }
+
+              String paidDate = "Not paid yet";
+
+              if (paidAt != null) {
+                paidDate = DateFormat(
+                  "MMMM dd, yyyy - hh:mm a",
+                ).format(
+                  paidAt.toDate(),
+                );
+              }
+
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(18),
@@ -120,6 +149,59 @@ class TenantHomeScreen extends StatelessWidget {
                         style: TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // =========================
+                      // PAYMENT STATUS
+                      // =========================
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: paymentStatus == "paid"
+                              ? Colors.green.shade50
+                              : isOverdue
+                                  ? Colors.red.shade50
+                                  : Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              paymentStatus == "paid"
+                                  ? "PAID"
+                                  : isOverdue
+                                      ? "OVERDUE"
+                                      : "UNPAID",
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: paymentStatus == "paid"
+                                    ? Colors.green
+                                    : isOverdue
+                                        ? Colors.red
+                                        : Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "Due Date: $dueDate",
+                              style: const TextStyle(
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              "Paid Date: $paidDate",
+                              style: const TextStyle(
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
