@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'owner_rooms_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,8 +8,53 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
 
-class OwnerDashboard extends StatelessWidget {
+class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
+
+  @override
+  State<OwnerDashboard> createState() => _OwnerDashboardState();
+}
+
+class _OwnerDashboardState extends State<OwnerDashboard> {
+  @override
+  void initState() {
+    super.initState();
+
+    generateOwnerCode();
+  }
+
+  // =========================================
+  // GENERATE 6 DIGIT OWNER CODE
+  // =========================================
+  Future<void> generateOwnerCode() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    final data = doc.data();
+
+    // IF NO OWNER CODE YET
+    if (data == null ||
+        data["ownerCode"] == null ||
+        data["ownerCode"].toString().isEmpty) {
+      final random = Random();
+
+      String code = (100000 + random.nextInt(900000)).toString();
+
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .update({
+        "ownerCode": code,
+        "role": "owner",
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +100,7 @@ class OwnerDashboard extends StatelessWidget {
                 final userData = snapshot.data!.data() as Map<String, dynamic>;
 
                 String ownerCode = userData["ownerCode"] ?? "------";
+
                 String name = userData["name"] ?? "Owner";
 
                 return SingleChildScrollView(
@@ -89,12 +137,27 @@ class OwnerDashboard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 5),
-                            Text(
-                              ownerCode,
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 4,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 25,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.deepOrange.withOpacity(
+                                  0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  15,
+                                ),
+                              ),
+                              child: Text(
+                                ownerCode,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 5,
+                                  color: Colors.deepOrange,
+                                ),
                               ),
                             ),
                           ],
@@ -108,13 +171,19 @@ class OwnerDashboard extends StatelessWidget {
                       // =========================
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(
+                          18,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(
+                            18,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withOpacity(
+                                0.08,
+                              ),
                               blurRadius: 10,
                             ),
                           ],
@@ -153,7 +222,9 @@ class OwnerDashboard extends StatelessWidget {
                                   user.uid,
                                 );
                               },
-                              icon: const Icon(Icons.visibility),
+                              icon: const Icon(
+                                Icons.visibility,
+                              ),
                               label: const Text(
                                 "View IDs",
                               ),
@@ -255,8 +326,14 @@ class OwnerDashboard extends StatelessWidget {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection("users")
-                  .where("ownerId", isEqualTo: ownerId)
-                  .where("role", isEqualTo: "tenant")
+                  .where(
+                    "ownerId",
+                    isEqualTo: ownerId,
+                  )
+                  .where(
+                    "role",
+                    isEqualTo: "tenant",
+                  )
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -280,24 +357,26 @@ class OwnerDashboard extends StatelessWidget {
                     final data = tenant.data() as Map<String, dynamic>;
 
                     String name = data["name"] ?? "No Name";
+
                     String job = data["job"] ?? "No Work";
+
                     String phone = data["phone"] ?? "No Phone";
+
                     String room = data["room"] ?? "No Room";
+
                     String image = data["workIdUrl"] ?? "";
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                      margin: const EdgeInsets.only(
+                        bottom: 15,
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(
+                          12,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // =========================
-                            // ID IMAGE
-                            // =========================
                             GestureDetector(
                               onTap: () {
                                 showDialog(
@@ -305,9 +384,6 @@ class OwnerDashboard extends StatelessWidget {
                                   builder: (_) {
                                     return Dialog(
                                       child: InteractiveViewer(
-                                        panEnabled: true,
-                                        minScale: 0.5,
-                                        maxScale: 4,
                                         child: Image.network(
                                           image,
                                           fit: BoxFit.contain,
@@ -321,13 +397,17 @@ class OwnerDashboard extends StatelessWidget {
                                 width: double.infinity,
                                 height: 180,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    12,
+                                  ),
                                   border: Border.all(
                                     color: Colors.grey.shade300,
                                   ),
                                   image: image.isNotEmpty
                                       ? DecorationImage(
-                                          image: NetworkImage(image),
+                                          image: NetworkImage(
+                                            image,
+                                          ),
                                           fit: BoxFit.cover,
                                         )
                                       : null,
@@ -343,9 +423,7 @@ class OwnerDashboard extends StatelessWidget {
                                     : null,
                               ),
                             ),
-
                             const SizedBox(height: 15),
-
                             Text(
                               name,
                               style: const TextStyle(
@@ -353,47 +431,10 @@ class OwnerDashboard extends StatelessWidget {
                                 fontSize: 20,
                               ),
                             ),
-
                             const SizedBox(height: 10),
-
-                            Row(
-                              children: [
-                                const Icon(Icons.work, size: 18),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(job),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 5),
-
-                            Row(
-                              children: [
-                                const Icon(Icons.phone, size: 18),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(phone),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 5),
-
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.meeting_room,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    "Room: $room",
-                                  ),
-                                ),
-                              ],
-                            ),
+                            Text("Job: $job"),
+                            Text("Phone: $phone"),
+                            Text("Room: $room"),
                           ],
                         ),
                       ),
@@ -457,6 +498,7 @@ class OwnerDashboard extends StatelessWidget {
     String ownerId,
   ) {
     final roomController = TextEditingController();
+
     final rentController = TextEditingController();
 
     showDialog(
