@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../services/auth_service.dart';
+
 import 'register_screen.dart';
-import '../owner/owner_dashboard.dart';
-import '../tenant/tenant_dashboard.dart';
+import 'role_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +15,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
+
   final passwordController = TextEditingController();
+
   final AuthService _auth = AuthService();
 
   bool isLoading = false;
@@ -31,29 +34,27 @@ class _LoginScreenState extends State<LoginScreen> {
         passwordController.text.trim(),
       );
 
-      if (user == null) throw Exception("Login failed");
-
-      var doc = await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .get();
-
-      String role = doc.data()?['role'] ?? "tenant";
-
-      if (role == "owner") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OwnerDashboard()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TenantDashboard()),
-        );
+      if (user == null) {
+        throw Exception("Login failed");
       }
+
+      // CHECK USER DOCUMENT
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+
+      // GO TO ROLE SELECTION
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const RoleSelectionScreen(),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(
+          content: Text(
+            e.toString(),
+          ),
+        ),
       );
     }
 
@@ -69,36 +70,42 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       var user = await _auth.signInWithGoogle();
 
-      if (user == null) return;
-
-      var doc = await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .get();
-
-      String role = doc.data()?['role'] ?? "tenant";
-
-      if (role == "owner") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OwnerDashboard()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TenantDashboard()),
+      if (user == null) {
+        throw Exception(
+          "Google login cancelled",
         );
       }
+
+      // CHECK USER DOCUMENT
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+
+      // GO TO ROLE SELECTION
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const RoleSelectionScreen(),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(
+          content: Text(
+            e.toString(),
+          ),
+        ),
       );
     }
 
     setState(() => isLoading = false);
   }
 
-  InputDecoration inputStyle(String label, IconData icon) {
+  // ===============================
+  // INPUT STYLE
+  // ===============================
+  InputDecoration inputStyle(
+    String label,
+    IconData icon,
+  ) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
@@ -124,12 +131,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 BoxShadow(
                   color: Colors.black12,
                   blurRadius: 10,
-                )
+                ),
               ],
             ),
             child: Column(
               children: [
-                const Icon(Icons.home, size: 70, color: Colors.deepOrange),
+                const Icon(
+                  Icons.home,
+                  size: 70,
+                  color: Colors.deepOrange,
+                ),
+
                 const SizedBox(height: 10),
 
                 const Text(
@@ -145,7 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // EMAIL
                 TextField(
                   controller: emailController,
-                  decoration: inputStyle("Email", Icons.email),
+                  decoration: inputStyle(
+                    "Email",
+                    Icons.email,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -154,7 +169,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: passwordController,
                   obscureText: true,
-                  decoration: inputStyle("Password", Icons.lock),
+                  decoration: inputStyle(
+                    "Password",
+                    Icons.lock,
+                  ),
                 ),
 
                 const SizedBox(height: 25),
@@ -166,14 +184,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: isLoading ? null : loginUser,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(
+                          15,
+                        ),
                       ),
                     ),
                     child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Login"),
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : const Text(
+                            "Login",
+                          ),
                   ),
                 ),
 
@@ -184,12 +210,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: isLoading ? null : googleLogin,
-                    icon: const Icon(Icons.login),
-                    label: const Text("Continue with Google"),
+                    icon: const Icon(
+                      Icons.login,
+                    ),
+                    label: const Text(
+                      "Continue with Google",
+                    ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(
+                          15,
+                        ),
                       ),
                     ),
                   ),
@@ -207,7 +241,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     );
                   },
-                  child: const Text("Create Account"),
+                  child: const Text(
+                    "Create Account",
+                  ),
                 ),
               ],
             ),
