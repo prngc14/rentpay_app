@@ -23,7 +23,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   String room = "";
   String ownerId = "";
+
   double rent = 0;
+  double waterBill = 0;
+  double electricBill = 0;
+  double totalBill = 0;
 
   String? gcashQR;
   String? mayaQR;
@@ -98,6 +102,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final roomData = roomQuery.docs.first.data();
 
         rent = (roomData["monthlyRent"] ?? 0).toDouble();
+
+        waterBill = (roomData["waterBill"] ?? 0).toDouble();
+
+        electricBill = (roomData["electricBill"] ?? 0).toDouble();
+
+        totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
         // AUTO FIX IF TENANT NOT SAVED
         if (roomData["tenantId"] == null ||
@@ -233,7 +243,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         user.uid,
         ownerId,
         room,
-        rent,
+        totalBill,
         url,
       );
 
@@ -263,10 +273,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   // CONFIRM PAYMENT
   // ======================================
   void confirmPayment() {
-    if (rent <= 0) {
+    if (totalBill <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("No room rent found"),
+          content: Text("No bill found"),
         ),
       );
       return;
@@ -277,7 +287,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       builder: (_) => AlertDialog(
         title: const Text("Confirm Payment"),
         content: Text(
-          "Upload proof of payment for ₱$rent ?",
+          "Upload proof of payment for ₱$totalBill ?",
         ),
         actions: [
           TextButton(
@@ -328,11 +338,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 20),
                           Text(
-                            "Rent: ₱$rent",
+                            "Room Rent: ₱$rent",
                             style: const TextStyle(
-                              fontSize: 24,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Water Bill: ₱$waterBill",
+                            style: const TextStyle(
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Electric Bill: ₱$electricBill",
+                            style: const TextStyle(
+                              fontSize: 18,
+                            ),
+                          ),
+                          const Divider(
+                            height: 30,
+                            thickness: 1,
+                          ),
+                          Text(
+                            "Total: ₱$totalBill",
+                            style: const TextStyle(
+                              fontSize: 28,
                               color: Colors.green,
                               fontWeight: FontWeight.bold,
                             ),
