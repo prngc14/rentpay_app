@@ -53,14 +53,32 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
 
       ownerId = ownerDoc.id;
 
-      // GET AVAILABLE ROOMS
+      // =====================================
+      // GET ROOMS
+      // =====================================
       final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("ownerId", isEqualTo: ownerId)
-          .where("tenantId", isEqualTo: null)
           .get();
 
-      availableRooms = roomQuery.docs;
+      // =====================================
+      // FILTER AVAILABLE ROOMS ONLY
+      // =====================================
+      availableRooms = roomQuery.docs.where((roomDoc) {
+        final data = roomDoc.data();
+
+        // AVAILABLE
+        if (data["tenantId"] == null) {
+          return true;
+        }
+
+        if (data["tenantId"].toString().isEmpty) {
+          return true;
+        }
+
+        // OCCUPIED
+        return false;
+      }).toList();
 
       if (availableRooms.isEmpty) {
         throw "No available rooms";
@@ -101,6 +119,12 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
       );
 
       final roomData = roomDoc.data() as Map<String, dynamic>;
+
+      // CHECK AGAIN IF OCCUPIED
+      if (roomData["tenantId"] != null &&
+          roomData["tenantId"].toString().isNotEmpty) {
+        throw "Room already occupied";
+      }
 
       // UPDATE ROOM
       await FirebaseFirestore.instance
@@ -166,7 +190,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
 
             const SizedBox(height: 20),
 
-            // CONNECT BUTTON
+            // FIND ROOMS BUTTON
             ElevatedButton(
               onPressed: loading ? null : connectToOwner,
               style: ElevatedButton.styleFrom(
@@ -201,20 +225,39 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
                           final room = availableRooms[index].data()
                               as Map<String, dynamic>;
 
+                          final bool occupied = room["tenantId"] != null &&
+                              room["tenantId"].toString().isNotEmpty;
+
                           return Card(
                             child: RadioListTile(
                               value: availableRooms[index].id,
                               groupValue: selectedRoom,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedRoom = value.toString();
-                                });
-                              },
+                              onChanged: occupied
+                                  ? null
+                                  : (value) {
+                                      setState(() {
+                                        selectedRoom = value.toString();
+                                      });
+                                    },
                               title: Text(
                                 "Room ${room["roomNumber"]}",
                               ),
-                              subtitle: Text(
-                                "Rent: ₱${room["monthlyRent"]}",
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Rent: ₱${room["monthlyRent"]}",
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    occupied ? "Occupied" : "Available",
+                                    style: TextStyle(
+                                      color:
+                                          occupied ? Colors.red : Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
