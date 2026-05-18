@@ -11,180 +11,115 @@ class FirestoreService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // =====================================================
+  // ===============================
   // CREATE USER
-  // =====================================================
+  // ===============================
   Future<void> createUser(
     UserModel user,
   ) async {
     await _db.collection("users").doc(user.uid).set({
       ...user.toMap(),
 
-      // DEFAULT INFO
+      // DEFAULT FIELDS
       "job": "",
       "phone": "",
-
-      // PAYMENT
       "paymentStatus": "unpaid",
       "lastPaymentDate": null,
-
-      // QR
       "gcashQr": null,
       "paymayaQr": null,
 
       // CONNECTION
-      "ownerId": "",
+      "ownerId": null,
       "room": "",
       "approved": false,
       "connected": false,
-
-      // ROLE
-      "role": user.role,
-
-      // OWNER CODE
-      "ownerCode": "",
-
-      // CREATED
-      "createdAt": Timestamp.now(),
     });
   }
 
-  // =====================================================
+  // ===============================
   // GET OWNER BY CODE
-  // =====================================================
+  // ===============================
   Future<QueryDocumentSnapshot?> getOwnerByCode(
     String code,
   ) async {
-    final query = await _db
+    var query = await _db
         .collection("users")
-        .where("ownerCode", isEqualTo: code)
-        .where("role", isEqualTo: "owner")
+        .where(
+          "ownerCode",
+          isEqualTo: code,
+        )
+        .where(
+          "role",
+          isEqualTo: "owner",
+        )
         .limit(1)
         .get();
 
-    if (query.docs.isEmpty) {
-      return null;
-    }
+    if (query.docs.isEmpty) return null;
 
     return query.docs.first;
   }
 
-  // =====================================================
-  // CONNECT TENANT USING OWNER CODE ONLY
-  // =====================================================
+  // ===============================
+  // CONNECT TENANT USING OWNER CODE
+  // ===============================
   Future<void> connectTenantByCode(
     String code,
   ) async {
     final user = _auth.currentUser;
 
     if (user == null) {
-      throw Exception("User not logged in");
+      throw Exception(
+        "User not logged in",
+      );
     }
 
-    final ownerQuery = await _db
+    var ownerQuery = await _db
         .collection("users")
-        .where("ownerCode", isEqualTo: code)
-        .where("role", isEqualTo: "owner")
+        .where(
+          "ownerCode",
+          isEqualTo: code,
+        )
+        .where(
+          "role",
+          isEqualTo: "owner",
+        )
         .limit(1)
         .get();
 
     if (ownerQuery.docs.isEmpty) {
-      throw Exception("Owner not found");
+      throw Exception(
+        "Owner not found",
+      );
     }
 
-    final ownerId = ownerQuery.docs.first.id;
+    final ownerDoc = ownerQuery.docs.first;
+
+    final ownerId = ownerDoc.id;
 
     await _db.collection("users").doc(user.uid).update({
       "ownerId": ownerId,
       "connected": true,
+      "approved": false,
     });
   }
 
-  // =====================================================
-  // CONNECT TENANT TO ROOM
-  // =====================================================
-  Future<void> connectTenantToRoom(
-    String roomNumber,
-    String tenantId,
-    String ownerCode,
-  ) async {
-    try {
-      // FIND OWNER
-      final ownerQuery = await _db
-          .collection("users")
-          .where("ownerCode", isEqualTo: ownerCode)
-          .where("role", isEqualTo: "owner")
-          .limit(1)
-          .get();
-
-      if (ownerQuery.docs.isEmpty) {
-        throw Exception("Owner not found");
-      }
-
-      final ownerId = ownerQuery.docs.first.id;
-
-      // FIND ROOM
-      final roomQuery = await _db
-          .collection("rooms")
-          .where("roomNumber", isEqualTo: roomNumber)
-          .where("ownerId", isEqualTo: ownerId)
-          .limit(1)
-          .get();
-
-      if (roomQuery.docs.isEmpty) {
-        throw Exception("Room not found");
-      }
-
-      final roomDoc = roomQuery.docs.first;
-
-      final roomData = roomDoc.data();
-
-      // CHECK IF OCCUPIED
-      if (roomData["tenantId"] != null &&
-          roomData["tenantId"].toString().isNotEmpty) {
-        throw Exception("Room already occupied");
-      }
-
-      // UPDATE ROOM
-      await roomDoc.reference.update({
-        "tenantId": tenantId,
-        "paymentStatus": "unpaid",
-        "paidAt": null,
-      });
-
-      // UPDATE USER
-      await _db.collection("users").doc(tenantId).update({
-        "ownerId": ownerId,
-        "room": roomNumber,
-        "connected": true,
-        "approved": true,
-        "paymentStatus": "unpaid",
-        "lastPaymentDate": null,
-      });
-    } catch (e) {
-      print("CONNECT ROOM ERROR: $e");
-      rethrow;
-    }
-  }
-
-  // =====================================================
+  // ===============================
   // GET OWNER QR
-  // =====================================================
+  // ===============================
   Future<Map<String, dynamic>?> getOwnerQR(
     String ownerId,
   ) async {
-    final doc = await _db.collection("users").doc(ownerId).get();
+    var doc = await _db.collection("users").doc(ownerId).get();
 
-    if (!doc.exists) {
-      return null;
-    }
+    if (!doc.exists) return null;
 
     return doc.data();
   }
 
-  // =====================================================
+  // ===============================
   // SAVE OWNER QR
-  // =====================================================
+  // ===============================
   Future<void> saveOwnerQR(
     String ownerId,
     String? gcashUrl,
@@ -196,28 +131,24 @@ class FirestoreService {
     });
   }
 
-  // =====================================================
+  // ===============================
   // GET CURRENT OWNER QR DATA
-  // =====================================================
+  // ===============================
   Future<Map<String, dynamic>?> getOwnerQrData() async {
     final user = _auth.currentUser;
 
-    if (user == null) {
-      return null;
-    }
+    if (user == null) return null;
 
     final doc = await _db.collection("users").doc(user.uid).get();
 
-    if (!doc.exists) {
-      return null;
-    }
+    if (!doc.exists) return null;
 
     return doc.data();
   }
 
-  // =====================================================
+  // ===============================
   // UPLOAD OWNER QR IMAGE
-  // =====================================================
+  // ===============================
   Future<void> uploadOwnerQr({
     required File file,
     required String type,
@@ -225,29 +156,33 @@ class FirestoreService {
     final user = _auth.currentUser;
 
     if (user == null) {
-      throw Exception("User not logged in");
+      throw Exception(
+        "User not logged in",
+      );
     }
 
     final imageUrl = await uploadToCloudinary(file);
 
     if (imageUrl == null) {
-      throw Exception("Cloudinary upload failed");
+      throw Exception(
+        "Cloudinary upload failed",
+      );
     }
 
     if (type == "gcash") {
       await _db.collection("users").doc(user.uid).update({
         "gcashQr": imageUrl,
       });
-    } else {
+    } else if (type == "maya") {
       await _db.collection("users").doc(user.uid).update({
         "paymayaQr": imageUrl,
       });
     }
   }
 
-  // =====================================================
+  // ===============================
   // CREATE ROOM
-  // =====================================================
+  // ===============================
   Future<void> createRoom(
     String roomNumber,
     String ownerId,
@@ -255,10 +190,11 @@ class FirestoreService {
   ) async {
     DateTime now = DateTime.now();
 
+    // DEFAULT DUE DATE
     DateTime dueDate = DateTime(
       now.year,
       now.month,
-      10,
+      5,
     );
 
     await _db.collection("rooms").add({
@@ -279,7 +215,7 @@ class FirestoreService {
       // WATER
       "previousWater": 0,
       "currentWater": 0,
-      "waterRate": 35,
+      "waterRate": 30,
       "waterConsumption": 0,
       "waterBill": 0,
 
@@ -290,7 +226,7 @@ class FirestoreService {
       "paymentStatus": "unpaid",
       "paidAt": null,
 
-      // DUE
+      // DUE DATE
       "dueDate": Timestamp.fromDate(dueDate),
 
       // OVERDUE
@@ -302,14 +238,13 @@ class FirestoreService {
       // HISTORY
       "history": {},
 
-      // CREATED
       "createdAt": Timestamp.now(),
     });
   }
 
-  // =====================================================
+  // ===============================
   // UPDATE ROOM BILLING
-  // =====================================================
+  // ===============================
   Future<void> updateRoomBilling({
     required String roomId,
     required double previousElectric,
@@ -325,25 +260,17 @@ class FirestoreService {
 
     double electricRate = (data["electricRate"] ?? 12).toDouble();
 
-    double waterRate = (data["waterRate"] ?? 35).toDouble();
+    double waterRate = (data["waterRate"] ?? 30).toDouble();
 
     double monthlyRent = (data["monthlyRent"] ?? 0).toDouble();
 
     // ELECTRIC
     double electricConsumption = currentElectric - previousElectric;
 
-    if (electricConsumption < 0) {
-      electricConsumption = 0;
-    }
-
     double electricBill = electricConsumption * electricRate;
 
     // WATER
     double waterConsumption = currentWater - previousWater;
-
-    if (waterConsumption < 0) {
-      waterConsumption = 0;
-    }
 
     double waterBill = waterConsumption * waterRate;
 
@@ -352,14 +279,17 @@ class FirestoreService {
 
     DateTime now = DateTime.now();
 
+    // DUE DATE
     DateTime dueDate = DateTime(
       now.year,
       now.month,
-      10,
+      5,
     );
 
+    // MONTH KEY
     String monthKey = "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
+    // UPDATE ROOM
     await _db.collection("rooms").doc(roomId).update({
       // ELECTRIC
       "previousElectric": previousElectric,
@@ -403,21 +333,108 @@ class FirestoreService {
     });
   }
 
-  // =====================================================
+  // ===============================
   // GET OWNER ROOMS
-  // =====================================================
+  // ===============================
   Stream<QuerySnapshot> getOwnerRooms(
     String ownerId,
   ) {
     return _db
         .collection("rooms")
-        .where("ownerId", isEqualTo: ownerId)
+        .where(
+          "ownerId",
+          isEqualTo: ownerId,
+        )
         .snapshots();
   }
 
-  // =====================================================
+  // ===============================
+  // CONNECT TENANT TO ROOM
+  // ===============================
+  Future<void> connectTenantToRoom(
+    String roomNumber,
+    String tenantId,
+    String ownerCode,
+  ) async {
+    try {
+      // FIND OWNER
+      var ownerQuery = await _db
+          .collection("users")
+          .where(
+            "ownerCode",
+            isEqualTo: ownerCode,
+          )
+          .where(
+            "role",
+            isEqualTo: "owner",
+          )
+          .limit(1)
+          .get();
+
+      if (ownerQuery.docs.isEmpty) {
+        throw Exception(
+          "Owner not found",
+        );
+      }
+
+      String ownerId = ownerQuery.docs.first.id;
+
+      // FIND ROOM
+      var roomQuery = await _db
+          .collection("rooms")
+          .where(
+            "roomNumber",
+            isEqualTo: roomNumber,
+          )
+          .where(
+            "ownerId",
+            isEqualTo: ownerId,
+          )
+          .limit(1)
+          .get();
+
+      if (roomQuery.docs.isEmpty) {
+        throw Exception(
+          "Room does not exist",
+        );
+      }
+
+      var roomDoc = roomQuery.docs.first;
+
+      // CHECK OCCUPIED
+      if (roomDoc["tenantId"] != null &&
+          roomDoc["tenantId"].toString().isNotEmpty) {
+        throw Exception(
+          "Room already occupied",
+        );
+      }
+
+      // SAVE TENANT
+      await roomDoc.reference.update({
+        "tenantId": tenantId,
+        "paymentStatus": "unpaid",
+        "paidAt": null,
+      });
+
+      // UPDATE TENANT
+      await _db.collection("users").doc(tenantId).update({
+        "room": roomNumber,
+        "ownerId": ownerId,
+        "approved": false,
+        "paymentStatus": "unpaid",
+        "lastPaymentDate": null,
+        "connected": true,
+      });
+    } catch (e) {
+      print("CONNECT ROOM ERROR: $e");
+
+      rethrow;
+    }
+  }
+
+  // ===============================
   // APPROVE TENANT
-  // =====================================================
+  // ===============================
   Future<void> approveTenant(
     String tenantId,
   ) async {
@@ -426,9 +443,9 @@ class FirestoreService {
     });
   }
 
-  // =====================================================
+  // ===============================
   // UPDATE TENANT PROFILE
-  // =====================================================
+  // ===============================
   Future<void> updateTenantInfo(
     String tenantId,
     String name,
@@ -442,9 +459,9 @@ class FirestoreService {
     });
   }
 
-  // =====================================================
+  // ===============================
   // SUBMIT PAYMENT
-  // =====================================================
+  // ===============================
   Future<void> submitPayment(
     String tenantId,
     String ownerId,
@@ -456,7 +473,6 @@ class FirestoreService {
 
     String paymentMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
-    // SAVE PAYMENT
     await _db.collection("payments").add({
       "tenantId": tenantId,
       "ownerId": ownerId,
@@ -473,25 +489,11 @@ class FirestoreService {
       // MONTH
       "paymentMonth": paymentMonth,
     });
-
-    // UPDATE ROOM STATUS
-    final roomQuery = await _db
-        .collection("rooms")
-        .where("roomNumber", isEqualTo: room)
-        .where("ownerId", isEqualTo: ownerId)
-        .limit(1)
-        .get();
-
-    if (roomQuery.docs.isNotEmpty) {
-      await roomQuery.docs.first.reference.update({
-        "paymentStatus": "pending",
-      });
-    }
   }
 
-  // =====================================================
+  // ===============================
   // APPROVE PAYMENT
-  // =====================================================
+  // ===============================
   Future<void> approvePayment(
     String paymentId,
     String tenantId,
@@ -505,8 +507,6 @@ class FirestoreService {
 
       String roomNumber = paymentData["room"] ?? "";
 
-      String ownerId = paymentData["ownerId"] ?? "";
-
       Timestamp paidTime = Timestamp.now();
 
       String paymentMonth = paymentData["paymentMonth"] ?? "";
@@ -519,6 +519,7 @@ class FirestoreService {
 
       // UPDATE USER
       await _db.collection("users").doc(tenantId).update({
+        "approved": true,
         "paymentStatus": "paid",
         "lastPaymentDate": paidTime,
       });
@@ -527,12 +528,14 @@ class FirestoreService {
       final roomQuery = await _db
           .collection("rooms")
           .where("roomNumber", isEqualTo: roomNumber)
-          .where("ownerId", isEqualTo: ownerId)
+          .where("tenantId", isEqualTo: tenantId)
           .limit(1)
           .get();
 
       if (roomQuery.docs.isNotEmpty) {
-        await roomQuery.docs.first.reference.update({
+        final roomRef = roomQuery.docs.first.reference;
+
+        await roomRef.update({
           "paymentStatus": "paid",
           "paidAt": paidTime,
           "isOverdue": false,
@@ -547,9 +550,9 @@ class FirestoreService {
     }
   }
 
-  // =====================================================
+  // ===============================
   // REJECT PAYMENT
-  // =====================================================
+  // ===============================
   Future<void> rejectPayment(
     String paymentId,
   ) async {
@@ -562,9 +565,9 @@ class FirestoreService {
     }
   }
 
-  // =====================================================
+  // ===============================
   // DELETE PAYMENT
-  // =====================================================
+  // ===============================
   Future<void> deletePayment(
     String paymentId,
   ) async {
@@ -575,9 +578,9 @@ class FirestoreService {
     }
   }
 
-  // =====================================================
+  // ===============================
   // CHECK OVERDUE
-  // =====================================================
+  // ===============================
   Future<void> checkOverdueRooms() async {
     final rooms = await _db.collection("rooms").get();
 
@@ -588,9 +591,7 @@ class FirestoreService {
 
       Timestamp? dueTimestamp = data["dueDate"];
 
-      if (dueTimestamp == null) {
-        continue;
-      }
+      if (dueTimestamp == null) continue;
 
       DateTime dueDate = dueTimestamp.toDate();
 
@@ -604,48 +605,66 @@ class FirestoreService {
     }
   }
 
-  // =====================================================
+  // ===============================
   // GET TENANT PAYMENTS
-  // =====================================================
+  // ===============================
   Stream<QuerySnapshot> getTenantPayments(
     String tenantId,
   ) {
     return _db
         .collection("payments")
-        .where("tenantId", isEqualTo: tenantId)
-        .orderBy("date", descending: true)
+        .where(
+          "tenantId",
+          isEqualTo: tenantId,
+        )
+        .orderBy(
+          "date",
+          descending: true,
+        )
         .snapshots();
   }
 
-  // =====================================================
+  // ===============================
   // GET OWNER PAYMENTS
-  // =====================================================
+  // ===============================
   Stream<QuerySnapshot> getOwnerPayments(
     String ownerId,
   ) {
     return _db
         .collection("payments")
-        .where("ownerId", isEqualTo: ownerId)
-        .orderBy("date", descending: true)
+        .where(
+          "ownerId",
+          isEqualTo: ownerId,
+        )
+        .orderBy(
+          "date",
+          descending: true,
+        )
         .snapshots();
   }
 
-  // =====================================================
+  // ===============================
   // GET OWNER TENANTS
-  // =====================================================
+  // ===============================
   Stream<QuerySnapshot> getOwnerTenants(
     String ownerId,
   ) {
     return _db
         .collection("users")
-        .where("ownerId", isEqualTo: ownerId)
-        .where("role", isEqualTo: "tenant")
+        .where(
+          "ownerId",
+          isEqualTo: ownerId,
+        )
+        .where(
+          "role",
+          isEqualTo: "tenant",
+        )
         .snapshots();
   }
 
-  // =====================================================
+  // ===============================
   // GET CURRENT USER DATA
-  // =====================================================
+  // ===============================
   Stream<DocumentSnapshot> getCurrentUserData() {
     final user = _auth.currentUser;
 
