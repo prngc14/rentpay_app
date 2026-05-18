@@ -77,8 +77,34 @@ class TenantHomeScreen extends StatelessWidget {
                 );
               }
 
-              final roomData =
-                  roomSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+              final roomDoc = roomSnapshot.data!.docs.first;
+
+              final roomData = roomDoc.data() as Map<String, dynamic>;
+
+              // =========================================
+              // AUTO FIX TENANT ID
+              // =========================================
+              if (roomData["tenantId"] == null ||
+                  roomData["tenantId"].toString().isEmpty) {
+                FirebaseFirestore.instance
+                    .collection("rooms")
+                    .doc(roomDoc.id)
+                    .update({
+                  "tenantId": user.uid,
+                });
+              }
+
+              // =========================================
+              // AUTO FIX PAYMENT STATUS
+              // =========================================
+              if (roomData["paymentStatus"] == null) {
+                FirebaseFirestore.instance
+                    .collection("rooms")
+                    .doc(roomDoc.id)
+                    .update({
+                  "paymentStatus": "unpaid",
+                });
+              }
 
               double rent = (roomData["monthlyRent"] ?? 0).toDouble();
 
@@ -122,6 +148,16 @@ class TenantHomeScreen extends StatelessWidget {
                 );
               }
 
+              Color statusColor;
+
+              if (paymentStatus == "paid") {
+                statusColor = Colors.green;
+              } else if (isOverdue) {
+                statusColor = Colors.red;
+              } else {
+                statusColor = Colors.orange;
+              }
+
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(18),
@@ -130,71 +166,83 @@ class TenantHomeScreen extends StatelessWidget {
                     children: [
                       const SizedBox(height: 20),
 
-                      // =========================
+                      // =========================================
                       // TITLE
-                      // =========================
+                      // =========================================
                       const Text(
                         "Monthly Billing",
                         style: TextStyle(
-                          fontSize: 23,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Color(0xff1D1D1F),
                         ),
                       ),
 
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 6),
 
                       const Text(
                         "Here’s your billing breakdown for this month.",
                         style: TextStyle(
                           color: Colors.grey,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
 
-                      // =========================
+                      // =========================================
                       // PAYMENT STATUS
-                      // =========================
+                      // =========================================
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: paymentStatus == "paid"
-                              ? Colors.green.shade50
-                              : isOverdue
-                                  ? Colors.red.shade50
-                                  : Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(20),
+                          color: statusColor.withOpacity(
+                            0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            22,
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              paymentStatus == "paid"
-                                  ? "PAID"
-                                  : isOverdue
-                                      ? "OVERDUE"
-                                      : "UNPAID",
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: paymentStatus == "paid"
-                                    ? Colors.green
-                                    : isOverdue
-                                        ? Colors.red
-                                        : Colors.orange,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  paymentStatus == "paid"
+                                      ? Icons.check_circle
+                                      : isOverdue
+                                          ? Icons.warning
+                                          : Icons.access_time,
+                                  color: statusColor,
+                                  size: 28,
+                                ),
+                                const SizedBox(
+                                  width: 10,
+                                ),
+                                Text(
+                                  paymentStatus == "paid"
+                                      ? "PAID"
+                                      : isOverdue
+                                          ? "OVERDUE"
+                                          : "UNPAID",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 14),
                             Text(
                               "Due Date: $dueDate",
                               style: const TextStyle(
                                 fontSize: 16,
                               ),
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 6),
                             Text(
                               "Paid Date: $paidDate",
                               style: const TextStyle(
@@ -205,11 +253,11 @@ class TenantHomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
 
-                      // =========================
-                      // ROOM CARD
-                      // =========================
+                      // =========================================
+                      // ROOM RENT
+                      // =========================================
                       _buildBillCard(
                         icon: Icons.apartment,
                         iconColor: Colors.deepOrange,
@@ -220,9 +268,9 @@ class TenantHomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
-                      // =========================
-                      // ELECTRICITY CARD
-                      // =========================
+                      // =========================================
+                      // ELECTRIC BILL
+                      // =========================================
                       _buildBillCard(
                         icon: Icons.flash_on,
                         iconColor: Colors.orange,
@@ -234,9 +282,9 @@ class TenantHomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
-                      // =========================
-                      // WATER CARD
-                      // =========================
+                      // =========================================
+                      // WATER BILL
+                      // =========================================
                       _buildBillCard(
                         icon: Icons.water_drop,
                         iconColor: Colors.blue,
@@ -246,14 +294,16 @@ class TenantHomeScreen extends StatelessWidget {
                         amount: "₱${waterBill.toStringAsFixed(2)}",
                       ),
 
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 24),
 
-                      // =========================
-                      // TOTAL BILL CARD
-                      // =========================
+                      // =========================================
+                      // TOTAL BILL
+                      // =========================================
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(
+                          24,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [
@@ -261,12 +311,17 @@ class TenantHomeScreen extends StatelessWidget {
                               Color(0xff5EDB72),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(
+                            24,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.green.withOpacity(0.25),
                               blurRadius: 14,
-                              offset: const Offset(0, 8),
+                              offset: const Offset(
+                                0,
+                                8,
+                              ),
                             ),
                           ],
                         ),
@@ -281,12 +336,14 @@ class TenantHomeScreen extends StatelessWidget {
                                 letterSpacing: 1,
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(
+                              height: 16,
+                            ),
                             Text(
                               "₱${totalBill.toStringAsFixed(2)}",
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 32,
+                                fontSize: 34,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -294,7 +351,7 @@ class TenantHomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
@@ -306,9 +363,9 @@ class TenantHomeScreen extends StatelessWidget {
     );
   }
 
-  // =========================
-  // CUSTOM CARD WIDGET
-  // =========================
+  // =========================================
+  // BILL CARD
+  // =========================================
   Widget _buildBillCard({
     required IconData icon,
     required Color iconColor,
@@ -317,13 +374,15 @@ class TenantHomeScreen extends StatelessWidget {
     required String amount,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(
+              0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -332,18 +391,22 @@ class TenantHomeScreen extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(13),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: iconColor.withOpacity(
+                0.1,
+              ),
+              borderRadius: BorderRadius.circular(
+                16,
+              ),
             ),
             child: Icon(
               icon,
               color: iconColor,
-              size: 26,
+              size: 28,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +431,7 @@ class TenantHomeScreen extends StatelessWidget {
                 Text(
                   amount,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 21,
                     fontWeight: FontWeight.bold,
                     color: iconColor,
                   ),

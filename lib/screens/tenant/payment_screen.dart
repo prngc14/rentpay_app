@@ -19,10 +19,14 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   final FirestoreService firestore = FirestoreService();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePicker picker = ImagePicker();
+
+  bool loading = true;
+  bool uploading = false;
 
   String room = "";
   String ownerId = "";
+  String roomId = "";
 
   double rent = 0;
   double waterBill = 0;
@@ -32,55 +36,58 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String? gcashQR;
   String? mayaQR;
 
-  bool loading = true;
-  bool uploading = false;
-
   @override
   void initState() {
     super.initState();
     loadTenantData();
   }
 
-  // ======================================
-  // LOAD TENANT + ROOM + OWNER QR
-  // ======================================
+  // =====================================================
+  // LOAD TENANT + ROOM + QR
+  // =====================================================
   Future<void> loadTenantData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) {
-        setState(() => loading = false);
+        setState(() {
+          loading = false;
+        });
         return;
       }
 
-      // ==========================
-      // GET TENANT DATA
-      // ==========================
+      // =========================
+      // GET USER DATA
+      // =========================
       final userDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
           .get();
 
       if (!userDoc.exists) {
-        setState(() => loading = false);
+        setState(() {
+          loading = false;
+        });
         return;
       }
 
-      final userData = userDoc.data();
+      final userData = userDoc.data()!;
 
-      ownerId = userData?["ownerId"] ?? "";
-      room = userData?["room"] ?? "";
+      ownerId = userData["ownerId"] ?? "";
+      room = userData["room"] ?? "";
 
-      // ==========================
-      // CHECK CONNECTION
-      // ==========================
+      // =========================
+      // VALIDATION
+      // =========================
       if (ownerId.isEmpty || room.isEmpty) {
-        setState(() => loading = false);
+        setState(() {
+          loading = false;
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Connect to owner and select a room first",
+              "No connected room yet",
             ),
           ),
         );
@@ -88,18 +95,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // ==========================
-      // GET ROOM DATA
-      // ==========================
+      // =========================
+      // GET ROOM
+      // =========================
       final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
-          .where("roomNumber", isEqualTo: room)
           .where("ownerId", isEqualTo: ownerId)
+          .where("roomNumber", isEqualTo: room)
           .limit(1)
           .get();
 
       if (roomQuery.docs.isNotEmpty) {
-        final roomData = roomQuery.docs.first.data();
+        final roomDoc = roomQuery.docs.first;
+
+        roomId = roomDoc.id;
+
+        final roomData = roomDoc.data();
 
         rent = (roomData["monthlyRent"] ?? 0).toDouble();
 
@@ -109,47 +120,53 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
         totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
-        // AUTO FIX IF TENANT NOT SAVED
+        // AUTO SAVE TENANT ID
         if (roomData["tenantId"] == null ||
             roomData["tenantId"].toString().isEmpty) {
-          await roomQuery.docs.first.reference.update({
+          await roomDoc.reference.update({
             "tenantId": user.uid,
           });
         }
       }
 
-      // ==========================
+      // =========================
       // GET OWNER QR
-      // ==========================
+      // =========================
       final ownerDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(ownerId)
           .get();
 
       if (ownerDoc.exists) {
-        final ownerData = ownerDoc.data();
+        final ownerData = ownerDoc.data()!;
 
-        gcashQR = ownerData?["gcashQr"];
-        mayaQR = ownerData?["paymayaQr"];
+        gcashQR = ownerData["gcashQr"];
+        mayaQR = ownerData["paymayaQr"];
       }
 
-      setState(() => loading = false);
+      setState(() {
+        loading = false;
+      });
     } catch (e) {
       print("LOAD PAYMENT ERROR: $e");
 
-      setState(() => loading = false);
+      setState(() {
+        loading = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: $e"),
+          content: Text(
+            "Error: $e",
+          ),
         ),
       );
     }
   }
 
-  // ======================================
-  // CHECK IF IMAGE IS POSSIBLY BLURRED
-  // ======================================
+  // =====================================================
+  // CHECK IMAGE QUALITY
+  // =====================================================
   Future<bool> isImageBlurred(File file) async {
     try {
       Uint8List? compressed = await FlutterImageCompress.compressWithFile(
@@ -161,11 +178,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return true;
       }
 
-      // CHECK FILE SIZE
-      int originalSize = await file.length();
+      int size = await file.length();
 
-      // TOO SMALL = POSSIBLY BLURRY
-      if (originalSize < 80000) {
+      if (size < 80000) {
         return true;
       }
 
@@ -175,51 +190,60 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // ======================================
+  // =====================================================
   // SHOW FULL IMAGE
-  // ======================================
+  // =====================================================
   void showFullImage(String url) {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        child: InteractiveViewer(
-          child: Image.network(url),
-        ),
-      ),
+      builder: (_) {
+        return Dialog(
+          child: InteractiveViewer(
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // ======================================
+  // =====================================================
   // UPLOAD PAYMENT
-  // ======================================
-  Future<void> uploadAndSubmitPayment() async {
+  // =====================================================
+  Future<void> uploadPayment() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) return;
 
-      final picked = await _picker.pickImage(
+      final picked = await picker.pickImage(
         source: ImageSource.gallery,
       );
 
       if (picked == null) return;
 
-      setState(() => uploading = true);
+      setState(() {
+        uploading = true;
+      });
 
       File file = File(picked.path);
 
-      // ======================================
+      // =========================
       // CHECK BLUR
-      // ======================================
+      // =========================
       bool blurred = await isImageBlurred(file);
 
       if (blurred) {
-        setState(() => uploading = false);
+        setState(() {
+          uploading = false;
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Blurred or low quality receipt detected",
+              "Blurred or low quality screenshot",
             ),
           ),
         );
@@ -227,27 +251,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // ======================================
-      // UPLOAD IMAGE
-      // ======================================
-      String? url = await uploadToCloudinary(file);
+      // =========================
+      // UPLOAD TO CLOUDINARY
+      // =========================
+      String? imageUrl = await uploadToCloudinary(file);
 
-      if (url == null) {
+      if (imageUrl == null) {
         throw Exception("Cloudinary upload failed");
       }
 
-      // ======================================
+      // =========================
       // SAVE PAYMENT
-      // ======================================
+      // =========================
       await firestore.submitPayment(
         user.uid,
         ownerId,
         room,
         totalBill,
-        url,
+        imageUrl,
       );
 
-      setState(() => uploading = false);
+      // =========================
+      // UPDATE ROOM STATUS
+      // =========================
+      if (roomId.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection("rooms")
+            .doc(roomId)
+            .update({
+          "paymentStatus": "pending",
+        });
+      }
+
+      setState(() {
+        uploading = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -259,24 +297,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
     } catch (e) {
       print("UPLOAD ERROR: $e");
 
-      setState(() => uploading = false);
+      setState(() {
+        uploading = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Upload failed: $e"),
+          content: Text(
+            "Upload failed: $e",
+          ),
         ),
       );
     }
   }
 
-  // ======================================
+  // =====================================================
   // CONFIRM PAYMENT
-  // ======================================
+  // =====================================================
   void confirmPayment() {
     if (totalBill <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("No bill found"),
+          content: Text(
+            "No bill found",
+          ),
         ),
       );
       return;
@@ -284,31 +328,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Confirm Payment"),
-        content: Text(
-          "Upload proof of payment for ₱$totalBill ?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+      builder: (_) {
+        return AlertDialog(
+          title: const Text(
+            "Confirm Payment",
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              uploadAndSubmitPayment();
-            },
-            child: const Text("Upload"),
+          content: Text(
+            "Upload proof of payment for ₱${totalBill.toStringAsFixed(2)} ?",
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                "Cancel",
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                uploadPayment();
+              },
+              child: const Text(
+                "Upload",
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  // ======================================
+  // =====================================================
   // UI
-  // ======================================
+  // =====================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -324,52 +378,99 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // ROOM CARD
+                  // =========================
+                  // BILL CARD
+                  // =========================
                   Card(
-                    elevation: 4,
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
                           Text(
-                            "Room: $room",
+                            "Room $room",
                             style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Text(
-                            "Room Rent: ₱$rent",
-                            style: const TextStyle(
-                              fontSize: 18,
-                            ),
+                          const SizedBox(height: 25),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Monthly Rent",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              Text(
+                                "₱${rent.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "Water Bill: ₱$waterBill",
-                            style: const TextStyle(
-                              fontSize: 18,
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Water Bill",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              Text(
+                                "₱${waterBill.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "Electric Bill: ₱$electricBill",
-                            style: const TextStyle(
-                              fontSize: 18,
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Electric Bill",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              Text(
+                                "₱${electricBill.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                           const Divider(
-                            height: 30,
+                            height: 35,
                             thickness: 1,
                           ),
-                          Text(
-                            "Total: ₱$totalBill",
-                            style: const TextStyle(
-                              fontSize: 28,
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "TOTAL",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "₱${totalBill.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -378,25 +479,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 30),
 
+                  // =========================
                   // GCASH QR
+                  // =========================
                   if (gcashQR != null && gcashQR!.isNotEmpty)
                     Column(
                       children: [
                         const Text(
                           "GCash QR",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         GestureDetector(
-                          onTap: () => showFullImage(gcashQR!),
+                          onTap: () {
+                            showFullImage(gcashQR!);
+                          },
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             child: Image.network(
                               gcashQR!,
-                              height: 220,
+                              height: 250,
                             ),
                           ),
                         ),
@@ -404,25 +509,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ],
                     ),
 
+                  // =========================
                   // MAYA QR
+                  // =========================
                   if (mayaQR != null && mayaQR!.isNotEmpty)
                     Column(
                       children: [
                         const Text(
                           "Maya QR",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         GestureDetector(
-                          onTap: () => showFullImage(mayaQR!),
+                          onTap: () {
+                            showFullImage(mayaQR!);
+                          },
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             child: Image.network(
                               mayaQR!,
-                              height: 220,
+                              height: 250,
                             ),
                           ),
                         ),
@@ -430,25 +539,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ],
                     ),
 
+                  // =========================
                   // UPLOAD BUTTON
+                  // =========================
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: uploading ? null : confirmPayment,
+                    child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: 16,
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                       ),
-                      child: uploading
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
+                      onPressed: uploading ? null : confirmPayment,
+                      icon: const Icon(
+                        Icons.upload,
+                      ),
+                      label: uploading
+                          ? const Padding(
+                              padding: EdgeInsets.all(5),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             )
                           : const Text(
                               "Upload Payment Screenshot",
                               style: TextStyle(
                                 fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                     ),

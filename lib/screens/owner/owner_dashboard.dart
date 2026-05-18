@@ -1,10 +1,12 @@
 import 'dart:math';
 
-import 'owner_rooms_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/firestore_service.dart';
+
+import 'owner_rooms_screen.dart';
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
 
@@ -16,6 +18,8 @@ class OwnerDashboard extends StatefulWidget {
 }
 
 class _OwnerDashboardState extends State<OwnerDashboard> {
+  final FirestoreService firestore = FirestoreService();
+
   @override
   void initState() {
     super.initState();
@@ -23,9 +27,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     generateOwnerCode();
   }
 
-  // =========================================
-  // GENERATE 6 DIGIT OWNER CODE
-  // =========================================
+  // =====================================================
+  // GENERATE OWNER CODE
+  // =====================================================
   Future<void> generateOwnerCode() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -38,7 +42,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
     final data = doc.data();
 
-    // IF NO OWNER CODE YET
     if (data == null ||
         data["ownerCode"] == null ||
         data["ownerCode"].toString().isEmpty) {
@@ -53,6 +56,66 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         "ownerCode": code,
         "role": "owner",
       });
+    }
+  }
+
+  // =====================================================
+  // TOTAL INCOME
+  // =====================================================
+  Stream<double> getTotalIncome(String ownerId) async* {
+    await for (var snapshot in FirebaseFirestore.instance
+        .collection("payments")
+        .where("ownerId", isEqualTo: ownerId)
+        .where("status", isEqualTo: "verified")
+        .snapshots()) {
+      double total = 0;
+
+      for (var doc in snapshot.docs) {
+        total += (doc["amount"] ?? 0).toDouble();
+      }
+
+      yield total;
+    }
+  }
+
+  // =====================================================
+  // COUNT UNPAID
+  // =====================================================
+  Stream<int> countUnpaid(String ownerId) async* {
+    await for (var snapshot in FirebaseFirestore.instance
+        .collection("rooms")
+        .where("ownerId", isEqualTo: ownerId)
+        .where("paymentStatus", isEqualTo: "unpaid")
+        .snapshots()) {
+      yield snapshot.docs.length;
+    }
+  }
+
+  // =====================================================
+  // COUNT OVERDUE
+  // =====================================================
+  Stream<int> countOverdue(String ownerId) async* {
+    await for (var snapshot in FirebaseFirestore.instance
+        .collection("rooms")
+        .where("ownerId", isEqualTo: ownerId)
+        .snapshots()) {
+      int overdue = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+
+        Timestamp? dueDate = data["dueDate"];
+
+        String paymentStatus = data["paymentStatus"] ?? "unpaid";
+
+        if (dueDate != null &&
+            paymentStatus != "paid" &&
+            dueDate.toDate().isBefore(DateTime.now())) {
+          overdue++;
+        }
+      }
+
+      yield overdue;
     }
   }
 
@@ -107,9 +170,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // =========================
+                      // =====================================================
                       // PROFILE
-                      // =========================
+                      // =====================================================
                       Center(
                         child: Column(
                           children: [
@@ -124,7 +187,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 20,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -133,7 +196,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               "Owner Code",
                               style: TextStyle(
                                 color: Colors.grey,
-                                fontSize: 14,
                               ),
                             ),
                             const SizedBox(height: 5),
@@ -143,12 +205,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.deepOrange.withOpacity(
-                                  0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  15,
-                                ),
+                                color: Colors.deepOrange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(15),
                               ),
                               child: Text(
                                 ownerCode,
@@ -166,78 +224,66 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                       const SizedBox(height: 25),
 
-                      // =========================
-                      // TENANT INFORMATION BOX
-                      // =========================
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(
-                          18,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(
-                            18,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(
-                                0.08,
-                              ),
-                              blurRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.badge,
-                              size: 40,
-                              color: Colors.deepOrange,
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              "Tenant Verification",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              "View uploaded tenant valid IDs",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 15),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepOrange,
-                              ),
-                              onPressed: () {
-                                _showTenantsDialog(
-                                  context,
-                                  user.uid,
+                      // =====================================================
+                      // ANALYTICS
+                      // =====================================================
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StreamBuilder<double>(
+                              stream: getTotalIncome(user.uid),
+                              builder: (context, snapshot) {
+                                double total = snapshot.data ?? 0;
+
+                                return _buildStatCard(
+                                  "Income",
+                                  "₱${total.toStringAsFixed(2)}",
+                                  Colors.green,
+                                  Icons.attach_money,
                                 );
                               },
-                              icon: const Icon(
-                                Icons.visibility,
-                              ),
-                              label: const Text(
-                                "View IDs",
-                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: StreamBuilder<int>(
+                              stream: countUnpaid(user.uid),
+                              builder: (context, snapshot) {
+                                int total = snapshot.data ?? 0;
+
+                                return _buildStatCard(
+                                  "Unpaid",
+                                  "$total",
+                                  Colors.orange,
+                                  Icons.warning,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      StreamBuilder<int>(
+                        stream: countOverdue(user.uid),
+                        builder: (context, snapshot) {
+                          int total = snapshot.data ?? 0;
+
+                          return _buildStatCard(
+                            "Overdue Tenants",
+                            "$total",
+                            Colors.red,
+                            Icons.error,
+                          );
+                        },
                       ),
 
                       const SizedBox(height: 25),
 
-                      // =========================
-                      // ACTION GRID
-                      // =========================
+                      // =====================================================
+                      // ACTIONS
+                      // =====================================================
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -310,150 +356,41 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 
   // =====================================================
-  // SHOW TENANTS
+  // STAT CARD
   // =====================================================
-  void _showTenantsDialog(
-    BuildContext context,
-    String ownerId,
+  Widget _buildStatCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
   ) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("Tenant Verification"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection("users")
-                  .where(
-                    "ownerId",
-                    isEqualTo: ownerId,
-                  )
-                  .where(
-                    "role",
-                    isEqualTo: "tenant",
-                  )
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text("No tenants found"),
-                  );
-                }
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    final tenant = snapshot.data!.docs[index];
-
-                    final data = tenant.data() as Map<String, dynamic>;
-
-                    String name = data["name"] ?? "No Name";
-
-                    String job = data["job"] ?? "No Work";
-
-                    String phone = data["phone"] ?? "No Phone";
-
-                    String room = data["room"] ?? "No Room";
-
-                    String image = data["workIdUrl"] ?? "";
-
-                    return Card(
-                      margin: const EdgeInsets.only(
-                        bottom: 15,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          12,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) {
-                                    return Dialog(
-                                      child: InteractiveViewer(
-                                        child: Image.network(
-                                          image,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                height: 180,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                    12,
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  image: image.isNotEmpty
-                                      ? DecorationImage(
-                                          image: NetworkImage(
-                                            image,
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                                child: image.isEmpty
-                                    ? const Center(
-                                        child: Icon(
-                                          Icons.image,
-                                          size: 50,
-                                          color: Colors.grey,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 15),
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text("Job: $job"),
-                            Text("Phone: $phone"),
-                            Text("Room: $room"),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 35),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.grey,
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Close"),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
@@ -531,16 +468,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 return;
               }
 
-              await FirebaseFirestore.instance.collection("rooms").add({
-                "roomNumber": roomController.text.trim(),
-                "ownerId": ownerId,
-                "tenantId": null,
-                "monthlyRent": double.tryParse(
+              await firestore.createRoom(
+                roomController.text.trim(),
+                ownerId,
+                double.tryParse(
                       rentController.text.trim(),
                     ) ??
                     0,
-                "createdAt": Timestamp.now(),
-              });
+              );
 
               Navigator.pop(context);
 
