@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
 
+import '../owner/owner_dashboard.dart';
+import '../tenant/tenant_connect_screen.dart';
+
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
 
@@ -38,16 +41,51 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Login failed");
       }
 
-      // CHECK USER DOCUMENT
-      await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+      // GET USER DATA
+      final doc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
 
-      // GO TO ROLE SELECTION
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const RoleSelectionScreen(),
-        ),
-      );
+      final data = doc.data();
+
+      String role = data?["role"] ?? "";
+
+      // ==========================
+      // OWNER
+      // ==========================
+      if (role == "owner") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OwnerDashboard(),
+          ),
+        );
+      }
+
+      // ==========================
+      // TENANT
+      // ==========================
+      else if (role == "tenant") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TenantConnectScreen(),
+          ),
+        );
+      }
+
+      // ==========================
+      // NO ROLE YET
+      // ==========================
+      else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RoleSelectionScreen(),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -76,16 +114,51 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // CHECK USER DOCUMENT
-      await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+      // GET USER DATA
+      final doc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
 
-      // GO TO ROLE SELECTION
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const RoleSelectionScreen(),
-        ),
-      );
+      final data = doc.data();
+
+      String role = data?["role"] ?? "";
+
+      // ==========================
+      // OWNER
+      // ==========================
+      if (role == "owner") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OwnerDashboard(),
+          ),
+        );
+      }
+
+      // ==========================
+      // TENANT
+      // ==========================
+      else if (role == "tenant") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TenantConnectScreen(),
+          ),
+        );
+      }
+
+      // ==========================
+      // NO ROLE YET
+      // ==========================
+      else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RoleSelectionScreen(),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -126,7 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.all(25),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(
+                25,
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
