@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 
 import '../owner/owner_dashboard.dart';
-import '../tenant/tenant_connect_screen.dart';
+import '../tenant/tenant_dashboard.dart';
 
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const TenantConnectScreen(),
+            builder: (_) => const TenantDashboard(),
           ),
         );
       }
@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const TenantConnectScreen(),
+            builder: (_) => const TenantDashboard(),
           ),
         );
       }
