@@ -29,21 +29,96 @@ class ContractPreviewScreen extends StatelessWidget {
     }).toList();
   }
 
+  pw.Widget _buildSignatureWidget(List<Offset> signaturePoints) {
+    if (signaturePoints.isEmpty) {
+      return pw.Text(
+        'Tenant signature has not been captured yet.',
+        style: const pw.TextStyle(fontSize: 10),
+      );
+    }
+
+    const boxWidth = 260.0;
+    const boxHeight = 90.0;
+
+    double minX = signaturePoints.first.dx;
+    double maxX = signaturePoints.first.dx;
+    double minY = signaturePoints.first.dy;
+    double maxY = signaturePoints.first.dy;
+
+    for (final point in signaturePoints) {
+      if (point.dx < minX) minX = point.dx;
+      if (point.dx > maxX) maxX = point.dx;
+      if (point.dy < minY) minY = point.dy;
+      if (point.dy > maxY) maxY = point.dy;
+    }
+
+    final rawWidth = (maxX - minX) == 0 ? 1.0 : (maxX - minX);
+    final rawHeight = (maxY - minY) == 0 ? 1.0 : (maxY - minY);
+
+    const padding = 10.0;
+    final scaleX = (boxWidth - padding * 2) / rawWidth;
+    final scaleY = (boxHeight - padding * 2) / rawHeight;
+    final scale = scaleX < scaleY ? scaleX : scaleY;
+
+    return pw.Container(
+      width: boxWidth,
+      height: boxHeight,
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.CustomPaint(
+        size: const PdfPoint(boxWidth, boxHeight),
+        painter: (PdfGraphics canvas, PdfPoint size) {
+          canvas
+            ..setColor(PdfColors.black)
+            ..setLineWidth(1.2);
+
+          bool started = false;
+
+          for (final point in signaturePoints) {
+            final x = padding + (point.dx - minX) * scale;
+            final y = size.y - (padding + (point.dy - minY) * scale);
+
+            if (!started) {
+              canvas.moveTo(x, y);
+              started = true;
+            } else {
+              canvas.lineTo(x, y);
+            }
+          }
+
+          canvas.strokePath();
+        },
+      ),
+    );
+  }
+
   Future<void> _generatePdf(BuildContext context) async {
-    final pdf = pw.Document();
+    final regularFont = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: regularFont,
+        bold: boldFont,
+      ),
+    );
 
     final tenantName = contractData['tenantName'] ?? 'Tenant';
     final ownerId = contractData['ownerId'] ?? 'Owner';
     final roomNumber = contractData['roomNumber'] ?? 'Room';
+
+    final status = contractData['status'] ?? 'Pending Signature';
+
     final monthlyRent = contractData['monthlyRent'] ?? 0;
     final securityDeposit = contractData['securityDeposit'] ?? 0;
     final advancePayment = contractData['advancePayment'] ?? 0;
+
     final electricRate = contractData['electricRate'] ?? 0;
     final waterRate = contractData['waterRate'] ?? 0;
+
     final terms = contractData['termsAndConditions'] ?? 'No terms provided';
-    final status = contractData['status'] ?? 'Pending Signature';
-    final signaturePoints = _getSignaturePoints();
-    final hasTenantSignature = signaturePoints.isNotEmpty;
 
     Timestamp? startDate = contractData['startDate'];
     Timestamp? endDate = contractData['endDate'];
@@ -55,6 +130,8 @@ class ContractPreviewScreen extends StatelessWidget {
     final end = endDate != null
         ? DateFormat('MMMM dd, yyyy').format(endDate.toDate())
         : '--';
+
+    final signaturePoints = _getSignaturePoints();
 
     pdf.addPage(
       pw.Page(
@@ -127,12 +204,7 @@ class ContractPreviewScreen extends StatelessWidget {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Text(
-                hasTenantSignature
-                    ? 'Tenant signature has been captured and is ready for verification.'
-                    : 'Tenant signature has not been captured yet.',
-                style: const pw.TextStyle(fontSize: 10),
-              ),
+              _buildSignatureWidget(signaturePoints),
             ],
           ),
         ),
@@ -149,24 +221,12 @@ class ContractPreviewScreen extends StatelessWidget {
     final tenantName = contractData['tenantName'] ?? 'Tenant';
     final roomNumber = contractData['roomNumber'] ?? 'Room';
     final status = contractData['status'] ?? 'Pending Signature';
+    final terms = contractData['termsAndConditions'] ?? 'No terms provided';
     final monthlyRent = contractData['monthlyRent'] ?? 0;
     final securityDeposit = contractData['securityDeposit'] ?? 0;
     final advancePayment = contractData['advancePayment'] ?? 0;
     final electricRate = contractData['electricRate'] ?? 0;
     final waterRate = contractData['waterRate'] ?? 0;
-    final terms = contractData['termsAndConditions'] ?? 'No terms provided';
-
-    Timestamp? startDate = contractData['startDate'];
-    Timestamp? endDate = contractData['endDate'];
-
-    final start = startDate != null
-        ? DateFormat('MMMM dd, yyyy').format(startDate.toDate())
-        : '--';
-
-    final end = endDate != null
-        ? DateFormat('MMMM dd, yyyy').format(endDate.toDate())
-        : '--';
-
     final signaturePoints = _getSignaturePoints();
     final hasTenantSignature = signaturePoints.isNotEmpty;
 
@@ -201,53 +261,16 @@ class ContractPreviewScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Tenant: $tenantName',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Room: $roomNumber',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Status: $status',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepOrange,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Monthly Rent: ₱$monthlyRent',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Security Deposit: ₱$securityDeposit',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Advance Payment: ₱$advancePayment',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    Text('Tenant: $tenantName'),
+                    Text('Room: $roomNumber'),
+                    Text('Status: $status'),
                     const SizedBox(height: 8),
-                    Text(
-                      'Electric Rate: ₱$electricRate per kWh',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Water Rate: ₱$waterRate per m³',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    Text('Monthly Rent: ₱$monthlyRent'),
+                    Text('Security Deposit: ₱$securityDeposit'),
+                    Text('Advance Payment: ₱$advancePayment'),
                     const SizedBox(height: 8),
-                    Text(
-                      'Contract Start: $start',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Contract End: $end',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    Text('Electric Rate: ₱$electricRate per kWh'),
+                    Text('Water Rate: ₱$waterRate per m³'),
                     const SizedBox(height: 16),
                     const Text(
                       'Contract Summary',

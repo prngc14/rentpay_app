@@ -9,6 +9,87 @@ import 'create_contract_screen.dart';
 class ContractListScreen extends StatelessWidget {
   const ContractListScreen({super.key});
 
+  // Mga status na ituturing na "hindi na active" -- kapareho ito ng
+  // ginamit natin sa create_contract_screen.dart para consistent ang
+  // filtering logic sa buong app. Ang mga contract na may ganitong
+  // status ay itatago (hindi ipapakita) sa listahan.
+  static const List<String> _inactiveStatuses = [
+    'Expired',
+    'Cancelled',
+    'Terminated',
+  ];
+
+  Future<void> _terminateContract({
+    required BuildContext context,
+    required String contractId,
+    required String? roomId,
+    required String tenantName,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Terminate Contract'),
+          content: Text(
+            'Are you sure you want to terminate $tenantName\'s contract? '
+            'It will be removed from this list, and the tenant and room '
+            'will become available again for a new contract.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Terminate'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      final contractRef = FirebaseFirestore.instance
+          .collection('contracts')
+          .doc(contractId);
+
+      batch.update(contractRef, {
+        'status': 'Terminated',
+        'terminatedAt': Timestamp.now(),
+      });
+
+      if (roomId != null && roomId.isNotEmpty) {
+        final roomRef =
+            FirebaseFirestore.instance.collection('rooms').doc(roomId);
+        batch.update(roomRef, {
+          'tenantId': null,
+        });
+      }
+
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contract terminated successfully.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error terminating contract: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -48,7 +129,14 @@ class ContractListScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          // I-filter out ang mga contract na "Terminated"/"Cancelled"/
+          // "Expired" na -- hindi na natin ipapakita ang mga ito sa
+          // listahan ng "Digital Contracts".
+          final docs = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = data['status'] ?? 'Pending Signature';
+            return !_inactiveStatuses.contains(status);
+          }).toList();
 
           if (docs.isEmpty) {
             return Center(
@@ -102,10 +190,12 @@ class ContractListScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: docs.length,
             itemBuilder: (context, index) {
+              final contractId = docs[index].id;
               final data = docs[index].data() as Map<String, dynamic>;
 
               final tenantName = data['tenantName'] ?? 'Tenant';
               final roomNumber = data['roomNumber'] ?? 'Room';
+              final roomId = data['roomId'] as String?;
               final status = data['status'] ?? 'Pending Signature';
               final monthlyRent = data['monthlyRent'] ?? 0;
 
@@ -118,7 +208,8 @@ class ContractListScreen extends StatelessWidget {
               String end = '--';
 
               if (createdAt != null) {
-                created = DateFormat('MMM dd, yyyy').format(createdAt.toDate());
+                created =
+                    DateFormat('MMM dd, yyyy').format(createdAt.toDate());
               }
               if (startDate != null) {
                 start = DateFormat('MMM dd, yyyy').format(startDate.toDate());
@@ -158,7 +249,10 @@ class ContractListScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 'Contract for $tenantName',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                               ),
@@ -180,6 +274,38 @@ class ContractListScreen extends StatelessWidget {
                                   fontSize: 12,
                                 ),
                               ),
+                            ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (value) {
+                                if (value == 'terminate') {
+                                  _terminateContract(
+                                    context: context,
+                                    contractId: contractId,
+                                    roomId: roomId,
+                                    tenantName: tenantName,
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'terminate',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.cancel_outlined,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Terminate Contract',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

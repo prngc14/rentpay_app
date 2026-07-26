@@ -14,6 +14,15 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
   final List<Offset> _signaturePoints = [];
   bool _isSavingSignature = false;
 
+  // Mga status na ituturing na "hindi na active" -- itatago ang mga
+  // contract na may ganitong status sa listahan ng tenant, dahil ito
+  // na ang mga contract na na-terminate/cancelled/expired na ng owner.
+  static const List<String> _inactiveStatuses = [
+    'Expired',
+    'Cancelled',
+    'Terminated',
+  ];
+
   // Cache para hindi paulit-ulit mag-fetch ng ownerCode kapag pareho
   // ang owner ng maraming contract
   final Map<String, String> _ownerCodeCache = {};
@@ -263,7 +272,14 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          // I-filter out ang mga contract na "Terminated"/"Cancelled"/
+          // "Expired" na -- ito ang mga contract na na-tapos na ng
+          // owner, kaya hindi na dapat makita pa ng tenant.
+          final docs = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = data['status'] ?? 'Pending Signature';
+            return !_inactiveStatuses.contains(status);
+          }).toList();
 
           if (docs.isEmpty) {
             return const Center(
@@ -466,10 +482,6 @@ class SignaturePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SignaturePainter oldDelegate) {
-    // Laging i-repaint dahil ang _signaturePoints ay iisang list lang
-    // na dinadagdagan (mutated in place), kaya ang reference comparison
-    // (oldDelegate.points != points) ay laging false kahit may bagong
-    // stroke -- kaya kailangan laging i-force ang repaint.
     return true;
   }
 }
