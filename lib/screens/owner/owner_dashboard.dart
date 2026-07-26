@@ -4,6 +4,7 @@ import 'owner_rooms_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../owner_esign/contract_list_screen.dart';
 
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
@@ -228,6 +229,70 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               label: const Text(
                                 "View IDs",
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.description,
+                              size: 40,
+                              color: Colors.deepOrange,
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            const Text(
+                              "Digital Contract",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            const Text(
+                              "Create optional rental contracts with E-Signature",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+
+                            const SizedBox(height: 15),
+
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                              ),
+                              icon: const Icon(Icons.article),
+                              label: const Text("Open Feature"),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ContractListScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -498,8 +563,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     String ownerId,
   ) {
     final roomController = TextEditingController();
-
     final rentController = TextEditingController();
+    final electricRateController = TextEditingController(text: "13.09");
+    final waterRateController = TextEditingController(text: "30.00");
 
     showDialog(
       context: context,
@@ -522,12 +588,31 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 labelText: "Monthly Rent",
               ),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: electricRateController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Electric Rate per kWh",
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: waterRateController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Water Rate per m³",
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () async {
-              if (roomController.text.isEmpty || rentController.text.isEmpty) {
+              if (roomController.text.isEmpty ||
+                  rentController.text.isEmpty ||
+                  electricRateController.text.isEmpty ||
+                  waterRateController.text.isEmpty) {
                 return;
               }
 
@@ -537,6 +622,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 "tenantId": null,
                 "monthlyRent": double.tryParse(
                       rentController.text.trim(),
+                    ) ??
+                    0,
+                "electricRate": double.tryParse(
+                      electricRateController.text.trim(),
+                    ) ??
+                    0,
+                "waterRate": double.tryParse(
+                      waterRateController.text.trim(),
                     ) ??
                     0,
                 "createdAt": Timestamp.now(),

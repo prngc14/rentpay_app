@@ -5,6 +5,7 @@ import 'tenant_home_screen.dart';
 import 'payment_screen.dart';
 import 'tenant_profile_screen.dart';
 import 'tenant_connect_screen.dart';
+import 'tenant_contracts_screen.dart';
 
 class TenantDashboard extends StatefulWidget {
   const TenantDashboard({super.key});
@@ -19,6 +20,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
   final List<Widget> _screens = [
     const TenantHomeScreen(),
     const PaymentScreen(),
+    const TenantContractsScreen(),
     const TenantProfileScreen(),
   ];
 
@@ -47,9 +49,11 @@ class _TenantDashboardState extends State<TenantDashboard> {
               title: Text(
                 _currentIndex == 0
                     ? "Home"
-                    : _currentIndex == 2
-                        ? "Profile"
-                        : "Tenant",
+                    : _currentIndex == 1
+                        ? "Payments"
+                        : _currentIndex == 2
+                            ? "Contracts"
+                            : "Profile",
               ),
               backgroundColor: Colors.deepOrange,
               actions: [
@@ -94,6 +98,10 @@ class _TenantDashboardState extends State<TenantDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.payment),
             label: "Payments",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.article_outlined),
+            label: "Contracts",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

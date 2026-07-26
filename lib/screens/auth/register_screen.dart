@@ -15,8 +15,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final roomController = TextEditingController();
-  final ownerCodeController = TextEditingController();
 
   final AuthService _auth = AuthService();
   final FirestoreService _firestore = FirestoreService();
@@ -29,8 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
-    roomController.dispose();
-    ownerCodeController.dispose();
     super.dispose();
   }
 
@@ -45,6 +41,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all required fields")),
+      );
+      return;
+    }
+
+    final emailRegex = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+
+    if (!emailRegex.hasMatch(emailController.text.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a valid email address")),
       );
       return;
     }
@@ -75,25 +80,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           approved: true,
         ));
       } else {
-        if (ownerCodeController.text.isEmpty || roomController.text.isEmpty) {
-          throw Exception("Enter owner code and room");
-        }
-
-        var ownerDoc =
-            await _firestore.getOwnerByCode(ownerCodeController.text.trim());
-
-        if (ownerDoc == null) {
-          throw Exception("Invalid owner code");
-        }
-
         await _firestore.createUser(UserModel(
           uid: user.uid,
           name: nameController.text.trim(),
           email: emailController.text.trim(),
           role: "tenant",
-          room: roomController.text.trim(), // ✅ FIXED
-          ownerCode: ownerCodeController.text.trim(),
-          ownerId: ownerDoc.id,
+          room: "",
+          ownerCode: "",
+          ownerId: "",
           approved: false,
         ));
       }
@@ -101,7 +95,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registered Successfully")),
+        const SnackBar(
+          content: Text(
+            "Registered Successfully. Please check your email and verify your account.",
+          ),
+        ),
       );
 
       Navigator.pushReplacementNamed(context, '/login');
@@ -179,6 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: inputStyle("Email"),
                 ),
                 const SizedBox(height: 20),
@@ -201,18 +200,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
                   },
                 ),
-                if (role == "tenant") ...[
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: ownerCodeController,
-                    decoration: inputStyle("Owner Code"),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: roomController,
-                    decoration: inputStyle("Room"),
-                  ),
-                ],
                 const SizedBox(height: 35),
                 SizedBox(
                   width: double.infinity,

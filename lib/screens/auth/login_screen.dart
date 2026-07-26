@@ -28,6 +28,43 @@ class _LoginScreenState extends State<LoginScreen> {
   // ===============================
   // EMAIL LOGIN
   // ===============================
+  Future<void> resendVerificationEmail() async {
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your email and password")),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await _auth.resendVerificationEmail(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Verification email sent. Please check your inbox."),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
   void loginUser() async {
     setState(() => isLoading = true);
 
@@ -279,6 +316,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 const SizedBox(height: 15),
+
+                TextButton(
+                  onPressed: isLoading ? null : resendVerificationEmail,
+                  child: const Text("Resend Verification Email"),
+                ),
+
+                const SizedBox(height: 10),
 
                 // GOOGLE LOGIN
                 SizedBox(
