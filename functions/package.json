@@ -1,0 +1,12 @@
+{
+  "name": "rentpay_app_functions",
+  "description": "Firebase Cloud Functions for RentPay due date reminders",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.10.0",
+    "firebase-functions": "^5.1.1"
+  }
+}

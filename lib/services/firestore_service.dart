@@ -605,6 +605,101 @@ class FirestoreService {
     }
   }
 
+  static const List<String> _inactiveContractStatuses = [
+    "Expired",
+    "Cancelled",
+    "Terminated",
+  ];
+
+  static DateTime _computeContractDueDate(
+    DateTime contractStartDate,
+    DateTime referenceDate,
+  ) {
+    final int dueDay = contractStartDate.day;
+    final int year = referenceDate.year;
+    final int month = referenceDate.month;
+    final int lastDayOfMonth = DateTime(year, month + 1, 0).day;
+    final int day = dueDay <= lastDayOfMonth ? dueDay : lastDayOfMonth;
+
+    return DateTime(year, month, day, 23, 59, 59);
+  }
+
+  Future<Map<String, dynamic>?> getActiveContractForTenant(
+    String tenantId,
+  ) async {
+    final contractSnapshot = await _db
+        .collection("contracts")
+        .where("tenantId", isEqualTo: tenantId)
+        .get();
+
+    final activeContracts = contractSnapshot.docs.where((doc) {
+      final data = doc.data();
+      final status = data["status"] ?? "";
+      return !_inactiveContractStatuses.contains(status);
+    }).toList();
+
+    if (activeContracts.isEmpty) return null;
+
+    activeContracts.sort((a, b) {
+      final aStart = (a.data()["startDate"] as Timestamp?)?.toDate();
+      final bStart = (b.data()["startDate"] as Timestamp?)?.toDate();
+
+      if (aStart == null && bStart == null) return 0;
+      if (aStart == null) return 1;
+      if (bStart == null) return -1;
+
+      return bStart.compareTo(aStart);
+    });
+
+    return activeContracts.first.data() as Map<String, dynamic>;
+  }
+
+  Future<DateTime?> getNextContractDueDateForTenant(
+    String tenantId,
+  ) async {
+    final contractData = await getActiveContractForTenant(tenantId);
+    if (contractData == null) return null;
+
+    final Timestamp? startTimestamp = contractData["startDate"];
+    if (startTimestamp == null) return null;
+
+    final DateTime contractStartDate = startTimestamp.toDate();
+    final DateTime now = DateTime.now();
+
+    if (now.isBefore(contractStartDate)) {
+      return null;
+    }
+
+    return _computeContractDueDate(contractStartDate, now);
+  }
+
+  Future<bool> shouldSendContractDueNotification(
+    String tenantId,
+  ) async {
+    final roomQuery = await _db
+        .collection("rooms")
+        .where("tenantId", isEqualTo: tenantId)
+        .limit(1)
+        .get();
+
+    if (roomQuery.docs.isEmpty) {
+      return false;
+    }
+
+    final roomData = roomQuery.docs.first.data();
+    final String paymentStatus = roomData["paymentStatus"] ?? "unpaid";
+
+    if (paymentStatus == "paid") return false;
+
+    final DateTime? contractDueDate =
+        await getNextContractDueDateForTenant(tenantId);
+
+    if (contractDueDate == null) return false;
+
+    final DateTime now = DateTime.now();
+    return !now.isBefore(contractDueDate);
+  }
+
   // ===============================
   // GET TENANT PAYMENTS
   // ===============================

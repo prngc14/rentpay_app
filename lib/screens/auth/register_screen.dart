@@ -35,6 +35,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return (100000 + random.nextInt(900000)).toString();
   }
 
+  /// Kinukuha ang username na na-type ng user (hal. "andrea06") at
+  /// ginagawang parang email format ito sa likod-likod (hal.
+  /// "andrea06@rentpay.local"), dahil kailangan talaga ng Firebase
+  /// Auth ng valid email format kahit hindi ito makikita ng user.
+  ///
+  /// Tinatanggal natin muna ang mga karakter na hindi pwede sa email
+  /// (spaces, special symbols) para laging valid ang resulta.
+  String _buildFakeEmail(String username) {
+    final sanitized = username
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+    return '$sanitized@rentpay.local';
+  }
+
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
@@ -45,11 +60,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final emailRegex = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    final username = emailController.text.trim();
+    final fakeEmail = _buildFakeEmail(username);
 
-    if (!emailRegex.hasMatch(emailController.text.trim())) {
+    // I-check kung may nabuong valid na username matapos i-sanitize
+    // (hal. kung puro special characters lang ang na-type, magiging
+    // blangko ito).
+    if (fakeEmail.startsWith('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid email address")),
+        const SnackBar(
+          content: Text(
+              "Please enter a valid username (letters, numbers, ., _, or -)"),
+        ),
       );
       return;
     }
@@ -59,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       // ✅ STEP 1: REGISTER USER
       var user = await _auth.register(
-        emailController.text.trim(),
+        fakeEmail,
         passwordController.text.trim(),
       );
 
@@ -72,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await _firestore.createUser(UserModel(
           uid: user.uid,
           name: nameController.text.trim(),
-          email: emailController.text.trim(),
+          email: fakeEmail,
           role: "owner",
           room: "",
           ownerCode: ownerCode,
@@ -83,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await _firestore.createUser(UserModel(
           uid: user.uid,
           name: nameController.text.trim(),
-          email: emailController.text.trim(),
+          email: fakeEmail,
           role: "tenant",
           room: "",
           ownerCode: "",
@@ -96,9 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Registered Successfully. Please check your email and verify your account.",
-          ),
+          content: Text("Registered Successfully. You can now log in."),
         ),
       );
 
@@ -177,8 +197,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: inputStyle("Email"),
+                  keyboardType: TextInputType.text,
+                  decoration: inputStyle("Username"),
                 ),
                 const SizedBox(height: 20),
                 TextField(

@@ -3,8 +3,49 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-class TenantHomeScreen extends StatelessWidget {
+import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
+
+class TenantHomeScreen extends StatefulWidget {
   const TenantHomeScreen({super.key});
+
+  @override
+  State<TenantHomeScreen> createState() => _TenantHomeScreenState();
+}
+
+class _TenantHomeScreenState extends State<TenantHomeScreen> {
+  final FirestoreService _tenantFirestoreService = FirestoreService();
+  bool _contractDueNotificationShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        _maybeSendContractDueNotification(user.uid);
+      }
+    });
+  }
+
+  Future<void> _maybeSendContractDueNotification(String tenantId) async {
+    if (_contractDueNotificationShown) return;
+    _contractDueNotificationShown = true;
+
+    final shouldSend = await _tenantFirestoreService
+        .shouldSendContractDueNotification(tenantId);
+    if (!mounted || !shouldSend) return;
+
+    final DateTime? dueDate =
+        await _tenantFirestoreService.getNextContractDueDateForTenant(tenantId);
+    if (!mounted || dueDate == null) return;
+
+    await NotificationService.showLocalNotification(
+      title: 'RentPay Reminder',
+      body:
+          'Your contract-based rent due date is ${DateFormat("MMMM dd, yyyy").format(dueDate)}. Please pay if not yet paid.',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

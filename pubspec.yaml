@@ -19,6 +19,10 @@ dependencies:
   firebase_auth: ^4.19.0
   cloud_firestore: ^4.17.0
   firebase_storage: ^11.7.0
+  firebase_messaging: ^14.9.2
+
+  # Local Notifications (para makita ng tenant ang reminder kahit bukas ang app)
+  flutter_local_notifications: ^17.1.2
 
   # Google Sign-In
   google_sign_in: ^6.2.1

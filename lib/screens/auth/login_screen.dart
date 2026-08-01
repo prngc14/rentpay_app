@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 
 import '../owner/owner_dashboard.dart';
 import '../tenant/tenant_dashboard.dart';
@@ -25,6 +26,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isLoading = false;
 
+  /// Kaparehong logic ng ginamit natin sa register_screen.dart --
+  /// kinukuha ang username na na-type ng user at ginagawang valid
+  /// email format ito (para sa Firebase Auth), na hindi na kailangang
+  /// makita/pansinin ng user.
+  String _buildFakeEmail(String username) {
+    final sanitized = username
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+    return '$sanitized@rentpay.local';
+  }
+
   // ===============================
   // EMAIL LOGIN
   // ===============================
@@ -32,7 +45,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your email and password")),
+        const SnackBar(
+            content: Text("Please enter your username and password")),
       );
       return;
     }
@@ -40,8 +54,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
+      final fakeEmail = _buildFakeEmail(emailController.text.trim());
+
       await _auth.resendVerificationEmail(
-        emailController.text.trim(),
+        fakeEmail,
         passwordController.text.trim(),
       );
 
@@ -69,14 +85,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
+      final fakeEmail = _buildFakeEmail(emailController.text.trim());
+
       var user = await _auth.login(
-        emailController.text.trim(),
+        fakeEmail,
         passwordController.text.trim(),
       );
 
       if (user == null) {
         throw Exception("Login failed");
       }
+
+      // I-setup ang push notifications para sa device/session na ito
+      // (kukuha at magse-save ng FCM token sa Firestore).
+      await NotificationService.initialize();
 
       // GET USER DATA
       final doc = await FirebaseFirestore.instance
@@ -139,6 +161,11 @@ class _LoginScreenState extends State<LoginScreen> {
   // ===============================
   // GOOGLE LOGIN
   // ===============================
+  // Hindi na binago ang auth logic dito -- direktang gumagamit ng
+  // tunay na Google account, hiwalay sa username/password fields sa
+  // itaas. Dinagdag lang ang NotificationService.initialize() para
+  // pareho ring makatanggap ng push notifications ang mga Google
+  // login users.
   void googleLogin() async {
     setState(() => isLoading = true);
 
@@ -150,6 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
           "Google login cancelled",
         );
       }
+
+      // I-setup ang push notifications para sa device/session na ito
+      await NotificationService.initialize();
 
       // GET USER DATA
       final doc = await FirebaseFirestore.instance
@@ -266,12 +296,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
-                // EMAIL
+                // USERNAME
                 TextField(
                   controller: emailController,
                   decoration: inputStyle(
-                    "Email",
-                    Icons.email,
+                    "Username",
+                    Icons.person,
                   ),
                 ),
 
