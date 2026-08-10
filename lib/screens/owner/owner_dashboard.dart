@@ -8,6 +8,7 @@ import '../owner_esign/contract_list_screen.dart';
 
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -613,6 +614,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   rentController.text.isEmpty ||
                   electricRateController.text.isEmpty ||
                   waterRateController.text.isEmpty) {
+                showAppWarningBanner(context, "Please fill all fields");
                 return;
               }
 
@@ -635,15 +637,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 "createdAt": Timestamp.now(),
               });
 
+              if (!context.mounted) return;
               Navigator.pop(context);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    "Room created successfully",
-                  ),
-                ),
-              );
+              showAppSuccessBanner(context, "Room created successfully");
             },
             child: const Text("Create"),
           ),

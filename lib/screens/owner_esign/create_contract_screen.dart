@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+
 class CreateContractScreen extends StatefulWidget {
   const CreateContractScreen({super.key});
 
@@ -145,9 +147,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     if (user == null) {
       debugPrint("Create Contract failed: user is null");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please log in first.")),
-        );
+        showAppWarningBanner(context, "Please log in first.");
       }
       return;
     }
@@ -157,9 +157,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         "Create Contract failed: tenant or room not selected. tenant=$_selectedTenantId room=$_selectedRoomId",
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please select a tenant and room.")),
-        );
+        showAppWarningBanner(context, "Please select a tenant and room.");
       }
       return;
     }
@@ -169,9 +167,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         "Create Contract failed: start or end date missing. start=$startDate end=$endDate",
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please select start and end dates.")),
-        );
+        showAppWarningBanner(context, "Please select start and end dates.");
       }
       return;
     }
@@ -230,16 +226,12 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Contract saved successfully.")),
-        );
+        showAppSuccessBanner(context, "Contract saved successfully.");
       }
     } catch (e) {
       debugPrint("Create Contract save failed: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error saving contract: $e")),
-        );
+        showAppWarningBanner(context, friendlyAuthError(e));
       }
     }
   }

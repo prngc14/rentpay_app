@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- IDAGDAG: ayusin ang path kung iba ang location mo
 
 import '../owner/owner_dashboard.dart';
 import '../tenant/tenant_dashboard.dart';
@@ -25,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _auth = AuthService();
 
   bool isLoading = false;
+  bool _obscurePassword = true;
 
   /// Kaparehong logic ng ginamit natin sa register_screen.dart --
   /// kinukuha ang username na na-type ng user at ginagawang valid
@@ -44,10 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> resendVerificationEmail() async {
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please enter your username and password")),
-      );
+      showAppWarningBanner(context, "Please enter your username and password");
       return;
     }
 
@@ -63,17 +62,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Verification email sent. Please check your inbox."),
-        ),
-      );
+      showAppSuccessBanner(context, "Verification email sent. Please check your inbox.");
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
     if (mounted) {
@@ -146,16 +139,14 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString(),
-          ),
-        ),
-      );
+      if (!mounted) return;
+
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   // ===============================
@@ -227,16 +218,14 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString(),
-          ),
-        ),
-      );
+      if (!mounted) return;
+
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   // ===============================
@@ -310,10 +299,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 // PASSWORD
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: inputStyle(
                     "Password",
                     Icons.lock,
+                  ).copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                   ),
                 ),
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/user_model.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- IDAGDAG: ayusin ang path kung iba ang location mo
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool isLoading = false;
   String role = "tenant";
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -50,13 +52,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return '$sanitized@rentpay.local';
   }
 
+  /// Kinu-check kung valid ang password.
+  /// Dapat may kahit isang letra AT isang numero, at at least 8 characters.
+  /// Nire-return ang error message kung invalid, o null kung valid na.
+  String? _validatePassword(String password) {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+    final hasLetter = RegExp(r'[A-Za-z]').hasMatch(password);
+    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
+
+    if (!hasLetter || !hasNumber) {
+      return "Password must contain both letters and numbers (e.g. gwapo1234)";
+    }
+    return null;
+  }
+
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
         passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all required fields")),
-      );
+      showAppWarningBanner(context, "Please fill all required fields");
+      return;
+    }
+
+    // ✅ CHECK PASSWORD STRENGTH BEFORE PROCEEDING
+    final passwordError = _validatePassword(passwordController.text.trim());
+    if (passwordError != null) {
+      showAppWarningBanner(context, passwordError);
       return;
     }
 
@@ -67,11 +90,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // (hal. kung puro special characters lang ang na-type, magiging
     // blangko ito).
     if (fakeEmail.startsWith('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              "Please enter a valid username (letters, numbers, ., _, or -)"),
-        ),
+      showAppWarningBanner(
+        context,
+        "Please enter a valid username (letters, numbers, ., _, or -)",
       );
       return;
     }
@@ -116,19 +137,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Registered Successfully. You can now log in."),
-        ),
-      );
+      showAppSuccessBanner(context, "Registered Successfully. You can now log in.");
 
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
     if (mounted) {
@@ -203,8 +218,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
-                  decoration: inputStyle("Password"),
+                  obscureText: _obscurePassword,
+                  decoration: inputStyle("Password").copyWith(
+                    helperText:
+                        "Must be 8+ characters with letters and numbers",
+                    helperMaxLines: 2,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 25),
                 DropdownButtonFormField<String>(

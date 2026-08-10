@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/firestore_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class OwnerRoomsScreen extends StatefulWidget {
   final String ownerId;
@@ -144,15 +145,10 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 currentWater: currentWater,
               );
 
+              if (!mounted) return;
               Navigator.pop(context);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    "Billing updated successfully",
-                  ),
-                ),
-              );
+              showAppSuccessBanner(context, "Billing updated successfully");
             },
             child: const Text("Save"),
           ),
@@ -531,13 +527,14 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                                   .doc(roomDoc.id)
                                   .delete();
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Room deleted successfully",
-                                  ),
-                                ),
-                              );
+                              // Ginagamit ang context ng buong Screen (hindi
+                              // yung sa specific room card) dahil natatanggal
+                              // agad ang card na ito sa StreamBuilder pagka-
+                              // delete -- kaya laging naka-check ang mounted
+                              // ng State mismo, hindi ng nawawalang card.
+                              if (!mounted) return;
+                              showAppSuccessBanner(
+                                  this.context, "Room deleted successfully");
                             }
                           },
                           icon: const Icon(

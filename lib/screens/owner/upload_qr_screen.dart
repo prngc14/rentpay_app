@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class UploadQrScreen extends StatefulWidget {
   const UploadQrScreen({super.key});
@@ -71,13 +72,10 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       File? selectedFile = type == "gcash" ? gcashImage : mayaImage;
 
       if (selectedFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Please select a $type QR image first",
-            ),
-          ),
-        );
+        if (mounted) {
+          showAppWarningBanner(
+              context, "Please select a $type QR image first");
+        }
 
         setState(() {
           isLoading = false;
@@ -93,19 +91,13 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
       await loadExistingQr();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "${type.toUpperCase()} QR uploaded successfully",
-          ),
-        ),
-      );
+      if (!mounted) return;
+      showAppSuccessBanner(
+          context, "${type.toUpperCase()} QR uploaded successfully");
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Upload failed: $e"),
-        ),
-      );
+      if (mounted) {
+        showAppWarningBanner(context, friendlyAuthError(e));
+      }
     }
 
     setState(() {

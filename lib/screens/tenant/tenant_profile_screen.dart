@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class TenantProfileScreen extends StatefulWidget {
   const TenantProfileScreen({super.key});
@@ -58,9 +59,8 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
         workIdUrl = data["workIdUrl"];
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading profile: $e")),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
     setState(() {
@@ -96,11 +96,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
       if (nameController.text.isEmpty ||
           jobController.text.isEmpty ||
           phoneController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Please fill all fields"),
-          ),
-        );
+        showAppWarningBanner(context, "Please fill all fields");
         return;
       }
 
@@ -131,19 +127,15 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("✅ Profile saved successfully"),
-        ),
-      );
+      if (!mounted) return;
+      showAppSuccessBanner(context, "Profile saved successfully");
     } catch (e) {
       setState(() {
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving profile: $e")),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
   }
 

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+
 class TenantContractsScreen extends StatefulWidget {
   const TenantContractsScreen({super.key});
 
@@ -52,9 +54,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
 
   Future<void> _saveSignature(String contractId) async {
     if (_signaturePoints.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please sign the contract first.")),
-      );
+      showAppWarningBanner(context, "Please sign the contract first.");
       return;
     }
 
@@ -75,12 +75,8 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
 
       if (isLocked) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  "This signature is already locked and cannot be changed."),
-            ),
-          );
+          showAppWarningBanner(context,
+              "This signature is already locked and cannot be changed.");
         }
         return;
       }
@@ -106,15 +102,11 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Signature saved successfully.")),
-        );
+        showAppSuccessBanner(context, "Signature saved successfully.");
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error saving signature: $e")),
-        );
+        showAppWarningBanner(context, friendlyAuthError(e));
       }
     } finally {
       if (mounted) {
@@ -137,9 +129,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Contract sent to owner.")),
-      );
+      showAppSuccessBanner(context, "Contract sent to owner.");
     }
   }
 

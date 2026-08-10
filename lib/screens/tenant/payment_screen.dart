@@ -9,6 +9,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -77,13 +78,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (ownerId.isEmpty || room.isEmpty) {
         setState(() => loading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Connect to owner and select a room first",
-            ),
-          ),
-        );
+        if (!mounted) return;
+        showAppWarningBanner(
+            context, "Connect to owner and select a room first");
 
         return;
       }
@@ -139,11 +136,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       setState(() => loading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-        ),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
   }
 
@@ -216,13 +210,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (blurred) {
         setState(() => uploading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Blurred or low quality receipt detected",
-            ),
-          ),
-        );
+        if (!mounted) return;
+        showAppWarningBanner(
+            context, "Blurred or low quality receipt detected");
 
         return;
       }
@@ -249,23 +239,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       setState(() => uploading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Payment submitted successfully",
-          ),
-        ),
-      );
+      if (!mounted) return;
+      showAppSuccessBanner(context, "Payment submitted successfully");
     } catch (e) {
       print("UPLOAD ERROR: $e");
 
       setState(() => uploading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Upload failed: $e"),
-        ),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
   }
 
@@ -274,11 +256,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   // ======================================
   void confirmPayment() {
     if (totalBill <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("No bill found"),
-        ),
-      );
+      showAppWarningBanner(context, "No bill found");
       return;
     }
 

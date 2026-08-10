@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'contract_preview_screen.dart';
 import 'create_contract_screen.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class ContractListScreen extends StatelessWidget {
   const ContractListScreen({super.key});
@@ -77,15 +78,11 @@ class ContractListScreen extends StatelessWidget {
       await batch.commit();
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contract terminated successfully.')),
-        );
+        showAppSuccessBanner(context, 'Contract terminated successfully.');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error terminating contract: $e')),
-        );
+        showAppWarningBanner(context, friendlyAuthError(e));
       }
     }
   }

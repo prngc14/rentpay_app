@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+
 class TenantConnectScreen extends StatefulWidget {
   const TenantConnectScreen({super.key});
 
@@ -26,11 +28,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
     String code = codeController.text.trim();
 
     if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Enter owner code"),
-        ),
-      );
+      showAppWarningBanner(context, "Enter owner code");
       return;
     }
 
@@ -88,11 +86,8 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
     } catch (e) {
       print("CONNECT ERROR: $e");
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$e"),
-        ),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
 
     setState(() => loading = false);
@@ -103,11 +98,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
   // =========================
   Future<void> assignRoom() async {
     if (selectedRoom == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Select a room"),
-        ),
-      );
+      showAppWarningBanner(context, "Select a room");
       return;
     }
 
@@ -147,23 +138,15 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
         "paymentStatus": "unpaid",
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Room connected successfully!",
-          ),
-        ),
-      );
+      if (!mounted) return;
+      showAppSuccessBanner(context, "Room connected successfully!");
 
       Navigator.pop(context);
     } catch (e) {
       print("ROOM ASSIGN ERROR: $e");
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$e"),
-        ),
-      );
+      if (!mounted) return;
+      showAppWarningBanner(context, friendlyAuthError(e));
     }
   }
 

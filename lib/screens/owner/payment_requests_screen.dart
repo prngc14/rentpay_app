@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/firestore_service.dart';
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class PaymentRequestsScreen extends StatelessWidget {
   const PaymentRequestsScreen({super.key});
@@ -11,6 +12,13 @@ class PaymentRequestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final FirestoreService firestore = FirestoreService();
     final user = FirebaseAuth.instance.currentUser;
+
+    // Ginagamit ang context ng buong Screen (mula sa build() mismo) sa
+    // lahat ng banner calls sa ibaba, hindi yung sa specific item card,
+    // dahil natatanggal agad ang card na iyon sa StreamBuilder pagka-
+    // approve/reject/delete -- kaya laging stable ang context na ito
+    // hangga't bukas ang buong screen.
+    final screenContext = context;
 
     if (user == null) {
       return const Scaffold(
@@ -275,14 +283,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                                         tenantId,
                                       );
 
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "✅ Payment approved",
-                                          ),
-                                        ),
-                                      );
+                                      if (!screenContext.mounted) return;
+                                      showAppSuccessBanner(
+                                          screenContext, "Payment approved");
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.green,
@@ -302,14 +305,9 @@ class PaymentRequestsScreen extends StatelessWidget {
                                         p.id,
                                       );
 
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "❌ Payment rejected",
-                                          ),
-                                        ),
-                                      );
+                                      if (!screenContext.mounted) return;
+                                      showAppWarningBanner(
+                                          screenContext, "Payment rejected");
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
@@ -374,13 +372,12 @@ class PaymentRequestsScreen extends StatelessWidget {
                                       .doc(p.id)
                                       .delete();
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "🗑 Payment deleted successfully",
-                                      ),
-                                    ),
-                                  );
+                                  // Gamit ang stable na screenContext (hindi
+                                  // yung sa card na ito) dahil matatanggal
+                                  // agad ang card pagka-delete.
+                                  if (!screenContext.mounted) return;
+                                  showAppSuccessBanner(screenContext,
+                                      "Payment deleted successfully");
                                 }
                               },
                               style: ElevatedButton.styleFrom(
