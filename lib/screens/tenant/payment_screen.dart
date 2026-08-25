@@ -30,6 +30,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
   double electricBill = 0;
   double totalBill = 0;
 
+  // PARTIAL PAYMENT TRACKING
+  double amountPaid = 0;
+  double remainingBalance = 0;
+  double carriedOverBalance = 0;
+  double minimumPayment = 0;
+
+  // FULL / PARTIAL TOGGLE
+  bool isPartialSelected = false;
+  final TextEditingController partialAmountController =
+      TextEditingController();
+
   String? gcashQR;
   String? mayaQR;
 
@@ -40,6 +51,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void initState() {
     super.initState();
     loadTenantData();
+  }
+
+  @override
+  void dispose() {
+    partialAmountController.dispose();
+    super.dispose();
   }
 
   // ======================================
@@ -106,6 +123,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
         totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
+        // PARTIAL PAYMENT TRACKING
+        amountPaid = (roomData["amountPaid"] ?? 0).toDouble();
+
+        carriedOverBalance = (roomData["carriedOverBalance"] ?? 0).toDouble();
+
+        remainingBalance = totalBill - amountPaid;
+        if (remainingBalance < 0) remainingBalance = 0;
+
+        minimumPayment = FirestoreService.calculateMinimumPayment(
+          totalBill: totalBill,
+          remainingBalance: remainingBalance,
+        );
+
         // AUTO FIX IF TENANT NOT SAVED
         if (roomData["tenantId"] == null ||
             roomData["tenantId"].toString().isEmpty) {
@@ -139,6 +169,44 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (!mounted) return;
       showAppWarningBanner(context, friendlyAuthError(e));
     }
+  }
+
+  // ======================================
+  // AMOUNT NA IPAPADALA (base sa toggle)
+  // ======================================
+  double get amountToSubmit {
+    if (!isPartialSelected) return remainingBalance;
+
+    return double.tryParse(partialAmountController.text) ?? 0;
+  }
+
+  // ======================================
+  // VALIDATION MESSAGE (null kung valid)
+  // ======================================
+  String? get partialAmountErrorText {
+    if (!isPartialSelected) return null;
+
+    final text = partialAmountController.text.trim();
+
+    if (text.isEmpty) {
+      return "Ilagay ang halagang babayaran";
+    }
+
+    final value = double.tryParse(text);
+
+    if (value == null || value <= 0) {
+      return "Invalid na halaga";
+    }
+
+    if (value > remainingBalance + 0.01) {
+      return "Hindi pwedeng lumagpas sa natitirang balanse (₱${remainingBalance.toStringAsFixed(2)})";
+    }
+
+    if (value < minimumPayment - 0.01) {
+      return "Minimum na ₱${minimumPayment.toStringAsFixed(2)} ang dapat bayaran";
+    }
+
+    return null;
   }
 
   // ======================================
@@ -186,7 +254,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   // ======================================
   // UPLOAD PAYMENT
   // ======================================
-  Future<void> uploadAndSubmitPayment() async {
+  Future<void> uploadAndSubmitPayment(double amount) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
@@ -233,7 +301,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         user.uid,
         ownerId,
         room,
-        totalBill,
+        amount,
         url,
       );
 
@@ -260,12 +328,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    if (remainingBalance <= 0) {
+      showAppWarningBanner(context, "Wala nang natitirang balanse");
+      return;
+    }
+
+    // VALIDATE PARTIAL AMOUNT (kung partial ang napili)
+    final error = partialAmountErrorText;
+
+    if (error != null) {
+      showAppWarningBanner(context, error);
+      return;
+    }
+
+    final double amount = amountToSubmit;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Confirm Payment"),
         content: Text(
-          "Upload proof of payment for ₱$totalBill ?",
+          "Upload proof of payment for ₱${amount.toStringAsFixed(2)}?",
         ),
         actions: [
           TextButton(
@@ -275,7 +358,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              uploadAndSubmitPayment();
+              uploadAndSubmitPayment(amount);
             },
             child: const Text("Upload"),
           ),
@@ -337,24 +420,188 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               fontSize: 18,
                             ),
                           ),
+
+                          // CARRIED OVER BALANCE (kung meron)
+                          if (carriedOverBalance > 0) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              "Carried Over Balance: ₱${carriedOverBalance.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+
                           const Divider(
                             height: 30,
                             thickness: 1,
                           ),
                           Text(
-                            "Total: ₱$totalBill",
+                            "Total Bill: ₱${totalBill.toStringAsFixed(2)}",
                             style: const TextStyle(
-                              fontSize: 28,
-                              color: Colors.green,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+
+                          // ALREADY PAID + REMAINING (kung may partial na)
+                          if (amountPaid > 0) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              "Already Paid: ₱${amountPaid.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.green,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              "Remaining Balance",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.deepOrange,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "₱${remainingBalance.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 28,
+                                color: Colors.deepOrange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              "₱${remainingBalance.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 28,
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 24),
+
+                  // ==========================
+                  // FULL / PARTIAL TOGGLE
+                  // ==========================
+                  if (remainingBalance > 0)
+                    Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              "Payment Option",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: !isPartialSelected
+                                          ? Colors.deepOrange
+                                          : null,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPartialSelected = false;
+                                      });
+                                    },
+                                    child: Text(
+                                      "Full Payment",
+                                      style: TextStyle(
+                                        color: !isPartialSelected
+                                            ? Colors.white
+                                            : Colors.deepOrange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: isPartialSelected
+                                          ? Colors.deepOrange
+                                          : null,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPartialSelected = true;
+
+                                        // I-PREFILL NG MINIMUM AMOUNT
+                                        if (partialAmountController
+                                            .text.isEmpty) {
+                                          partialAmountController.text =
+                                              minimumPayment
+                                                  .toStringAsFixed(2);
+                                        }
+                                      });
+                                    },
+                                    child: Text(
+                                      "Partial Payment",
+                                      style: TextStyle(
+                                        color: isPartialSelected
+                                            ? Colors.white
+                                            : Colors.deepOrange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // PARTIAL AMOUNT INPUT
+                            if (isPartialSelected) ...[
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: partialAmountController,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                onChanged: (_) => setState(() {}),
+                                decoration: InputDecoration(
+                                  labelText: "Halagang Babayaran",
+                                  prefixText: "₱ ",
+                                  border: const OutlineInputBorder(),
+                                  helperText:
+                                      "Minimum: ₱${minimumPayment.toStringAsFixed(2)} • Max: ₱${remainingBalance.toStringAsFixed(2)}",
+                                  errorText: partialAmountErrorText,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
 
                   // GCASH QR
                   if (gcashQR != null && gcashQR!.isNotEmpty)

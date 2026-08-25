@@ -6,11 +6,13 @@ import '../../services/firestore_service.dart';
 import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class TenantPaymentHistoryScreen extends StatelessWidget {
+  final String ownerId;
   final String tenantId;
   final String tenantName;
 
   const TenantPaymentHistoryScreen({
     super.key,
+    required this.ownerId,
     required this.tenantId,
     required this.tenantName,
   });
@@ -33,7 +35,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: firestore.getTenantPayments(tenantId),
+        stream: firestore.getTenantPaymentsForOwner(ownerId, tenantId),
         builder: (context, snapshot) {
           // 🔄 LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {

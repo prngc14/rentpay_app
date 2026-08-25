@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/firestore_service.dart';
 import 'tenant_home_screen.dart';
 import 'payment_screen.dart';
 import 'tenant_profile_screen.dart';
 import 'tenant_connect_screen.dart';
 import 'tenant_contracts_screen.dart';
+import 'pending_payment_screen.dart';
 
 class TenantDashboard extends StatefulWidget {
   const TenantDashboard({super.key});
@@ -17,12 +20,7 @@ class TenantDashboard extends StatefulWidget {
 class _TenantDashboardState extends State<TenantDashboard> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const TenantHomeScreen(),
-    const PaymentScreen(),
-    const TenantContractsScreen(),
-    const TenantProfileScreen(),
-  ];
+  final FirestoreService firestore = FirestoreService();
 
   void logout() async {
     await FirebaseAuth.instance.signOut();
@@ -79,7 +77,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                 ),
               ],
             ),
-      body: _screens[_currentIndex],
+      body: _buildBody(user.uid),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: Colors.deepOrange,
@@ -109,6 +107,68 @@ class _TenantDashboardState extends State<TenantDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  // ===============================
+  // MAIN BODY (per tab)
+  // Home / Contracts / Profile = normal, walang lock.
+  // Payments tab lang ang naka-gate: kung may
+  // activePaymentId, PendingPaymentScreen ang lalabas
+  // imbes na ang normal na PaymentScreen (upload form).
+  // ===============================
+  Widget _buildBody(String uid) {
+    switch (_currentIndex) {
+      case 0:
+        return const TenantHomeScreen();
+      case 1:
+        return _buildPaymentsTab(uid);
+      case 2:
+        return const TenantContractsScreen();
+      case 3:
+        return const TenantProfileScreen();
+      default:
+        return const TenantHomeScreen();
+    }
+  }
+
+  Widget _buildPaymentsTab(String uid) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: firestore.getCurrentUserData(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>?;
+
+        final String? activePaymentId = userData?["activePaymentId"];
+
+        if (activePaymentId != null && activePaymentId.isNotEmpty) {
+          return PendingPaymentScreen(
+            paymentId: activePaymentId,
+            tenantId: uid,
+            onContinue: () async {
+              await firestore.clearActivePayment(uid);
+
+              if (!mounted) return;
+              setState(() {
+                _currentIndex = 0; // balik sa Home tab
+              });
+            },
+            onSubmitNew: () async {
+              await firestore.clearActivePayment(uid);
+              // mananatili sa Payments tab — awtomatikong
+              // magpapakita ng normal PaymentScreen (upload form)
+              // sa sandaling ma-clear ang activePaymentId.
+            },
+          );
+        }
+
+        return const PaymentScreen();
+      },
     );
   }
 }

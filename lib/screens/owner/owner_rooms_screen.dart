@@ -26,6 +26,10 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     String roomId,
     Map<String, dynamic> room,
   ) {
+    final rentController = TextEditingController(
+      text: room["monthlyRent"].toString(),
+    );
+
     final prevElectricController = TextEditingController(
       text: room["previousElectric"].toString(),
     );
@@ -49,6 +53,26 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
         content: SingleChildScrollView(
           child: Column(
             children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Monthly Rent",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: rentController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: "Monthly Rent",
+                  prefixText: "₱ ",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -117,6 +141,11 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
               backgroundColor: Colors.deepOrange,
             ),
             onPressed: () async {
+              double monthlyRent = double.tryParse(
+                    rentController.text,
+                  ) ??
+                  (room["monthlyRent"] as num).toDouble();
+
               double previousElectric = double.tryParse(
                     prevElectricController.text,
                   ) ??
@@ -139,6 +168,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
               await firestore.updateRoomBilling(
                 roomId: roomId,
+                monthlyRent: monthlyRent,
                 previousElectric: previousElectric,
                 currentElectric: currentElectric,
                 previousWater: previousWater,
@@ -169,6 +199,42 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
     return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} "
         "${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+  }
+
+  // ======================================
+  // PAYMENT STATUS DISPLAY HELPERS
+  // ======================================
+  Color _statusColor(String status) {
+    switch (status) {
+      case "paid":
+        return Colors.green;
+      case "partial":
+        return Colors.orange;
+      default:
+        return Colors.red;
+    }
+  }
+
+  Color _statusBgColor(String status) {
+    switch (status) {
+      case "paid":
+        return Colors.green.shade50;
+      case "partial":
+        return Colors.orange.shade50;
+      default:
+        return Colors.red.shade50;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case "paid":
+        return "PAID";
+      case "partial":
+        return "PARTIAL PAYMENT";
+      default:
+        return "UNPAID";
+    }
   }
 
   @override
@@ -207,6 +273,17 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
               String paymentStatus = room["paymentStatus"] ?? "unpaid";
 
               Timestamp? paidAt = room["paidAt"];
+
+              double totalBill = (room["totalBill"] ?? 0).toDouble();
+
+              double amountPaid = (room["amountPaid"] ?? 0).toDouble();
+
+              double remainingBalance = (room["remainingBalance"] ??
+                      (totalBill - amountPaid))
+                  .toDouble();
+
+              double carriedOverBalance =
+                  (room["carriedOverBalance"] ?? 0).toDouble();
 
               return Card(
                 margin: const EdgeInsets.all(10),
@@ -391,10 +468,22 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                         "Water Bill: ₱${room["waterBill"] ?? 0}",
                       ),
 
+                      // CARRIED OVER BALANCE (kung meron)
+                      if (carriedOverBalance > 0) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          "Carried Over Balance: ₱${carriedOverBalance.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: 10),
 
                       Text(
-                        "TOTAL BILL: ₱${room["totalBill"] ?? 0}",
+                        "TOTAL BILL: ₱${totalBill.toStringAsFixed(2)}",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.green,
@@ -411,31 +500,50 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(15),
                         decoration: BoxDecoration(
-                          color: paymentStatus == "paid"
-                              ? Colors.green.shade50
-                              : Colors.red.shade50,
+                          color: _statusBgColor(paymentStatus),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              paymentStatus == "paid" ? "PAID" : "UNPAID",
+                              _statusLabel(paymentStatus),
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: paymentStatus == "paid"
-                                    ? Colors.green
-                                    : Colors.red,
+                                color: _statusColor(paymentStatus),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Payment Date: ${formatDate(paidAt)}",
-                              style: const TextStyle(
-                                fontSize: 15,
+
+                            // PARTIAL: ipakita ang Amount Paid + Remaining
+                            if (paymentStatus == "partial") ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                "Amount Paid: ₱${amountPaid.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Remaining Balance: ₱${remainingBalance.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.deepOrange,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                "Payment Date: ${formatDate(paidAt)}",
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

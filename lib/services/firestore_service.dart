@@ -33,6 +33,9 @@ class FirestoreService {
       "room": "",
       "approved": false,
       "connected": false,
+
+      // PENDING PAYMENT LOCK
+      "activePaymentId": null,
     });
   }
 
@@ -222,6 +225,11 @@ class FirestoreService {
       // TOTAL
       "totalBill": monthlyRent,
 
+      // PARTIAL PAYMENT TRACKING
+      "amountPaid": 0,
+      "remainingBalance": monthlyRent,
+      "carriedOverBalance": 0,
+
       // PAYMENT
       "paymentStatus": "unpaid",
       "paidAt": null,
@@ -245,8 +253,13 @@ class FirestoreService {
   // ===============================
   // UPDATE ROOM BILLING
   // ===============================
+  // Bagong cycle = bagong rent+utilities bill, DAGDAG ang
+  // natitirang unpaid balance mula sa nakaraang cycle
+  // (rollover, parang Home Credit / GGives).
+  // ===============================
   Future<void> updateRoomBilling({
     required String roomId,
+    required double monthlyRent,
     required double previousElectric,
     required double currentElectric,
     required double previousWater,
@@ -262,8 +275,6 @@ class FirestoreService {
 
     double waterRate = (data["waterRate"] ?? 30).toDouble();
 
-    double monthlyRent = (data["monthlyRent"] ?? 0).toDouble();
-
     // ELECTRIC
     double electricConsumption = currentElectric - previousElectric;
 
@@ -274,8 +285,25 @@ class FirestoreService {
 
     double waterBill = waterConsumption * waterRate;
 
-    // TOTAL
-    double totalBill = monthlyRent + electricBill + waterBill;
+    // ===============================
+    // ROLLOVER: dalhin ang natitirang unpaid
+    // balance mula sa nakaraang cycle
+    // ===============================
+    double previousTotalBill = (data["totalBill"] ?? 0).toDouble();
+
+    double previousAmountPaid = (data["amountPaid"] ?? 0).toDouble();
+
+    String previousStatus = data["paymentStatus"] ?? "unpaid";
+
+    double carriedOverBalance = previousStatus == "paid"
+        ? 0
+        : (previousTotalBill - previousAmountPaid);
+
+    if (carriedOverBalance < 0) carriedOverBalance = 0;
+
+    // TOTAL = bagong bill + carried-over na utang
+    double totalBill =
+        monthlyRent + electricBill + waterBill + carriedOverBalance;
 
     DateTime now = DateTime.now();
 
@@ -291,6 +319,9 @@ class FirestoreService {
 
     // UPDATE ROOM
     await _db.collection("rooms").doc(roomId).update({
+      // RENT
+      "monthlyRent": monthlyRent,
+
       // ELECTRIC
       "previousElectric": previousElectric,
       "currentElectric": currentElectric,
@@ -305,6 +336,11 @@ class FirestoreService {
 
       // TOTAL
       "totalBill": totalBill,
+
+      // RESET PARTIAL PAYMENT TRACKING (bagong cycle)
+      "amountPaid": 0,
+      "remainingBalance": totalBill,
+      "carriedOverBalance": carriedOverBalance,
 
       // RESET PAYMENT
       "paymentStatus": "unpaid",
@@ -322,10 +358,12 @@ class FirestoreService {
       // HISTORY
       "history.$monthKey": {
         "month": monthKey,
+        "monthlyRent": monthlyRent,
         "electricConsumption": electricConsumption,
         "waterConsumption": waterConsumption,
         "electricBill": electricBill,
         "waterBill": waterBill,
+        "carriedOverBalance": carriedOverBalance,
         "totalBill": totalBill,
         "paymentStatus": "unpaid",
         "paidAt": null,
@@ -460,20 +498,93 @@ class FirestoreService {
   }
 
   // ===============================
+  // CALCULATE MINIMUM PAYMENT
+  // ===============================
+  // 50% ng totalBill, MALIBAN kung mas maliit na
+  // ang natitirang balance (huling bahagi na lang) -
+  // doon, ang buong natitira na lang ang minimum.
+  // Ginagamit ng UI (Payment Screen) at ng
+  // submitPayment() validation - iisang formula lang.
+  // ===============================
+  static double calculateMinimumPayment({
+    required double totalBill,
+    required double remainingBalance,
+  }) {
+    double half = totalBill * 0.5;
+    return remainingBalance < half ? remainingBalance : half;
+  }
+
+  // ===============================
   // SUBMIT PAYMENT
   // ===============================
-  Future<void> submitPayment(
+  // Gumagawa ng bagong payment doc, va-validate laban
+  // sa kasalukuyang balance ng room (minimum 50%,
+  // hindi pwedeng lumagpas sa natitira), at ise-set
+  // ang activePaymentId sa tenant para i-gate papunta
+  // sa PendingPaymentScreen. Ibinabalik ang payment doc ID.
+  // ===============================
+  Future<String> submitPayment(
     String tenantId,
     String ownerId,
     String room,
     double amount,
     String screenshotUrl,
   ) async {
+    // FETCH CURRENT ROOM BALANCE
+    final roomQuery = await _db
+        .collection("rooms")
+        .where("roomNumber", isEqualTo: room)
+        .where("ownerId", isEqualTo: ownerId)
+        .limit(1)
+        .get();
+
+    if (roomQuery.docs.isEmpty) {
+      throw Exception("Room not found");
+    }
+
+    final roomData = roomQuery.docs.first.data();
+
+    double totalBill = (roomData["totalBill"] ?? 0).toDouble();
+
+    double amountPaid = (roomData["amountPaid"] ?? 0).toDouble();
+
+    double remainingBalance = totalBill - amountPaid;
+
+    if (remainingBalance < 0) remainingBalance = 0;
+
+    if (remainingBalance <= 0) {
+      throw Exception("Wala nang natitirang balanse na dapat bayaran");
+    }
+
+    double minimumRequired = calculateMinimumPayment(
+      totalBill: totalBill,
+      remainingBalance: remainingBalance,
+    );
+
+    if (amount <= 0) {
+      throw Exception("Invalid na halaga ng bayad");
+    }
+
+    if (amount > remainingBalance + 0.01) {
+      throw Exception(
+        "Ang halaga ay lumampas sa natitirang balanse (₱${remainingBalance.toStringAsFixed(2)})",
+      );
+    }
+
+    if (amount < minimumRequired - 0.01) {
+      throw Exception(
+        "Kailangan ng hindi bababa sa ₱${minimumRequired.toStringAsFixed(2)} (minimum payment)",
+      );
+    }
+
     DateTime now = DateTime.now();
 
-    String paymentMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
+    String paymentMonth =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
-    await _db.collection("payments").add({
+    bool isPartial = amount < remainingBalance - 0.01;
+
+    final paymentRef = await _db.collection("payments").add({
       "tenantId": tenantId,
       "ownerId": ownerId,
       "room": room,
@@ -482,6 +593,7 @@ class FirestoreService {
 
       // STATUS
       "status": "pending",
+      "isPartial": isPartial,
 
       // DATE
       "date": Timestamp.now(),
@@ -489,10 +601,24 @@ class FirestoreService {
       // MONTH
       "paymentMonth": paymentMonth,
     });
+
+    // LOCK: i-gate ang tenant papunta sa Pending Payment Screen
+    await _db.collection("users").doc(tenantId).update({
+      "activePaymentId": paymentRef.id,
+    });
+
+    return paymentRef.id;
   }
 
   // ===============================
   // APPROVE PAYMENT
+  // ===============================
+  // Kinukwenta kung buo na ba ang total bayad
+  // (amountPaid + itong bagong payment) laban sa
+  // totalBill. Kung buo na -> "paid" (manual Continue
+  // sa Pending screen). Kung hindi pa -> "partial"
+  // (awtomatikong nawawala ang lock, walang kailangang
+  // i-tap na Continue - diretso balik sa Payments tab).
   // ===============================
   Future<void> approvePayment(
     String paymentId,
@@ -507,21 +633,16 @@ class FirestoreService {
 
       String roomNumber = paymentData["room"] ?? "";
 
-      Timestamp paidTime = Timestamp.now();
+      double approvedAmount = (paymentData["amount"] ?? 0).toDouble();
+
+      Timestamp approvedTime = Timestamp.now();
 
       String paymentMonth = paymentData["paymentMonth"] ?? "";
 
-      // UPDATE PAYMENT
+      // UPDATE PAYMENT DOC
       await _db.collection("payments").doc(paymentId).update({
         "status": "verified",
-        "verifiedAt": paidTime,
-      });
-
-      // UPDATE USER
-      await _db.collection("users").doc(tenantId).update({
-        "approved": true,
-        "paymentStatus": "paid",
-        "lastPaymentDate": paidTime,
+        "verifiedAt": approvedTime,
       });
 
       // FIND ROOM
@@ -532,17 +653,58 @@ class FirestoreService {
           .limit(1)
           .get();
 
+      String newStatus = "paid";
+
       if (roomQuery.docs.isNotEmpty) {
         final roomRef = roomQuery.docs.first.reference;
+        final roomData = roomQuery.docs.first.data();
+
+        double totalBill = (roomData["totalBill"] ?? 0).toDouble();
+
+        double currentAmountPaid = (roomData["amountPaid"] ?? 0).toDouble();
+
+        double newAmountPaid = currentAmountPaid + approvedAmount;
+
+        if (newAmountPaid > totalBill) newAmountPaid = totalBill;
+
+        double newRemaining = totalBill - newAmountPaid;
+
+        if (newRemaining < 0) newRemaining = 0;
+
+        bool isFull = newRemaining <= 0.01;
+
+        newStatus = isFull ? "paid" : "partial";
 
         await roomRef.update({
-          "paymentStatus": "paid",
-          "paidAt": paidTime,
+          "amountPaid": newAmountPaid,
+          "remainingBalance": newRemaining,
+          "paymentStatus": newStatus,
+          "paidAt": isFull ? approvedTime : null,
           "isOverdue": false,
 
           // HISTORY
-          "history.$paymentMonth.paymentStatus": "paid",
-          "history.$paymentMonth.paidAt": paidTime,
+          "history.$paymentMonth.paymentStatus": newStatus,
+          "history.$paymentMonth.paidAt": isFull ? approvedTime : null,
+          "history.$paymentMonth.amountPaid": newAmountPaid,
+        });
+      }
+
+      // UPDATE USER
+      await _db.collection("users").doc(tenantId).update({
+        "approved": true,
+        "paymentStatus": newStatus,
+        "lastPaymentDate": approvedTime,
+      });
+
+      // ===============================
+      // PARTIAL PAYMENT: awtomatikong i-unlock
+      // (walang kailangang i-tap na "Continue")
+      // FULL PAYMENT: mananatiling naka-lock hanggang
+      // i-tap ang "Continue to Dashboard"
+      // ===============================
+      if (newStatus == "partial") {
+        await _db.collection("users").doc(tenantId).update({
+          "activePaymentId": null,
         });
       }
     } catch (e) {
@@ -563,6 +725,21 @@ class FirestoreService {
     } catch (e) {
       print("REJECT PAYMENT ERROR: $e");
     }
+  }
+
+  // ===============================
+  // CLEAR ACTIVE PAYMENT (unlock dashboard)
+  // ===============================
+  // Tinatawag pagkatapos ng "Continue to Dashboard"
+  // (full payment approved) o "Submit New Payment"
+  // (rejected) sa PendingPaymentScreen.
+  // ===============================
+  Future<void> clearActivePayment(
+    String tenantId,
+  ) async {
+    await _db.collection("users").doc(tenantId).update({
+      "activePaymentId": null,
+    });
   }
 
   // ===============================
@@ -708,6 +885,40 @@ class FirestoreService {
   ) {
     return _db
         .collection("payments")
+        .where(
+          "tenantId",
+          isEqualTo: tenantId,
+        )
+        .orderBy(
+          "date",
+          descending: true,
+        )
+        .snapshots();
+  }
+
+  // ===============================
+  // GET TENANT PAYMENTS (FOR OWNER VIEW)
+  // ===============================
+  // Kasama ang ownerId sa query mismo (hindi lang tenantId).
+  // Kailangan ito para sa Firestore Security Rules -- sa LIST
+  // queries, hindi tulad ng single-doc read, kailangang direktang
+  // ma-verify ng rule ang pag-access GAMIT ANG QUERY MISMO, hindi
+  // lang sa bawat resultang document. Dahil ang ownerId ang
+  // sinusuri para sa access ng Owner, kailangan itong sumali sa
+  // where() clause -- kaya hiwalay ito sa getTenantPayments() sa
+  // itaas (na para naman sa Tenant mismo na tumitingin sa sarili
+  // niyang history).
+  // ===============================
+  Stream<QuerySnapshot> getTenantPaymentsForOwner(
+    String ownerId,
+    String tenantId,
+  ) {
+    return _db
+        .collection("payments")
+        .where(
+          "ownerId",
+          isEqualTo: ownerId,
+        )
         .where(
           "tenantId",
           isEqualTo: tenantId,

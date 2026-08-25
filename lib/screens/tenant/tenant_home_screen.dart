@@ -47,6 +47,31 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     );
   }
 
+  // =========================
+  // STATUS DISPLAY HELPERS
+  // Priority: PAID > PARTIAL > OVERDUE > UNPAID
+  // =========================
+  String _statusLabel(String paymentStatus, bool isOverdue) {
+    if (paymentStatus == "paid") return "PAID";
+    if (paymentStatus == "partial") return "PARTIAL PAYMENT";
+    if (isOverdue) return "OVERDUE";
+    return "UNPAID";
+  }
+
+  Color _statusColor(String paymentStatus, bool isOverdue) {
+    if (paymentStatus == "paid") return Colors.green;
+    if (paymentStatus == "partial") return Colors.orange;
+    if (isOverdue) return Colors.red;
+    return Colors.orange;
+  }
+
+  Color _statusBgColor(String paymentStatus, bool isOverdue) {
+    if (paymentStatus == "paid") return Colors.green.shade50;
+    if (paymentStatus == "partial") return Colors.orange.shade50;
+    if (isOverdue) return Colors.red.shade50;
+    return Colors.orange.shade50;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -135,6 +160,12 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
               double totalBill = (roomData["totalBill"] ?? 0).toDouble();
 
+              double amountPaid = (roomData["amountPaid"] ?? 0).toDouble();
+
+              double remainingBalance = (roomData["remainingBalance"] ??
+                      (totalBill - amountPaid))
+                  .toDouble();
+
               String paymentStatus = roomData["paymentStatus"] ?? "unpaid";
 
               bool isOverdue = roomData["isOverdue"] ?? false;
@@ -202,30 +233,18 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: paymentStatus == "paid"
-                              ? Colors.green.shade50
-                              : isOverdue
-                                  ? Colors.red.shade50
-                                  : Colors.orange.shade50,
+                          color: _statusBgColor(paymentStatus, isOverdue),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              paymentStatus == "paid"
-                                  ? "PAID"
-                                  : isOverdue
-                                      ? "OVERDUE"
-                                      : "UNPAID",
+                              _statusLabel(paymentStatus, isOverdue),
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: paymentStatus == "paid"
-                                    ? Colors.green
-                                    : isOverdue
-                                        ? Colors.red
-                                        : Colors.orange,
+                                color: _statusColor(paymentStatus, isOverdue),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -235,13 +254,35 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                                 fontSize: 16,
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              "Paid Date: $paidDate",
-                              style: const TextStyle(
-                                fontSize: 16,
+
+                            // PARTIAL: ipakita ang Amount Paid + Remaining
+                            if (paymentStatus == "partial") ...[
+                              const SizedBox(height: 5),
+                              Text(
+                                "Amount Paid: ₱${amountPaid.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 5),
+                              Text(
+                                "Remaining Balance: ₱${remainingBalance.toStringAsFixed(2)}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 5),
+                              Text(
+                                "Paid Date: $paidDate",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -290,7 +331,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                       const SizedBox(height: 22),
 
                       // =========================
-                      // TOTAL BILL CARD
+                      // TOTAL / REMAINING BILL CARD
                       // =========================
                       Container(
                         width: double.infinity,
@@ -313,9 +354,11 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                         ),
                         child: Column(
                           children: [
-                            const Text(
-                              "TOTAL BILL",
-                              style: TextStyle(
+                            Text(
+                              paymentStatus == "partial"
+                                  ? "REMAINING BALANCE"
+                                  : "TOTAL BILL",
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -324,7 +367,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              "₱${totalBill.toStringAsFixed(2)}",
+                              "₱${(paymentStatus == "partial" ? remainingBalance : totalBill).toStringAsFixed(2)}",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 32,

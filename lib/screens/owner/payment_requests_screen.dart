@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import 'tenant_payment_history_screen.dart';
 
 class PaymentRequestsScreen extends StatelessWidget {
   const PaymentRequestsScreen({super.key});
@@ -13,13 +14,6 @@ class PaymentRequestsScreen extends StatelessWidget {
     final FirestoreService firestore = FirestoreService();
     final user = FirebaseAuth.instance.currentUser;
 
-    // Ginagamit ang context ng buong Screen (mula sa build() mismo) sa
-    // lahat ng banner calls sa ibaba, hindi yung sa specific item card,
-    // dahil natatanggal agad ang card na iyon sa StreamBuilder pagka-
-    // approve/reject/delete -- kaya laging stable ang context na ito
-    // hangga't bukas ang buong screen.
-    final screenContext = context;
-
     if (user == null) {
       return const Scaffold(
         body: Center(child: Text("Not logged in")),
@@ -28,7 +22,7 @@ class PaymentRequestsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Payment Requests"),
+        title: const Text("Payment History"),
         backgroundColor: Colors.deepOrange,
         centerTitle: true,
       ),
@@ -54,7 +48,7 @@ class PaymentRequestsScreen extends StatelessWidget {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
-                "No payment requests yet",
+                "No payment history yet",
                 style: TextStyle(fontSize: 18),
               ),
             );
@@ -62,29 +56,53 @@ class PaymentRequestsScreen extends StatelessWidget {
 
           final payments = snapshot.data!.docs;
 
+          // ======================================
+          // GROUP PAYMENTS BY TENANT
+          // (getOwnerPayments ay naka-orderBy date
+          // descending na, kaya mananatiling pinaka-
+          // bago ang unang item ng bawat group)
+          // ======================================
+          final Map<String, List<QueryDocumentSnapshot>> grouped = {};
+
+          for (final doc in payments) {
+            final data = doc.data() as Map<String, dynamic>;
+            final String tenantId = data["tenantId"] ?? "";
+
+            if (tenantId.isEmpty) continue;
+
+            grouped.putIfAbsent(tenantId, () => []).add(doc);
+          }
+
+          final tenantIds = grouped.keys.toList();
+
+          if (tenantIds.isEmpty) {
+            return const Center(
+              child: Text(
+                "No payment requests yet",
+                style: TextStyle(fontSize: 18),
+              ),
+            );
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: payments.length,
+            itemCount: tenantIds.length,
             itemBuilder: (context, index) {
-              final p = payments[index];
-              final data = p.data() as Map<String, dynamic>;
+              final tenantId = tenantIds[index];
+              final group = grouped[tenantId]!;
 
-              final String tenantId = data["tenantId"] ?? "";
-              final String room = data["room"] ?? "No room";
-              final double amount = (data["amount"] ?? 0).toDouble();
-              final String screenshot = data["screenshot"] ?? "";
-              final String status = data["status"] ?? "pending";
-              final Timestamp? date = data["date"];
+              final int totalCount = group.length;
 
-              Color statusColor;
+              final int pendingCount = group.where((d) {
+                final data = d.data() as Map<String, dynamic>;
+                return (data["status"] ?? "pending") == "pending";
+              }).length;
 
-              if (status == "verified") {
-                statusColor = Colors.green;
-              } else if (status == "rejected") {
-                statusColor = Colors.red;
-              } else {
-                statusColor = Colors.orange;
-              }
+              final latestData = group.first.data() as Map<String, dynamic>;
+
+              final String room = latestData["room"] ?? "No room";
+
+              final Timestamp? latestDate = latestData["date"];
 
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
@@ -100,9 +118,13 @@ class PaymentRequestsScreen extends StatelessWidget {
                         tenantSnapshot.data!.data() as Map<String, dynamic>;
 
                     tenantName = tenantData["name"] ?? "Unnamed Tenant";
-
                     tenantEmail = tenantData["email"] ?? "";
                   }
+
+                  // DISPLAY-ONLY: username = bahagi bago ang "@"
+                  final String tenantUsername = tenantEmail.contains("@")
+                      ? tenantEmail.split("@").first
+                      : tenantEmail;
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 14),
@@ -110,288 +132,109 @@ class PaymentRequestsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 👤 TENANT INFO
-                          Text(
-                            tenantName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TenantPaymentHistoryScreen(
+                              ownerId: user.uid,
+                              tenantId: tenantId,
+                              tenantName: tenantName,
                             ),
                           ),
-
-                          if (tenantEmail.isNotEmpty)
-                            Text(
-                              tenantEmail,
-                              style: const TextStyle(
-                                color: Colors.grey,
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: Colors.deepOrange.shade50,
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.deepOrange,
+                                size: 28,
                               ),
                             ),
-
-                          const SizedBox(height: 10),
-
-                          // 🏠 ROOM
-                          Text(
-                            "Room: $room",
-                            style: const TextStyle(fontSize: 16),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          // 💵 AMOUNT
-                          Text(
-                            "Amount: ₱$amount",
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // 🕒 DATE
-                          if (date != null)
-                            Text(
-                              "Submitted: ${date.toDate()}",
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey,
-                              ),
-                            ),
-
-                          const SizedBox(height: 12),
-
-                          // 🖼 SCREENSHOT
-                          if (screenshot.isNotEmpty)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Payment Screenshot",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => Dialog(
-                                        child: InteractiveViewer(
-                                          child: Image.network(
-                                            screenshot,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (
-                                              context,
-                                              error,
-                                              stackTrace,
-                                            ) {
-                                              return const Padding(
-                                                padding: EdgeInsets.all(20),
-                                                child: Text(
-                                                  "Failed to load image",
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              );
-                                            },
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          tenantName,
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                    );
-                                  },
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      screenshot,
-                                      height: 220,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (
-                                        context,
-                                        error,
-                                        stackTrace,
-                                      ) {
-                                        return Container(
-                                          height: 180,
-                                          width: double.infinity,
-                                          color: Colors.grey.shade300,
-                                          child: const Center(
-                                            child: Text(
-                                              "Image not available",
+                                      if (pendingCount > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade100,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            "$pendingCount Pending",
+                                            style: const TextStyle(
+                                              color: Colors.deepOrange,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
                                             ),
                                           ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  "No screenshot uploaded",
-                                ),
-                              ),
-                            ),
-
-                          const SizedBox(height: 14),
-
-                          // 📌 STATUS
-                          Row(
-                            children: [
-                              const Text(
-                                "Status: ",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                status.toUpperCase(),
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // ✅ APPROVE / REJECT
-                          if (status == "pending")
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await firestore.approvePayment(
-                                        p.id,
-                                        tenantId,
-                                      );
-
-                                      if (!screenContext.mounted) return;
-                                      showAppSuccessBanner(
-                                          screenContext, "Payment approved");
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.check),
-                                    label: const Text("Approve"),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await firestore.rejectPayment(
-                                        p.id,
-                                      );
-
-                                      if (!screenContext.mounted) return;
-                                      showAppWarningBanner(
-                                          screenContext, "Payment rejected");
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.close),
-                                    label: const Text("Reject"),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                          const SizedBox(height: 12),
-
-                          // 🗑 DELETE BUTTON
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final confirm = await showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: const Text(
-                                        "Delete Payment",
-                                      ),
-                                      content: const Text(
-                                        "Are you sure you want to delete this payment request?",
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(
-                                              context,
-                                              false,
-                                            );
-                                          },
-                                          child: const Text("Cancel"),
                                         ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          onPressed: () {
-                                            Navigator.pop(
-                                              context,
-                                              true,
-                                            );
-                                          },
-                                          child: const Text("Delete"),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-
-                                if (confirm == true) {
-                                  await FirebaseFirestore.instance
-                                      .collection("payments")
-                                      .doc(p.id)
-                                      .delete();
-
-                                  // Gamit ang stable na screenContext (hindi
-                                  // yung sa card na ito) dahil matatanggal
-                                  // agad ang card pagka-delete.
-                                  if (!screenContext.mounted) return;
-                                  showAppSuccessBanner(screenContext,
-                                      "Payment deleted successfully");
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
+                                    ],
+                                  ),
+                                  if (tenantUsername.isNotEmpty)
+                                    Text(
+                                      "Username: $tenantUsername",
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Room: $room",
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Total Payments: $totalCount",
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  if (latestDate != null)
+                                    Text(
+                                      "Last Submitted: ${DateFormat("yyyy-MM-dd HH:mm:ss").format(latestDate.toDate())}",
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                ],
                               ),
-                              icon: const Icon(Icons.delete),
-                              label: const Text("Delete Payment"),
                             ),
-                          ),
-                        ],
+                            const Icon(
+                              Icons.chevron_right,
+                              color: Colors.grey,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
