@@ -8,7 +8,7 @@ class UserModel {
   final String ownerId;
   final bool approved;
 
-  // ✅ NEW FIELDS
+  // NEW FIELDS
   final String? gcashQR;
   final String? mayaQR;
 

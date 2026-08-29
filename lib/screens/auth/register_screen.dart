@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/user_model.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- IDAGDAG: ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- gidungag:para ayuson ang path kung iba ang location mo
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// ginagawang parang email format ito sa likod-likod (hal.
   /// "andrea06@rentpay.local"), dahil kailangan talaga ng Firebase
   /// Auth ng valid email format kahit hindi ito makikita ng user.
-  
+  /// 
   /// (spaces, special symbols) para laging valid ang resulta.
   String _buildFakeEmail(String username) {
     final sanitized = username

@@ -35,7 +35,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: firestore.getTenantPayments(tenantId),
         builder: (context, snapshot) {
-          // 🔄 LOADING
+          // LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -142,7 +142,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 10),
 
-                      // 🕒 DATE
+                      // DATE
                       if (date != null)
                         Text(
                           "Submitted: ${DateFormat("yyyy-MM-dd HH:mm:ss").format(date.toDate())}",
@@ -289,14 +289,14 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  // ✅ FIXED: dinagdagan ng tenantId para
+                                  // FIXED: dinagdagan ng tenantId para
                                   // ma-clear ang activePaymentId lock ng
                                   // tenant kapag na-reject ang payment
                                   // (kailangan ito ng bagong signature ng
                                   // rejectPayment() sa FirestoreService).
                                   await firestore.rejectPayment(
                                     p.id,
-                                    tenantId,
+                                  
                                   );
 
                                   if (!screenContext.mounted) return;
@@ -318,7 +318,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 12),
 
-                      // 🗑 DELETE BUTTON
+                      // DELETE BUTTON
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(

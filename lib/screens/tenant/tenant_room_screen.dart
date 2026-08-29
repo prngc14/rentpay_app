@@ -115,9 +115,9 @@ class TenantRoomScreen extends StatelessWidget {
 
                         const SizedBox(height: 25),
 
-                        // ====================================
+                      
                         // TENANT INFO
-                        // ====================================
+                      
                         const Text(
                           "Tenant Information",
                           style: TextStyle(
@@ -151,9 +151,9 @@ class TenantRoomScreen extends StatelessWidget {
 
                         const Divider(height: 40),
 
-                        // ====================================
+                      
                         // RENT
-                        // ====================================
+                     
                         const Text(
                           "Monthly Rent",
                           style: TextStyle(
@@ -175,9 +175,9 @@ class TenantRoomScreen extends StatelessWidget {
 
                         const Divider(height: 40),
 
-                        // ====================================
+                      
                         // ELECTRIC BILL
-                        // ====================================
+                      
                         const Text(
                           "Electric Billing",
                           style: TextStyle(
@@ -224,9 +224,9 @@ class TenantRoomScreen extends StatelessWidget {
 
                         const Divider(height: 40),
 
-                        // ====================================
+                        
                         // WATER BILL
-                        // ====================================
+                      
                         const Text(
                           "Water Billing",
                           style: TextStyle(
