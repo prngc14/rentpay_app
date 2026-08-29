@@ -6,9 +6,9 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ======================================================
+
   // EMAIL LOGIN
-  // ======================================================
+
   Future<User?> login(String email, String password) async {
     try {
       final result = await _auth.signInWithEmailAndPassword(
@@ -23,9 +23,9 @@ class AuthService {
     }
   }
 
-  // ======================================================
-  // EMAIL REGISTER
-  // ======================================================
+
+ 
+
   Future<User?> register(String email, String password) async {
     try {
       final result = await _auth.createUserWithEmailAndPassword(
@@ -66,10 +66,10 @@ class AuthService {
     }
   }
 
-  // ======================================================
+
   // RESEND VERIFICATION EMAIL
   // (Disabled for Development)
-  // ======================================================
+  
   Future<void> resendVerificationEmail(
       String email, String password) async {
     throw Exception(
@@ -77,9 +77,9 @@ class AuthService {
     );
   }
 
-  // ======================================================
+  
   // GOOGLE LOGIN
-  // ======================================================
+
   Future<User?> signInWithGoogle() async {
     try {
       final googleUser = await GoogleSignIn().signIn();
@@ -129,9 +129,9 @@ class AuthService {
     }
   }
 
-  // ======================================================
+  
   // LOGOUT
-  // ======================================================
+  
   Future<void> logout() async {
     await _auth.signOut();
     await GoogleSignIn().signOut();

@@ -3,14 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantPaymentHistoryScreen extends StatelessWidget {
+  final String ownerId;
   final String tenantId;
   final String tenantName;
 
   const TenantPaymentHistoryScreen({
     super.key,
+    required this.ownerId,
     required this.tenantId,
     required this.tenantName,
   });
@@ -19,11 +21,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final FirestoreService firestore = FirestoreService();
 
-    // Ginagamit ang context ng buong Screen (mula sa build() mismo) sa
-    // lahat ng banner calls sa ibaba, hindi yung sa specific item card,
-    // dahil natatanggal agad ang card na iyon sa StreamBuilder pagka-
-    // approve/reject/delete -- kaya laging stable ang context na ito
-    // hangga't bukas ang buong screen.
     final screenContext = context;
 
     return Scaffold(
@@ -33,14 +30,12 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: firestore.getTenantPayments(tenantId),
+        stream: firestore.getTenantPaymentsForOwner(ownerId, tenantId),
         builder: (context, snapshot) {
-          // 🔄 LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ❌ ERROR
           if (snapshot.hasError) {
             return Center(
               child: Text(
@@ -50,7 +45,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
             );
           }
 
-          // 📭 EMPTY
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
@@ -97,7 +91,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 🏠 ROOM
                       Row(
                         children: [
                           Expanded(
@@ -127,10 +120,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             ),
                         ],
                       ),
-
                       const SizedBox(height: 5),
-
-                      // 💵 AMOUNT
                       Text(
                         "Amount: ₱${amount.toStringAsFixed(2)}",
                         style: const TextStyle(
@@ -139,10 +129,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                           color: Colors.green,
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
-                      // 🕒 DATE
                       if (date != null)
                         Text(
                           "Submitted: ${DateFormat("yyyy-MM-dd HH:mm:ss").format(date.toDate())}",
@@ -151,19 +138,14 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             color: Colors.grey,
                           ),
                         ),
-
                       const SizedBox(height: 12),
-
-                      // 🖼 SCREENSHOT
                       if (screenshot.isNotEmpty)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               "Payment Screenshot",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
                             GestureDetector(
@@ -175,11 +157,8 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                       child: Image.network(
                                         screenshot,
                                         fit: BoxFit.contain,
-                                        errorBuilder: (
-                                          context,
-                                          error,
-                                          stackTrace,
-                                        ) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return const Padding(
                                             padding: EdgeInsets.all(20),
                                             child: Text(
@@ -200,19 +179,13 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                   height: 220,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (
-                                    context,
-                                    error,
-                                    stackTrace,
-                                  ) {
+                                  errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       height: 180,
                                       width: double.infinity,
                                       color: Colors.grey.shade300,
                                       child: const Center(
-                                        child: Text(
-                                          "Image not available",
-                                        ),
+                                        child: Text("Image not available"),
                                       ),
                                     );
                                   },
@@ -230,22 +203,15 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Center(
-                            child: Text(
-                              "No screenshot uploaded",
-                            ),
+                            child: Text("No screenshot uploaded"),
                           ),
                         ),
-
                       const SizedBox(height: 14),
-
-                      // 📌 STATUS
                       Row(
                         children: [
                           const Text(
                             "Status: ",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             status.toUpperCase(),
@@ -256,10 +222,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 14),
-
-                      // ✅ APPROVE / REJECT
                       if (status == "pending")
                         Row(
                           children: [
@@ -277,9 +240,8 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                 ),
                                 icon: const Icon(Icons.check),
                                 label: const Text("Approve"),
@@ -289,9 +251,9 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
-                                  await firestore.rejectPayment(
-                                    p.id,
-                                  );
+                                  // 1 parameter lang -- tugma sa
+                                  // rejectPayment(String paymentId)
+                                  await firestore.rejectPayment(p.id);
 
                                   if (!screenContext.mounted) return;
                                   showAppWarningBanner(
@@ -299,9 +261,8 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                 ),
                                 icon: const Icon(Icons.close),
                                 label: const Text("Reject"),
@@ -309,10 +270,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-
                       const SizedBox(height: 12),
-
-                      // 🗑 DELETE BUTTON
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -321,19 +279,14 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                               context: context,
                               builder: (context) {
                                 return AlertDialog(
-                                  title: const Text(
-                                    "Delete Payment",
-                                  ),
+                                  title: const Text("Delete Payment"),
                                   content: const Text(
                                     "Are you sure you want to delete this payment request?",
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () {
-                                        Navigator.pop(
-                                          context,
-                                          false,
-                                        );
+                                        Navigator.pop(context, false);
                                       },
                                       child: const Text("Cancel"),
                                     ),
@@ -342,10 +295,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                         backgroundColor: Colors.red,
                                       ),
                                       onPressed: () {
-                                        Navigator.pop(
-                                          context,
-                                          true,
-                                        );
+                                        Navigator.pop(context, true);
                                       },
                                       child: const Text("Delete"),
                                     ),
@@ -360,9 +310,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                   .doc(p.id)
                                   .delete();
 
-                              // Gamit ang stable na screenContext (hindi
-                              // yung sa card na ito) dahil matatanggal
-                              // agad ang card pagka-delete.
                               if (!screenContext.mounted) return;
                               showAppSuccessBanner(screenContext,
                                   "Payment deleted successfully");
@@ -371,9 +318,8 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 14,
-                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
                           ),
                           icon: const Icon(Icons.delete),
                           label: const Text("Delete Payment"),

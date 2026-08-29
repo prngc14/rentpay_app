@@ -47,10 +47,10 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     );
   }
 
-  // =========================
+  
   // STATUS DISPLAY HELPERS
   // Priority: PAID > PARTIAL > OVERDUE > UNPAID
-  // =========================
+  
   String _statusLabel(String paymentStatus, bool isOverdue) {
     if (paymentStatus == "paid") return "PAID";
     if (paymentStatus == "partial") return "PARTIAL PAYMENT";
@@ -202,9 +202,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                     children: [
                       const SizedBox(height: 20),
 
-                      // =========================
+                      
                       // TITLE
-                      // =========================
+                     
                       const Text(
                         "Monthly Billing",
                         style: TextStyle(
@@ -226,9 +226,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
                       const SizedBox(height: 20),
 
-                      // =========================
+                     
                       // PAYMENT STATUS
-                      // =========================
+                      
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -289,9 +289,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
                       const SizedBox(height: 20),
 
-                      // =========================
+                      
                       // ROOM CARD
-                      // =========================
+                      
                       _buildBillCard(
                         icon: Icons.apartment,
                         iconColor: Colors.deepOrange,
@@ -302,9 +302,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
                       const SizedBox(height: 16),
 
-                      // =========================
+                      
                       // ELECTRICITY CARD
-                      // =========================
+                      
                       _buildBillCard(
                         icon: Icons.flash_on,
                         iconColor: Colors.orange,
@@ -316,9 +316,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
                       const SizedBox(height: 16),
 
-                      // =========================
+                      
                       // WATER CARD
-                      // =========================
+                     
                       _buildBillCard(
                         icon: Icons.water_drop,
                         iconColor: Colors.blue,
@@ -330,9 +330,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
                       const SizedBox(height: 22),
 
-                      // =========================
+                      
                       // TOTAL / REMAINING BILL CARD
-                      // =========================
+                     
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(22),
@@ -390,9 +390,9 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     );
   }
 
-  // =========================
+  
   // CUSTOM CARD WIDGET
-  // =========================
+  
   Widget _buildBillCard({
     required IconData icon,
     required Color iconColor,

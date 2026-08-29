@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantConnectScreen extends StatefulWidget {
   const TenantConnectScreen({super.key});
@@ -21,9 +21,9 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
   String? selectedRoom;
   String? ownerId;
 
-  // =========================
+  
   // CONNECT OWNER
-  // =========================
+ 
   Future<void> connectToOwner() async {
     String code = codeController.text.trim();
 
@@ -51,17 +51,17 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
 
       ownerId = ownerDoc.id;
 
-      // =====================================
+     
       // GET ROOMS
-      // =====================================
+      
       final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("ownerId", isEqualTo: ownerId)
           .get();
 
-      // =====================================
+      
       // FILTER AVAILABLE ROOMS ONLY
-      // =====================================
+     
       availableRooms = roomQuery.docs.where((roomDoc) {
         final data = roomDoc.data();
 

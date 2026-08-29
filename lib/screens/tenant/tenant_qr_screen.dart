@@ -17,21 +17,21 @@ class TenantQRScreen extends StatelessWidget {
             .doc("payment_qr")
             .snapshots(),
         builder: (context, snapshot) {
-          // 🔄 LOADING
+          //LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          // ❌ NO DATA
+          //NO DATA
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(
               child: Text("No QR uploaded"),
             );
           }
 
-          // ✅ GET DATA
+          //GET DATA
           final data = snapshot.data!.data() as Map<String, dynamic>;
 
           String? gcashQr = data["gcashQr"];
@@ -41,7 +41,7 @@ class TenantQRScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // ================= GCash =================
+                //GCash
                 buildQR(
                   context,
                   "GCash",
@@ -50,7 +50,7 @@ class TenantQRScreen extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                // ================= PayMaya =================
+                //PayMaya 
                 buildQR(
                   context,
                   "PayMaya",
@@ -64,7 +64,7 @@ class TenantQRScreen extends StatelessWidget {
     );
   }
 
-  // ================= QR WIDGET =================
+  //QR
   Widget buildQR(
     BuildContext context,
     String title,
@@ -83,7 +83,7 @@ class TenantQRScreen extends StatelessWidget {
         qrUrl != null && qrUrl.isNotEmpty
             ? GestureDetector(
                 onTap: () {
-                  // 🔥 ENLARGE IMAGE WHEN CLICKED
+                  //ENLARGE IMAGE WHEN CLICKED
                   showDialog(
                     context: context,
                     builder: (_) => Dialog(

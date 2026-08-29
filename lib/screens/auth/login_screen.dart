@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- IDAGDAG: ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- GIDUNGAG: Ge ayus ang path kung lahi ang location dere
 
 import '../owner/owner_dashboard.dart';
 import '../tenant/tenant_dashboard.dart';
@@ -28,8 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   bool _obscurePassword = true;
 
-  /// Kaparehong logic ng ginamit natin sa register_screen.dart --
-  /// kinukuha ang username na na-type ng user at ginagawang valid
+  /// same logic ang ginamit nako dere sa register_screen.dart --
+  /// gikinukuha ang username na na-type ng user at ginagawang valid
   /// email format ito (para sa Firebase Auth), na hindi na kailangang
   /// makita/pansinin ng user.
   String _buildFakeEmail(String username) {
@@ -40,9 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return '$sanitized@rentpay.local';
   }
 
-  // ===============================
+  
   // EMAIL LOGIN
-  // ===============================
+  
   Future<void> resendVerificationEmail() async {
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
@@ -89,8 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Login failed");
       }
 
-      // I-setup ang push notifications para sa device/session na ito
-      // (kukuha at magse-save ng FCM token sa Firestore).
+      // GI-setup ang push notifications para sa device/session na ito
+      // (Ga kukuha og magse-save ng FCM token sa Firestore).
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -103,9 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String role = data?["role"] ?? "";
 
-      // ==========================
+      
       // OWNER
-      // ==========================
+      
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -115,9 +115,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // ==========================
+      
       // TENANT
-      // ==========================
+      
       else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
@@ -127,9 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // ==========================
+     
       // NO ROLE YET
-      // ==========================
+     
       else {
         Navigator.pushReplacement(
           context,
@@ -149,13 +149,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===============================
+  
   // GOOGLE LOGIN
-  // ===============================
-  // Hindi na binago ang auth logic dito -- direktang gumagamit ng
-  // tunay na Google account, hiwalay sa username/password fields sa
-  // itaas. Dinagdag lang ang NotificationService.initialize() para
-  // pareho ring makatanggap ng push notifications ang mga Google
+
   // login users.
   void googleLogin() async {
     setState(() => isLoading = true);
@@ -169,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // I-setup ang push notifications para sa device/session na ito
+      // I-setup ang push notifications para sa device/session na dere
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -182,9 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String role = data?["role"] ?? "";
 
-      // ==========================
+      
       // OWNER
-      // ==========================
+      
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -194,9 +190,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // ==========================
+      
       // TENANT
-      // ==========================
+      
       else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
@@ -206,9 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // ==========================
+      
       // NO ROLE YET
-      // ==========================
+      
       else {
         Navigator.pushReplacement(
           context,
@@ -228,9 +224,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===============================
+  
   // INPUT STYLE
-  // ===============================
+  
   InputDecoration inputStyle(
     String label,
     IconData icon,

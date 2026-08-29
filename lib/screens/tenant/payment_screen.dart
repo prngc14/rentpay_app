@@ -9,7 +9,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -59,9 +59,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
-  // ======================================
+  
   // LOAD TENANT + ROOM + OWNER QR
-  // ======================================
+ 
   Future<void> loadTenantData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -71,9 +71,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // ==========================
+      
       // GET TENANT DATA
-      // ==========================
+     
       final userDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
@@ -89,9 +89,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ownerId = userData?["ownerId"] ?? "";
       room = userData?["room"] ?? "";
 
-      // ==========================
+     
       // CHECK CONNECTION
-      // ==========================
+      
       if (ownerId.isEmpty || room.isEmpty) {
         setState(() => loading = false);
 
@@ -102,9 +102,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // ==========================
+      
       // GET ROOM DATA
-      // ==========================
+     
       final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("roomNumber", isEqualTo: room)
@@ -145,9 +145,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
       }
 
-      // ==========================
+     
       // GET OWNER QR
-      // ==========================
+      
       final ownerDoc = await FirebaseFirestore.instance
           .collection("users")
           .doc(ownerId)
@@ -171,18 +171,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // ======================================
+  
   // AMOUNT NA IPAPADALA (base sa toggle)
-  // ======================================
+  
   double get amountToSubmit {
     if (!isPartialSelected) return remainingBalance;
 
     return double.tryParse(partialAmountController.text) ?? 0;
   }
 
-  // ======================================
+  
   // VALIDATION MESSAGE (null kung valid)
-  // ======================================
+  
   String? get partialAmountErrorText {
     if (!isPartialSelected) return null;
 
@@ -209,9 +209,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return null;
   }
 
-  // ======================================
+  
   // CHECK IF IMAGE IS POSSIBLY BLURRED
-  // ======================================
+  
   Future<bool> isImageBlurred(File file) async {
     try {
       Uint8List? compressed = await FlutterImageCompress.compressWithFile(
@@ -237,9 +237,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // ======================================
+ 
   // SHOW FULL IMAGE
-  // ======================================
+  
   void showFullImage(String url) {
     showDialog(
       context: context,
@@ -251,9 +251,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ======================================
+  
   // UPLOAD PAYMENT
-  // ======================================
+  
   Future<void> uploadAndSubmitPayment(double amount) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -270,9 +270,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       File file = File(picked.path);
 
-      // ======================================
+      
       // CHECK BLUR
-      // ======================================
+      
       bool blurred = await isImageBlurred(file);
 
       if (blurred) {
@@ -285,18 +285,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // ======================================
+      
       // UPLOAD IMAGE
-      // ======================================
+      
       String? url = await uploadToCloudinary(file);
 
       if (url == null) {
         throw Exception("Cloudinary upload failed");
       }
 
-      // ======================================
+      
       // SAVE PAYMENT
-      // ======================================
+     
       await firestore.submitPayment(
         user.uid,
         ownerId,
@@ -319,9 +319,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // ======================================
+ 
   // CONFIRM PAYMENT
-  // ======================================
+ 
   void confirmPayment() {
     if (totalBill <= 0) {
       showAppWarningBanner(context, "No bill found");
@@ -329,7 +329,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     if (remainingBalance <= 0) {
-      showAppWarningBanner(context, "Wala nang natitirang balanse");
+      showAppWarningBanner(context, "No bill found");
       return;
     }
 
@@ -367,9 +367,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ======================================
+ 
   // UI
-  // ======================================
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -492,9 +492,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
                   const SizedBox(height: 24),
 
-                  // ==========================
+                 
                   // FULL / PARTIAL TOGGLE
-                  // ==========================
+                  
                   if (remainingBalance > 0)
                     Card(
                       elevation: 2,

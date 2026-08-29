@@ -8,7 +8,7 @@ import '../owner_esign/contract_list_screen.dart';
 
 import 'payment_requests_screen.dart';
 import 'upload_qr_screen.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class OwnerDashboard extends StatefulWidget {
   const OwnerDashboard({super.key});
@@ -25,9 +25,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     generateOwnerCode();
   }
 
-  // =========================================
+  
   // GENERATE 6 DIGIT OWNER CODE
-  // =========================================
+  
   Future<void> generateOwnerCode() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -109,9 +109,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // =========================
+                      
                       // PROFILE
-                      // =========================
+                      
                       Center(
                         child: Column(
                           children: [
@@ -168,9 +168,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                       const SizedBox(height: 25),
 
-                      // =========================
+                      
                       // TENANT INFORMATION BOX
-                      // =========================
+                      
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(
@@ -301,9 +301,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                       const SizedBox(height: 25),
 
-                      // =========================
+                      
                       // ACTION GRID
-                      // =========================
+                      
                       GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,

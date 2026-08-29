@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantPaymentHistoryScreen extends StatelessWidget {
   final String tenantId;
@@ -20,7 +20,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
     final FirestoreService firestore = FirestoreService();
 
     // Ginagamit ang context ng buong Screen (mula sa build() mismo) sa
-    // lahat ng banner calls sa ibaba, hindi yung sa specific item card,
+    // lahat ng banner calls sa ibaba, dele tung  sa specific item card,
     // dahil natatanggal agad ang card na iyon sa StreamBuilder pagka-
     // approve/reject/delete -- kaya laging stable ang context na ito
     // hangga't bukas ang buong screen.
@@ -40,7 +40,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ❌ ERROR
+          //ERROR
           if (snapshot.hasError) {
             return Center(
               child: Text(
@@ -50,7 +50,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
             );
           }
 
-          // 📭 EMPTY
+          //EMPTY
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
@@ -97,7 +97,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 🏠 ROOM
+                      //ROOM
                       Row(
                         children: [
                           Expanded(
@@ -130,7 +130,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 5),
 
-                      // 💵 AMOUNT
+                      //AMOUNT
                       Text(
                         "Amount: ₱${amount.toStringAsFixed(2)}",
                         style: const TextStyle(
@@ -154,7 +154,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 12),
 
-                      // 🖼 SCREENSHOT
+                      //SCREENSHOT
                       if (screenshot.isNotEmpty)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +238,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 14),
 
-                      // 📌 STATUS
+                      //STATUS
                       Row(
                         children: [
                           const Text(
@@ -259,7 +259,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
 
                       const SizedBox(height: 14),
 
-                      // ✅ APPROVE / REJECT
+                      //APPROVE / REJECT
                       if (status == "pending")
                         Row(
                           children: [
@@ -289,8 +289,14 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () async {
+                                  // ✅ FIXED: dinagdagan ng tenantId para
+                                  // ma-clear ang activePaymentId lock ng
+                                  // tenant kapag na-reject ang payment
+                                  // (kailangan ito ng bagong signature ng
+                                  // rejectPayment() sa FirestoreService).
                                   await firestore.rejectPayment(
                                     p.id,
+                                    tenantId,
                                   );
 
                                   if (!screenContext.mounted) return;
@@ -360,7 +366,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                                   .doc(p.id)
                                   .delete();
 
-                              // Gamit ang stable na screenContext (hindi
+                              // Gamit ang stable na screenContext (dili
                               // yung sa card na ito) dahil matatanggal
                               // agad ang card pagka-delete.
                               if (!screenContext.mounted) return;

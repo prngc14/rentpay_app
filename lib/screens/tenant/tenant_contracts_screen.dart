@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantContractsScreen extends StatefulWidget {
   const TenantContractsScreen({super.key});
@@ -16,17 +16,14 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
   final List<Offset> _signaturePoints = [];
   bool _isSavingSignature = false;
 
-  // Mga status na ituturing na "hindi na active" -- itatago ang mga
-  // contract na may ganitong status sa listahan ng tenant, dahil ito
-  // na ang mga contract na na-terminate/cancelled/expired na ng owner.
+  // ✅ ADDED: "Renewed"
   static const List<String> _inactiveStatuses = [
     'Expired',
     'Cancelled',
     'Terminated',
+    'Renewed',
   ];
 
-  // Cache para hindi paulit-ulit mag-fetch ng ownerCode kapag pareho
-  // ang owner ng maraming contract
   final Map<String, String> _ownerCodeCache = {};
 
   Future<String> _getOwnerCode(String ownerId) async {
@@ -145,6 +142,9 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) {
             return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
               title: const Text("E-Sign Contract"),
               content: SizedBox(
                 width: double.maxFinite,
@@ -218,6 +218,9 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepOrange,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             onPressed: _isSavingSignature
                                 ? null
@@ -238,6 +241,69 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
+  // ==========================================================
+  // STATUS DISPLAY HELPERS
+  // ==========================================================
+  Color _statusColor(String status) {
+    switch (status) {
+      case "Signed by Tenant":
+        return Colors.blue;
+      case "Sent to Owner":
+        return Colors.green;
+      default:
+        return Colors.deepOrange;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case "Signed by Tenant":
+        return Icons.edit_document;
+      case "Sent to Owner":
+        return Icons.mark_email_read_outlined;
+      default:
+        return Icons.hourglass_top_rounded;
+    }
+  }
+
+  // ==========================================================
+  // SMALL DETAIL ROW (icon + label + value)
+  // ==========================================================
+  Widget _detailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade600),
+          const SizedBox(width: 10),
+          Text(
+            "$label: ",
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xff1D1D1F),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -252,6 +318,11 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
+      appBar: AppBar(
+        title: const Text("My Contracts"),
+        backgroundColor: Colors.deepOrange,
+        centerTitle: true,
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("contracts")
@@ -262,9 +333,6 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // I-filter out ang mga contract na "Terminated"/"Cancelled"/
-          // "Expired" na -- ito ang mga contract na na-tapos na ng
-          // owner, kaya hindi na dapat makita pa ng tenant.
           final docs = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final status = data['status'] ?? 'Pending Signature';
@@ -272,8 +340,22 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
           }).toList();
 
           if (docs.isEmpty) {
-            return const Center(
-              child: Text("No contracts found"),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "No contracts found",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -316,126 +398,311 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
 
               final bool isSigned = status == "Signed by Tenant";
               final bool isSentToOwner = status == "Sent to Owner";
+              final Color statusColor = _statusColor(status);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ================= HEADER =================
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.08),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
                         children: [
-                          const Icon(
-                            Icons.article_outlined,
-                            color: Colors.deepOrange,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.article_outlined,
+                              color: statusColor,
+                              size: 20,
+                            ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              "New Contract",
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Rental Contract",
+                                  style: TextStyle(
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    color: Color(0xff1D1D1F),
                                   ),
+                                ),
+                                Text(
+                                  "Room $roomNumber",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
-                              vertical: 5,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.deepOrange.shade50,
+                              color: statusColor.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
-                              status,
-                              style: const TextStyle(
-                                color: Colors.deepOrange,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _statusIcon(status),
+                                  size: 13,
+                                  color: statusColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  status,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Text("Room: $roomNumber"),
-                      FutureBuilder<String>(
-                        future: _getOwnerCode(ownerId),
-                        builder: (context, ownerSnapshot) {
-                          final displayCode =
-                              ownerSnapshot.data ?? "Loading...";
-                          return Text("Owner ID: $displayCode");
-                        },
+                    ),
+
+                    // ================= DETAILS =================
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _detailRow(
+                            icon: Icons.meeting_room_outlined,
+                            label: "Room",
+                            value: roomNumber.toString(),
+                          ),
+                          FutureBuilder<String>(
+                            future: _getOwnerCode(ownerId),
+                            builder: (context, ownerSnapshot) {
+                              final displayCode =
+                                  ownerSnapshot.data ?? "Loading...";
+                              return _detailRow(
+                                icon: Icons.badge_outlined,
+                                label: "Owner ID",
+                                value: displayCode,
+                              );
+                            },
+                          ),
+                          _detailRow(
+                            icon: Icons.flash_on_outlined,
+                            label: "Electric Rate",
+                            value: "₱$electricRate per kWh",
+                          ),
+                          _detailRow(
+                            icon: Icons.water_drop_outlined,
+                            label: "Water Rate",
+                            value: "₱$waterRate per m³",
+                          ),
+                          _detailRow(
+                            icon: Icons.calendar_today_outlined,
+                            label: "Start Date",
+                            value: startDate,
+                          ),
+                          _detailRow(
+                            icon: Icons.event_busy_outlined,
+                            label: "End Date",
+                            value: endDate,
+                          ),
+                          _detailRow(
+                            icon: Icons.history_outlined,
+                            label: "Created",
+                            value: createdDate,
+                          ),
+                        ],
                       ),
-                      Text("Electric Rate: ₱$electricRate per kWh"),
-                      Text("Water Rate: ₱$waterRate per m³"),
-                      Text("Start Date: $startDate"),
-                      Text("End Date: $endDate"),
-                      Text("Created: $createdDate"),
-                      const SizedBox(height: 12),
-                      Text(
-                        terms.isEmpty ? "No terms provided" : terms,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
+                    ),
+
+                    // ================= TERMS =================
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+                      child: Container(
                         width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isSentToOwner
-                                ? Colors.grey
-                                : Colors.deepOrange,
-                          ),
-                          onPressed: isSentToOwner
-                              ? null
-                              : () => _showSignatureDialog(
-                                    contractId: contractId,
-                                    roomNumber: roomNumber,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xffF7F7FA),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.notes_outlined,
+                                  size: 15,
+                                  color: Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  "Terms & Conditions",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade700,
                                   ),
-                          icon: const Icon(Icons.draw),
-                          label: Text(
-                            isSentToOwner
-                                ? "Signature Locked"
-                                : "Review & Sign",
-                          ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              terms.isEmpty ? "No terms provided" : terms,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      if (isSigned && !isSentToOwner)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                    ),
+
+                    const SizedBox(height: 6),
+                    Divider(height: 1, color: Colors.grey.shade200),
+
+                    // ================= ACTIONS =================
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isSentToOwner
+                                    ? Colors.grey.shade300
+                                    : Colors.deepOrange,
+                                foregroundColor: isSentToOwner
+                                    ? Colors.grey.shade700
+                                    : Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: isSentToOwner ? 0 : 2,
+                              ),
+                              onPressed: isSentToOwner
+                                  ? null
+                                  : () => _showSignatureDialog(
+                                        contractId: contractId,
+                                        roomNumber: roomNumber,
+                                      ),
+                              icon: Icon(
+                                isSentToOwner ? Icons.lock_outline : Icons.draw,
+                                size: 18,
+                              ),
+                              label: Text(
+                                isSentToOwner
+                                    ? "Signature Locked"
+                                    : "Review & Sign",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            onPressed: () => _sendToOwner(contractId),
-                            icon: const Icon(Icons.send),
-                            label: const Text("Send to Owner"),
                           ),
-                        ),
-                      if (isSentToOwner)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "Signature is locked and sent to owner for verification.",
-                            style: TextStyle(color: Colors.green),
-                          ),
-                        ),
-                    ],
-                  ),
+                          if (isSigned && !isSentToOwner) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 13,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                onPressed: () => _sendToOwner(contractId),
+                                icon: const Icon(Icons.send, size: 18),
+                                label: const Text(
+                                  "Send to Owner",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (isSentToOwner) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.green.shade200,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.verified_outlined,
+                                    color: Colors.green.shade700,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Signature is locked and sent to owner for verification.",
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },

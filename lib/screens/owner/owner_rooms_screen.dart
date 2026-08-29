@@ -247,6 +247,21 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
       body: StreamBuilder<QuerySnapshot>(
         stream: firestore.getOwnerRooms(widget.ownerId),
         builder: (context, snapshot) {
+          // ✅ ADDED: ipakita ang aktwal na error sa halip na
+          // infinite loading kung mag-error ang stream
+          // (hal. missing Firestore index, denied ng security rules).
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  "ERROR: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            );
+          }
+
           if (!snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(),

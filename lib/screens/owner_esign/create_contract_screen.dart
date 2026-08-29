@@ -5,7 +5,18 @@ import 'package:flutter/material.dart';
 import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
 
 class CreateContractScreen extends StatefulWidget {
-  const CreateContractScreen({super.key});
+  // ADDED: kung meron nito, "renewal" mode ito -- pre-fills ang
+  // form gamit ang datos ng lumang contract, at ini-mark ang lumang
+  // contract bilang "Renewed" pagkatapos gumawa ng bago.
+  // Inaasahang laman: contractId, tenantId, tenantName, roomId,
+  // roomNumber, monthlyRent, securityDeposit, advancePayment,
+  // electricRate, waterRate, termsAndConditions.
+  final Map<String, dynamic>? renewalData;
+
+  const CreateContractScreen({
+    super.key,
+    this.renewalData,
+  });
 
   @override
   State<CreateContractScreen> createState() =>
@@ -33,12 +44,18 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   bool useESign = true;
   bool _isLoading = true;
 
+  bool get _isRenewal => widget.renewalData != null;
+
   // Mga status na HINDI dapat mag-block sa tenant/room sa dropdown
   // (ibig sabihin: pwede na ulit i-select kapag ganito na ang status)
+  // ADDED: "Renewed" -- dating status ng contract na kapapalit
+  // lang ng bago, kaya dapat din itong hindi nag-b-block sa
+  // tenant/room sa dropdown.
   static const List<String> _inactiveContractStatuses = [
     "Expired",
     "Cancelled",
     "Terminated",
+    "Renewed",
   ];
 
   @override
@@ -75,7 +92,17 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         .where("ownerId", isEqualTo: user.uid)
         .get();
 
+    //ADDED: kapag renewal, huwag isama ang lumang contract sa
+    // pag-compute ng "active" tenants/rooms -- dahil ito mismo ang
+    // papalitan natin ng bago, dapat pumasok pa rin ang parehong
+    // tenant/room sa dropdown options.
+    final String? renewingContractId =
+        _isRenewal ? widget.renewalData!["contractId"] as String? : null;
+
     final activeContracts = contractsSnapshot.docs.where((doc) {
+      if (renewingContractId != null && doc.id == renewingContractId) {
+        return false;
+      }
       final status = (doc.data()["status"] ?? "").toString();
       return !_inactiveContractStatuses.contains(status);
     });
@@ -117,6 +144,27 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       }).toList();
 
       _isLoading = false;
+
+      //ADDED: kung renewal mode, i-pre-fill ang lahat ng field
+      // gamit ang datos ng lumang contract.
+      if (_isRenewal) {
+        final r = widget.renewalData!;
+
+        _selectedTenantId = r["tenantId"] as String?;
+        _selectedRoomId = r["roomId"] as String?;
+
+        _rentController.text =
+            ((r["monthlyRent"] ?? 0) as num).toStringAsFixed(0);
+        _depositController.text =
+            ((r["securityDeposit"] ?? 0) as num).toStringAsFixed(0);
+        _advanceController.text =
+            ((r["advancePayment"] ?? 0) as num).toStringAsFixed(0);
+        _electricRateController.text =
+            ((r["electricRate"] ?? 0) as num).toStringAsFixed(2);
+        _waterRateController.text =
+            ((r["waterRate"] ?? 0) as num).toStringAsFixed(2);
+        _termsController.text = (r["termsAndConditions"] ?? "").toString();
+      }
     });
   }
 
@@ -174,13 +222,16 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
     final tenant = _tenantOptions.firstWhere(
       (item) => item["id"] == _selectedTenantId,
-      orElse: () => {"name": "Tenant"},
+      orElse: () => {
+        "name": _isRenewal ? widget.renewalData!["tenantName"] : "Tenant",
+      },
     );
 
     final room = _roomOptions.firstWhere(
       (item) => item["id"] == _selectedRoomId,
       orElse: () => {
-        "roomNumber": "Room",
+        "roomNumber":
+            _isRenewal ? widget.renewalData!["roomNumber"] : "Room",
         "monthlyRent": 0.0,
       },
     );
@@ -219,6 +270,20 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
             double.tryParse(_waterRateController.text.trim()) ?? 0.0,
       });
 
+      //ADDED: kung renewal, i-mark ang lumang contract bilang
+      // "Renewed" para hindi na ito lumabas sa listahan ng active
+      // contracts, pero nananatili pa rin ito sa Firestore bilang
+      // record/history.
+      if (_isRenewal) {
+        final oldContractId = widget.renewalData!["contractId"] as String?;
+        if (oldContractId != null) {
+          await _firestore.collection("contracts").doc(oldContractId).update({
+            "status": "Renewed",
+            "renewedAt": Timestamp.now(),
+          });
+        }
+      }
+
       debugPrint("Contract saved successfully.");
 
       if (mounted) {
@@ -226,7 +291,12 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       }
 
       if (mounted) {
-        showAppSuccessBanner(context, "Contract saved successfully.");
+        showAppSuccessBanner(
+          context,
+          _isRenewal
+              ? "Contract renewed successfully."
+              : "Contract saved successfully.",
+        );
       }
     } catch (e) {
       debugPrint("Create Contract save failed: $e");
@@ -240,7 +310,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Create Rental Contract"),
+        title: Text(
+          _isRenewal ? "Renew Rental Contract" : "Create Rental Contract",
+        ),
         backgroundColor: Colors.deepOrange,
       ),
       body: _isLoading
@@ -250,6 +322,38 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ADDED: banner na nagpapakita kung renewal mode
+                  if (_isRenewal)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.blue.shade700, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Renewing contract for "
+                              "${widget.renewalData!["tenantName"] ?? "tenant"}. "
+                              "The old contract will automatically be marked "
+                              'as "Renewed" after saving.',
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   DropdownButtonFormField<String>(
                     value: _selectedTenantId,
                     decoration: const InputDecoration(
@@ -429,7 +533,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                         backgroundColor: Colors.deepOrange,
                       ),
                       onPressed: _createContract,
-                      child: const Text("Create Contract"),
+                      child: Text(
+                        _isRenewal ? "Renew Contract" : "Create Contract",
+                      ),
                     ),
                   ),
                 ],

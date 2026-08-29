@@ -41,8 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// ginagawang parang email format ito sa likod-likod (hal.
   /// "andrea06@rentpay.local"), dahil kailangan talaga ng Firebase
   /// Auth ng valid email format kahit hindi ito makikita ng user.
-  ///
-  /// Tinatanggal natin muna ang mga karakter na hindi pwede sa email
+  
   /// (spaces, special symbols) para laging valid ang resulta.
   String _buildFakeEmail(String username) {
     final sanitized = username
@@ -52,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return '$sanitized@rentpay.local';
   }
 
-  /// Kinu-check kung valid ang password.
+  /// gina-check kung valid ang password.
   /// Dapat may kahit isang letra AT isang numero, at at least 8 characters.
   /// Nire-return ang error message kung invalid, o null kung valid na.
   String? _validatePassword(String password) {
@@ -63,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final hasNumber = RegExp(r'[0-9]').hasMatch(password);
 
     if (!hasLetter || !hasNumber) {
-      return "Password must contain both letters and numbers (e.g. gwapo1234)";
+      return "Password must contain both letters and numbers";
     }
     return null;
   }
@@ -76,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // ✅ CHECK PASSWORD STRENGTH BEFORE PROCEEDING
+    // CHECK PASSWORD STRENGTH BEFORE PROCEEDING
     final passwordError = _validatePassword(passwordController.text.trim());
     if (passwordError != null) {
       showAppWarningBanner(context, passwordError);
@@ -87,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final fakeEmail = _buildFakeEmail(username);
 
     // I-check kung may nabuong valid na username matapos i-sanitize
-    // (hal. kung puro special characters lang ang na-type, magiging
+    // (example. kung puro special characters lang ang na-type, magiging
     // blangko ito).
     if (fakeEmail.startsWith('@')) {
       showAppWarningBanner(
@@ -100,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => isLoading = true);
 
     try {
-      // ✅ STEP 1: REGISTER USER
+      // STEP 1: REGISTER USER
       var user = await _auth.register(
         fakeEmail,
         passwordController.text.trim(),
@@ -108,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user == null) throw Exception("Registration failed");
 
-      // ✅ STEP 2: SAVE USER DATA (ONLY ONE WRITE)
+      // STEP 2: SAVE USER DATA (ONLY ONE WRITE)
       if (role == "owner") {
         String ownerCode = generateOwnerCode();
 

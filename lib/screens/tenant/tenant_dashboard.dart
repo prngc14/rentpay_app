@@ -110,13 +110,13 @@ class _TenantDashboardState extends State<TenantDashboard> {
     );
   }
 
-  // ===============================
+  
   // MAIN BODY (per tab)
   // Home / Contracts / Profile = normal, walang lock.
   // Payments tab lang ang naka-gate: kung may
   // activePaymentId, PendingPaymentScreen ang lalabas
   // imbes na ang normal na PaymentScreen (upload form).
-  // ===============================
+  
   Widget _buildBody(String uid) {
     switch (_currentIndex) {
       case 0:

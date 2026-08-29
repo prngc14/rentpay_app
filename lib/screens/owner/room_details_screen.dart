@@ -25,7 +25,7 @@ class RoomDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 🏠 ROOM HEADER CARD
+            //ROOM HEADER CARD
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -51,7 +51,7 @@ class RoomDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // 💰 RENT CARD
+            //RENT CARD
             _buildInfoCard(
               icon: Icons.attach_money,
               title: "Monthly Rent",
@@ -61,7 +61,7 @@ class RoomDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 15),
 
-            // 👤 TENANT CARD
+            // TENANT CARD
             _buildInfoCard(
               icon: Icons.person,
               title: "Tenant",
@@ -71,7 +71,7 @@ class RoomDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 25),
 
-            // ⚡ ACTION BUTTONS (optional but nice)
+            // ACTION BUTTONS (optional but nice)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -103,7 +103,7 @@ class RoomDetailsScreen extends StatelessWidget {
     );
   }
 
-  // 🔹 REUSABLE CARD
+  //REUSABLE CARD
   Widget _buildInfoCard({
     required IconData icon,
     required String title,

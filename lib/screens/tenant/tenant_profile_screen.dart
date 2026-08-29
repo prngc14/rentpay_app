@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantProfileScreen extends StatefulWidget {
   const TenantProfileScreen({super.key});
@@ -35,9 +35,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     loadProfile();
   }
 
-  // ===============================
+ 
   // LOAD PROFILE
-  // ===============================
+  
   Future<void> loadProfile() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -68,9 +68,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     });
   }
 
-  // ===============================
+  
   // PICK IMAGE
-  // ===============================
+  
   Future<void> pickImage() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -84,9 +84,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     }
   }
 
-  // ===============================
+  
   // SAVE PROFILE
-  // ===============================
+ 
   Future<void> saveProfile() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -147,9 +147,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     super.dispose();
   }
 
-  // ===============================
+  
   // UI
-  // ===============================
+ 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -203,9 +203,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
 
             const SizedBox(height: 20),
 
-            // ===============================
+            
             // WORK ID UPLOAD
-            // ===============================
+            
             Align(
               alignment: Alignment.centerLeft,
               child: Text(

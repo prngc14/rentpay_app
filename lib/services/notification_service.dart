@@ -1,12 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import '../main.dart';
+import '../screens/tenant/tenant_contracts_screen.dart';
 
 /// Nag-aasikaso ng push notification setup: humihingi ng permission,
 /// kumukuha at nagse-save ng FCM device token sa Firestore (para
 /// malaman ng Cloud Function kung saan magpapadala ng notification),
 /// at nagpapakita ng notification kahit bukas ang app (foreground).
+/// Kapag tinapik ang notification, dinadala ang tenant sa Contracts
+/// screen, dahil doon nakabase ang RentPay Reminder notification.
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -14,43 +20,44 @@ class NotificationService {
 
   static bool _initialized = false;
 
+  /// Payload na ilalagay sa lahat ng RentPay Reminder notification,
+  /// para malaman ng tap handler kung saan dapat mag-navigate.
+  static const String _contractReminderPayload = 'contract_due_reminder';
+
   /// Tawagin ito pagkatapos ng successful login (email/password man o
-  /// Google). Ligtas itong tawagin nang paulit-ulit -- may guard na
+  /// Google). Ligtas itong tawagin nang paulit-ulit - may guard na
   /// para hindi ito mag-initialize ng dalawang beses sa parehong
   /// session.
   static Future<void> initialize() async {
     if (_initialized) {
-      // Kahit initialized na, siguraduhin lang na updated ang token
-      // (baka nag-login ng ibang account sa parehong device).
       await _saveTokenToFirestore();
       return;
     }
 
-    // Humingi ng permission (required sa Android 13+ at iOS)
     await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // I-setup ang local notifications para sa foreground display
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
-    await _localNotifications.initialize(initSettings);
+    final initSettings = InitializationSettings(android: androidSettings);
 
-    // I-save ang device token sa Firestore
+    // ✅ ADDED: onDidReceiveNotificationResponse -- ito ang tumatawag
+    // pag tinapik ng user ang isang notification (foreground o
+    // background, habang bukas pa rin ang app process).
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
     await _saveTokenToFirestore();
 
-    // Kada mag-refresh ang token (nangyayari paminsan-minsan),
-    // i-update din natin sa Firestore
     _messaging.onTokenRefresh.listen((newToken) {
       _saveTokenToFirestore(token: newToken);
     });
 
-    // Ipakita ang notification kahit bukas ang app (foreground) --
-    // kapag naka-background o nakasara ang app, awtomatiko na itong
-    // ipinapakita ng OS mismo, hindi na natin kailangang asikasuhin.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
@@ -72,7 +79,7 @@ class NotificationService {
           .update({"fcmToken": fcmToken});
     } catch (e) {
       // Hindi natin ito ginagawang blocker sa login flow kung
-      // sakaling mabigo ang pag-save ng token
+      // sakaling mabigo ka pag move on nlang uwu
     }
   }
 
@@ -91,6 +98,7 @@ class NotificationService {
       message.notification?.title ?? 'RentPay',
       message.notification?.body ?? '',
       details,
+      payload: _contractReminderPayload,
     );
   }
 
@@ -112,6 +120,26 @@ class NotificationService {
       title,
       body,
       details,
+      // ✅ ADDED: payload para malaman ng tap handler na ito ay
+      // contract due reminder, at doon dapat mag-navigate.
+      payload: _contractReminderPayload,
+    );
+  }
+
+  /// ✅ ADDED: tinatawag kapag tinapik ng user ang notification.
+  /// Dinadala ang user diretso sa Contracts screen gamit ang
+  /// global navigatorKey (dahil static context ito, walang sariling
+  /// BuildContext mula sa kasalukuyang open screen).
+  static void _onNotificationTapped(NotificationResponse response) {
+    if (response.payload != _contractReminderPayload) return;
+
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+
+    Navigator.of(ctx).push(
+      MaterialPageRoute(
+        builder: (_) => const TenantContractsScreen(),
+      ),
     );
   }
 

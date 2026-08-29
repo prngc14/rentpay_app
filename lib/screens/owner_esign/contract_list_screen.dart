@@ -14,10 +14,12 @@ class ContractListScreen extends StatelessWidget {
   // ginamit natin sa create_contract_screen.dart para consistent ang
   // filtering logic sa buong app. Ang mga contract na may ganitong
   // status ay itatago (hindi ipapakita) sa listahan.
+  // ✅ ADDED: "Renewed"
   static const List<String> _inactiveStatuses = [
     'Expired',
     'Cancelled',
     'Terminated',
+    'Renewed',
   ];
 
   Future<void> _terminateContract({
@@ -87,6 +89,35 @@ class ContractListScreen extends StatelessWidget {
     }
   }
 
+  // ✅ ADDED: buksan ang CreateContractScreen sa renewal mode, may
+  // paunang-punuang data mula sa napiling contract.
+  void _renewContract({
+    required BuildContext context,
+    required String contractId,
+    required Map<String, dynamic> data,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateContractScreen(
+          renewalData: {
+            "contractId": contractId,
+            "tenantId": data["tenantId"],
+            "tenantName": data["tenantName"],
+            "roomId": data["roomId"],
+            "roomNumber": data["roomNumber"],
+            "monthlyRent": data["monthlyRent"],
+            "securityDeposit": data["securityDeposit"],
+            "advancePayment": data["advancePayment"],
+            "electricRate": data["electricRate"],
+            "waterRate": data["waterRate"],
+            "termsAndConditions": data["termsAndConditions"],
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -127,8 +158,8 @@ class ContractListScreen extends StatelessWidget {
           }
 
           // I-filter out ang mga contract na "Terminated"/"Cancelled"/
-          // "Expired" na -- hindi na natin ipapakita ang mga ito sa
-          // listahan ng "Digital Contracts".
+          // "Expired"/"Renewed" na -- hindi na natin ipapakita ang
+          // mga ito sa listahan ng "Digital Contracts".
           final docs = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final status = data['status'] ?? 'Pending Signature';
@@ -282,9 +313,31 @@ class ContractListScreen extends StatelessWidget {
                                     roomId: roomId,
                                     tenantName: tenantName,
                                   );
+                                } else if (value == 'renew') {
+                                  // ✅ ADDED
+                                  _renewContract(
+                                    context: context,
+                                    contractId: contractId,
+                                    data: data,
+                                  );
                                 }
                               },
                               itemBuilder: (context) => [
+                                // ✅ ADDED: Renew option
+                                const PopupMenuItem(
+                                  value: 'renew',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.autorenew,
+                                        color: Colors.deepOrange,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('Renew Contract'),
+                                    ],
+                                  ),
+                                ),
                                 const PopupMenuItem(
                                   value: 'terminate',
                                   child: Row(

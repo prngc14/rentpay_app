@@ -29,12 +29,10 @@ class PaymentRequestsScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: firestore.getOwnerPayments(user.uid),
         builder: (context, snapshot) {
-          // 🔄 LOADING
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ❌ ERROR
           if (snapshot.hasError) {
             return Center(
               child: Text(
@@ -44,7 +42,6 @@ class PaymentRequestsScreen extends StatelessWidget {
             );
           }
 
-          // 📭 EMPTY
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
@@ -56,12 +53,6 @@ class PaymentRequestsScreen extends StatelessWidget {
 
           final payments = snapshot.data!.docs;
 
-          // ======================================
-          // GROUP PAYMENTS BY TENANT
-          // (getOwnerPayments ay naka-orderBy date
-          // descending na, kaya mananatiling pinaka-
-          // bago ang unang item ng bawat group)
-          // ======================================
           final Map<String, List<QueryDocumentSnapshot>> grouped = {};
 
           for (final doc in payments) {
@@ -121,7 +112,6 @@ class PaymentRequestsScreen extends StatelessWidget {
                     tenantEmail = tenantData["email"] ?? "";
                   }
 
-                  // DISPLAY-ONLY: username = bahagi bago ang "@"
                   final String tenantUsername = tenantEmail.contains("@")
                       ? tenantEmail.split("@").first
                       : tenantEmail;
