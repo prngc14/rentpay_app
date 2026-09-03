@@ -318,17 +318,24 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
-      appBar: AppBar(
-        title: const Text("My Contracts"),
-        backgroundColor: Colors.deepOrange,
-        centerTitle: true,
-      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("contracts")
             .where("tenantId", isEqualTo: user.uid)
             .snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  "Unable to load contracts.\n${snapshot.error}",
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

@@ -674,7 +674,6 @@ class FirestoreService {
     return _db
         .collection("payments")
         .where("tenantId", isEqualTo: tenantId)
-        .orderBy("date", descending: true)
         .snapshots();
   }
 

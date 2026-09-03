@@ -181,6 +181,9 @@ String friendlyAuthError(Object error) {
   if (msg.contains('network-request-failed')) {
     return "No internet connection. Please try again.";
   }
+  if (msg.contains('permission-denied')) {
+    return "You do not have permission to connect this room.";
+  }
   if (msg.contains('too-many-requests')) {
     return "Too many attempts. Please try again later.";
   }

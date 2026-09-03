@@ -10,7 +10,18 @@ service cloud.firestore {
 
     match /rooms/{roomId} {
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+        && (
+          resource.data.ownerId == request.auth.uid
+          || (
+            (resource.data.tenantId == null || resource.data.tenantId == '')
+            && request.resource.data.ownerId == resource.data.ownerId
+            && request.resource.data.tenantId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'tenantId'
+            ])
+          )
+        );
       allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
       allow read: if request.auth != null;
     }
@@ -20,11 +31,49 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid;
 
       allow read: if request.auth != null
+        && (resource.data.ownerId == request.auth.uid
+          || resource.data.tenantId == request.auth.uid);
+
+      allow update: if request.auth != null
+        && (
+          (resource.data.ownerId == request.auth.uid
+            && request.resource.data.ownerId == request.auth.uid)
+          || (resource.data.tenantId == request.auth.uid
+            && request.resource.data.ownerId == resource.data.ownerId
+            && request.resource.data.tenantId == resource.data.tenantId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'tenantSignature',
+              'status',
+              'tenantSignedAt',
+              'signatureLocked',
+              'tenantSentAt'
+            ]))
+        );
+
+      allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /payments/{paymentId} {
+      allow create: if request.auth != null
+        && request.resource.data.tenantId == request.auth.uid
+        && request.resource.data.ownerId == get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.ownerId;
+
+      allow read: if request.auth != null
+        && (resource.data.tenantId == request.auth.uid
+          || resource.data.ownerId == request.auth.uid);
 
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.tenantId == resource.data.tenantId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'verifiedAt'
+        ])
+        && request.resource.data.status in ['verified', 'rejected'];
 
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;

@@ -10,6 +10,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import 'tenant_payment_history_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -376,6 +377,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         title: const Text("Pay Rent"),
         backgroundColor: Colors.deepOrange,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: "Payment History",
+            onPressed: () {
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TenantPaymentHistoryScreen(
+                    tenantId: user.uid,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: loading
           ? const Center(
