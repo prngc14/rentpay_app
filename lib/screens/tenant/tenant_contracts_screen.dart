@@ -10,7 +10,6 @@ class TenantContractsScreen extends StatefulWidget {
   // sa loob ng Contracts tab ng Tenant Dashboard (may sarili nang
   // AppBar ang Dashboard, walang Scaffold/AppBar dito, top-aligned
   // scrollable list).
-  //
   // true = ginagamit LANG kapag binubuksan mula sa notification tap
   // (NotificationService._onNotificationTapped) -- dito idinadagdag
   // ang sariling AppBar (may back button), dahil direktang naka-push
@@ -30,7 +29,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
   final List<Offset> _signaturePoints = [];
   bool _isSavingSignature = false;
 
-  // ✅ ADDED: "Renewed"
+  // ADDED: "Renewed"
   static const List<String> _inactiveStatuses = [
     'Expired',
     'Cancelled',
@@ -255,9 +254,9 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
-  // ==========================================================
+  
   // STATUS DISPLAY HELPERS
-  // ==========================================================
+  
   Color _statusColor(String status) {
     switch (status) {
       case "Signed by Tenant":
@@ -280,9 +279,9 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     }
   }
 
-  // ==========================================================
+  
   // SMALL DETAIL ROW (icon + label + value)
-  // ==========================================================
+  
   Widget _detailRow({
     required IconData icon,
     required String label,
@@ -318,11 +317,11 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
-  // ==========================================================
+  
   // CONTRACT LIST BODY (StreamBuilder) -- KAPAREHO ito ng
   // dating laman ng Scaffold's body, walang binago sa loob. Ang
   // standalone mode ay iba lang sa AppBar na idinadagdag ng build().
-  // ==========================================================
+  
   Widget _buildContractList(String uid) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -386,11 +385,11 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
-  // ==========================================================
+  
   // CONTRACT CARD (hiniwalay para magamit sa parehong
   // top-aligned list at centered/standalone view -- eksaktong
   // pareho ang laman sa dating card, walang binago)
-  // ==========================================================
+  
   Widget _buildContractCard(String contractId, Map<String, dynamic> data) {
     final roomNumber = data["roomNumber"] ?? "Room";
     final ownerId = data["ownerId"] ?? "";
@@ -521,7 +520,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
             ),
           ),
 
-          // ================= DETAILS =================
+          // DETAILS 
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
             child: Column(
@@ -572,7 +571,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
             ),
           ),
 
-          // ================= TERMS =================
+          // TERMS 
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
             child: Container(
@@ -620,7 +619,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
           const SizedBox(height: 6),
           Divider(height: 1, color: Colors.grey.shade200),
 
-          // ================= ACTIONS =================
+          //  ACTIONS
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
             child: Column(
@@ -740,12 +739,12 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
       );
     }
 
-    // ============================================
+    
     // STANDALONE MODE (notification tap): may
     // sariling AppBar (back button + title), at
     // SafeArea, dahil direktang naka-push ito nang
     // walang Dashboard shell sa paligid.
-    // ============================================
+    
     if (widget.standalone) {
       return Scaffold(
         backgroundColor: const Color(0xffF5F6FA),
@@ -759,12 +758,12 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
       );
     }
 
-    // ============================================
+    
     // NORMAL MODE (Contracts tab): EKSAKTONG PAREHO
     // sa dating behavior -- walang AppBar dito
     // (supplied ng Tenant Dashboard shell), walang
     // SafeArea, top-aligned scrollable list.
-    // ============================================
+    
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
       body: _buildContractList(user.uid),

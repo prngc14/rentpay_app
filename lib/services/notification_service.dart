@@ -44,7 +44,7 @@ class NotificationService {
         AndroidInitializationSettings("@mipmap/ic_launcher");
     final initSettings = InitializationSettings(android: androidSettings);
 
-    // ✅ ADDED: onDidReceiveNotificationResponse -- ito ang tumatawag
+    // ADDED: onDidReceiveNotificationResponse -- ito ang tumatawag
     // pag tinapik ng user ang isang notification (foreground o
     // background, habang bukas pa rin ang app process).
     await _localNotifications.initialize(
