@@ -6,7 +6,21 @@ import 'package:intl/intl.dart';
 import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
 
 class TenantContractsScreen extends StatefulWidget {
-  const TenantContractsScreen({super.key});
+  // Default false = EKSAKTONG PAREHO sa dating behavior, ginagamit
+  // sa loob ng Contracts tab ng Tenant Dashboard (may sarili nang
+  // AppBar ang Dashboard, walang Scaffold/AppBar dito, top-aligned
+  // scrollable list).
+  //
+  // true = ginagamit LANG kapag binubuksan mula sa notification tap
+  // (NotificationService._onNotificationTapped) -- dito idinadagdag
+  // ang sariling AppBar (may back button), dahil direktang naka-push
+  // ito nang walang Dashboard shell sa paligid.
+  final bool standalone;
+
+  const TenantContractsScreen({
+    super.key,
+    this.standalone = false,
+  });
 
   @override
   State<TenantContractsScreen> createState() => _TenantContractsScreenState();
@@ -304,6 +318,416 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
+  // ==========================================================
+  // CONTRACT LIST BODY (StreamBuilder) -- KAPAREHO ito ng
+  // dating laman ng Scaffold's body, walang binago sa loob. Ang
+  // standalone mode ay iba lang sa AppBar na idinadagdag ng build().
+  // ==========================================================
+  Widget _buildContractList(String uid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection("contracts")
+          .where("tenantId", isEqualTo: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                "Unable to load contracts.\n${snapshot.error}",
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = data['status'] ?? 'Pending Signature';
+          return !_inactiveStatuses.contains(status);
+        }).toList();
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.description_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "No contracts found",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final contractId = docs[index].id;
+            final data = docs[index].data() as Map<String, dynamic>;
+
+            return _buildContractCard(contractId, data);
+          },
+        );
+      },
+    );
+  }
+
+  // ==========================================================
+  // CONTRACT CARD (hiniwalay para magamit sa parehong
+  // top-aligned list at centered/standalone view -- eksaktong
+  // pareho ang laman sa dating card, walang binago)
+  // ==========================================================
+  Widget _buildContractCard(String contractId, Map<String, dynamic> data) {
+    final roomNumber = data["roomNumber"] ?? "Room";
+    final ownerId = data["ownerId"] ?? "";
+    final status = data["status"] ?? "Pending Signature";
+    final terms = data["termsAndConditions"] ?? "";
+    final electricRate = data["electricRate"] ?? 0;
+    final waterRate = data["waterRate"] ?? 0;
+
+    Timestamp? startTimestamp = data["startDate"];
+    Timestamp? endTimestamp = data["endDate"];
+    Timestamp? createdTimestamp = data["createdAt"];
+
+    String startDate = "--";
+    String endDate = "--";
+    String createdDate = "--";
+
+    if (startTimestamp != null) {
+      startDate = DateFormat("MMM dd, yyyy").format(startTimestamp.toDate());
+    }
+
+    if (endTimestamp != null) {
+      endDate = DateFormat("MMM dd, yyyy").format(endTimestamp.toDate());
+    }
+
+    if (createdTimestamp != null) {
+      createdDate =
+          DateFormat("MMM dd, yyyy").format(createdTimestamp.toDate());
+    }
+
+    final bool isSigned = status == "Signed by Tenant";
+    final bool isSentToOwner = status == "Sent to Owner";
+    final Color statusColor = _statusColor(status);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ================= HEADER =================
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.08),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.article_outlined,
+                    color: statusColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Rental Contract",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff1D1D1F),
+                        ),
+                      ),
+                      Text(
+                        "Room $roomNumber",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _statusIcon(status),
+                        size: 13,
+                        color: statusColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ================= DETAILS =================
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _detailRow(
+                  icon: Icons.meeting_room_outlined,
+                  label: "Room",
+                  value: roomNumber.toString(),
+                ),
+                FutureBuilder<String>(
+                  future: _getOwnerCode(ownerId),
+                  builder: (context, ownerSnapshot) {
+                    final displayCode = ownerSnapshot.data ?? "Loading...";
+                    return _detailRow(
+                      icon: Icons.badge_outlined,
+                      label: "Owner ID",
+                      value: displayCode,
+                    );
+                  },
+                ),
+                _detailRow(
+                  icon: Icons.flash_on_outlined,
+                  label: "Electric Rate",
+                  value: "₱$electricRate per kWh",
+                ),
+                _detailRow(
+                  icon: Icons.water_drop_outlined,
+                  label: "Water Rate",
+                  value: "₱$waterRate per m³",
+                ),
+                _detailRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: "Start Date",
+                  value: startDate,
+                ),
+                _detailRow(
+                  icon: Icons.event_busy_outlined,
+                  label: "End Date",
+                  value: endDate,
+                ),
+                _detailRow(
+                  icon: Icons.history_outlined,
+                  label: "Created",
+                  value: createdDate,
+                ),
+              ],
+            ),
+          ),
+
+          // ================= TERMS =================
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xffF7F7FA),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.notes_outlined,
+                        size: 15,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Terms & Conditions",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    terms.isEmpty ? "No terms provided" : terms,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 6),
+          Divider(height: 1, color: Colors.grey.shade200),
+
+          // ================= ACTIONS =================
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isSentToOwner
+                          ? Colors.grey.shade300
+                          : Colors.deepOrange,
+                      foregroundColor: isSentToOwner
+                          ? Colors.grey.shade700
+                          : Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 13,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: isSentToOwner ? 0 : 2,
+                    ),
+                    onPressed: isSentToOwner
+                        ? null
+                        : () => _showSignatureDialog(
+                              contractId: contractId,
+                              roomNumber: roomNumber,
+                            ),
+                    icon: Icon(
+                      isSentToOwner ? Icons.lock_outline : Icons.draw,
+                      size: 18,
+                    ),
+                    label: Text(
+                      isSentToOwner ? "Signature Locked" : "Review & Sign",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                if (isSigned && !isSentToOwner) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: () => _sendToOwner(contractId),
+                      icon: const Icon(Icons.send, size: 18),
+                      label: const Text(
+                        "Send to Owner",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (isSentToOwner) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.green.shade200,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          color: Colors.green.shade700,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Signature is locked and sent to owner for verification.",
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -316,406 +740,34 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
       );
     }
 
+    // ============================================
+    // STANDALONE MODE (notification tap): may
+    // sariling AppBar (back button + title), at
+    // SafeArea, dahil direktang naka-push ito nang
+    // walang Dashboard shell sa paligid.
+    // ============================================
+    if (widget.standalone) {
+      return Scaffold(
+        backgroundColor: const Color(0xffF5F6FA),
+        appBar: AppBar(
+          title: const Text("Contracts"),
+          backgroundColor: Colors.deepOrange,
+        ),
+        body: SafeArea(
+          child: _buildContractList(user.uid),
+        ),
+      );
+    }
+
+    // ============================================
+    // NORMAL MODE (Contracts tab): EKSAKTONG PAREHO
+    // sa dating behavior -- walang AppBar dito
+    // (supplied ng Tenant Dashboard shell), walang
+    // SafeArea, top-aligned scrollable list.
+    // ============================================
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("contracts")
-            .where("tenantId", isEqualTo: user.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  "Unable to load contracts.\n${snapshot.error}",
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data!.docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final status = data['status'] ?? 'Pending Signature';
-            return !_inactiveStatuses.contains(status);
-          }).toList();
-
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "No contracts found",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final contractId = docs[index].id;
-              final data = docs[index].data() as Map<String, dynamic>;
-
-              final roomNumber = data["roomNumber"] ?? "Room";
-              final ownerId = data["ownerId"] ?? "";
-              final status = data["status"] ?? "Pending Signature";
-              final terms = data["termsAndConditions"] ?? "";
-              final electricRate = data["electricRate"] ?? 0;
-              final waterRate = data["waterRate"] ?? 0;
-
-              Timestamp? startTimestamp = data["startDate"];
-              Timestamp? endTimestamp = data["endDate"];
-              Timestamp? createdTimestamp = data["createdAt"];
-
-              String startDate = "--";
-              String endDate = "--";
-              String createdDate = "--";
-
-              if (startTimestamp != null) {
-                startDate = DateFormat("MMM dd, yyyy")
-                    .format(startTimestamp.toDate());
-              }
-
-              if (endTimestamp != null) {
-                endDate =
-                    DateFormat("MMM dd, yyyy").format(endTimestamp.toDate());
-              }
-
-              if (createdTimestamp != null) {
-                createdDate = DateFormat("MMM dd, yyyy")
-                    .format(createdTimestamp.toDate());
-              }
-
-              final bool isSigned = status == "Signed by Tenant";
-              final bool isSentToOwner = status == "Sent to Owner";
-              final Color statusColor = _statusColor(status);
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ================= HEADER =================
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.08),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.article_outlined,
-                              color: statusColor,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Rental Contract",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xff1D1D1F),
-                                  ),
-                                ),
-                                Text(
-                                  "Room $roomNumber",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _statusIcon(status),
-                                  size: 13,
-                                  color: statusColor,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  status,
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // ================= DETAILS =================
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _detailRow(
-                            icon: Icons.meeting_room_outlined,
-                            label: "Room",
-                            value: roomNumber.toString(),
-                          ),
-                          FutureBuilder<String>(
-                            future: _getOwnerCode(ownerId),
-                            builder: (context, ownerSnapshot) {
-                              final displayCode =
-                                  ownerSnapshot.data ?? "Loading...";
-                              return _detailRow(
-                                icon: Icons.badge_outlined,
-                                label: "Owner ID",
-                                value: displayCode,
-                              );
-                            },
-                          ),
-                          _detailRow(
-                            icon: Icons.flash_on_outlined,
-                            label: "Electric Rate",
-                            value: "₱$electricRate per kWh",
-                          ),
-                          _detailRow(
-                            icon: Icons.water_drop_outlined,
-                            label: "Water Rate",
-                            value: "₱$waterRate per m³",
-                          ),
-                          _detailRow(
-                            icon: Icons.calendar_today_outlined,
-                            label: "Start Date",
-                            value: startDate,
-                          ),
-                          _detailRow(
-                            icon: Icons.event_busy_outlined,
-                            label: "End Date",
-                            value: endDate,
-                          ),
-                          _detailRow(
-                            icon: Icons.history_outlined,
-                            label: "Created",
-                            value: createdDate,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // ================= TERMS =================
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffF7F7FA),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.notes_outlined,
-                                  size: 15,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  "Terms & Conditions",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              terms.isEmpty ? "No terms provided" : terms,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 6),
-                    Divider(height: 1, color: Colors.grey.shade200),
-
-                    // ================= ACTIONS =================
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isSentToOwner
-                                    ? Colors.grey.shade300
-                                    : Colors.deepOrange,
-                                foregroundColor: isSentToOwner
-                                    ? Colors.grey.shade700
-                                    : Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 13,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: isSentToOwner ? 0 : 2,
-                              ),
-                              onPressed: isSentToOwner
-                                  ? null
-                                  : () => _showSignatureDialog(
-                                        contractId: contractId,
-                                        roomNumber: roomNumber,
-                                      ),
-                              icon: Icon(
-                                isSentToOwner ? Icons.lock_outline : Icons.draw,
-                                size: 18,
-                              ),
-                              label: Text(
-                                isSentToOwner
-                                    ? "Signature Locked"
-                                    : "Review & Sign",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (isSigned && !isSentToOwner) ...[
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 13,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                onPressed: () => _sendToOwner(contractId),
-                                icon: const Icon(Icons.send, size: 18),
-                                label: const Text(
-                                  "Send to Owner",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (isSentToOwner) ...[
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.green.shade200,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.verified_outlined,
-                                    color: Colors.green.shade700,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      "Signature is locked and sent to owner for verification.",
-                                      style: TextStyle(
-                                        color: Colors.green.shade700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: _buildContractList(user.uid),
     );
   }
 }

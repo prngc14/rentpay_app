@@ -22,7 +22,7 @@ class NotificationService {
 
   /// Payload na ilalagay sa lahat ng RentPay Reminder notification,
   /// para malaman ng tap handler kung saan dapat mag-navigate.
-  static const String _contractReminderPayload = 'contract_due_reminder';
+  static const String _contractReminderPayload = "contract_due_reminder";
 
   /// Tawagin ito pagkatapos ng successful login (email/password man o
   /// Google). Ligtas itong tawagin nang paulit-ulit - may guard na
@@ -41,7 +41,7 @@ class NotificationService {
     );
 
     const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings("@mipmap/ic_launcher");
     final initSettings = InitializationSettings(android: androidSettings);
 
     // ✅ ADDED: onDidReceiveNotificationResponse -- ito ang tumatawag
@@ -85,9 +85,9 @@ class NotificationService {
 
   static void _showLocalNotification(RemoteMessage message) {
     const androidDetails = AndroidNotificationDetails(
-      'rentpay_reminders',
-      'RentPay Reminders',
-      channelDescription: 'Payment due date reminders',
+      "rentpay_reminders",
+      "RentPay Reminders",
+      channelDescription: "Payment due date reminders",
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -95,8 +95,8 @@ class NotificationService {
 
     _localNotifications.show(
       message.hashCode,
-      message.notification?.title ?? 'RentPay',
-      message.notification?.body ?? '',
+      message.notification?.title ?? "RentPay",
+      message.notification?.body ?? "",
       details,
       payload: _contractReminderPayload,
     );
@@ -107,9 +107,9 @@ class NotificationService {
     required String body,
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      'rentpay_reminders',
-      'RentPay Reminders',
-      channelDescription: 'Payment due date reminders',
+      "rentpay_reminders",
+      "RentPay Reminders",
+      channelDescription: "Payment due date reminders",
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -126,10 +126,12 @@ class NotificationService {
     );
   }
 
-  /// ✅ ADDED: tinatawag kapag tinapik ng user ang notification.
-  /// Dinadala ang user diretso sa Contracts screen gamit ang
-  /// global navigatorKey (dahil static context ito, walang sariling
-  /// BuildContext mula sa kasalukuyang open screen).
+  /// Tinatawag kapag tinapik ng user ang notification. Dinadala ang
+  /// user sa Contracts screen sa STANDALONE mode (may sariling
+  /// AppBar), dahil direktang naka-push ito gamit ang global navigatorKey
+  /// (static context, walang sariling BuildContext mula sa kasalukuyang
+  /// open screen) -- kaya wala itong Dashboard shell (AppBar/BottomNav)
+  /// sa paligid.
   static void _onNotificationTapped(NotificationResponse response) {
     if (response.payload != _contractReminderPayload) return;
 
@@ -138,7 +140,7 @@ class NotificationService {
 
     Navigator.of(ctx).push(
       MaterialPageRoute(
-        builder: (_) => const TenantContractsScreen(),
+        builder: (_) => const TenantContractsScreen(standalone: true),
       ),
     );
   }
