@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; //ayusin ang path kung iba ang location mo
 
 class CreateContractScreen extends StatefulWidget {
   // ADDED: kung meron nito, "renewal" mode ito -- pre-fills ang
@@ -74,23 +74,51 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       return;
     }
 
-    final tenantsSnapshot = await _firestore
-        .collection("users")
-        .where("ownerId", isEqualTo: user.uid)
-        .where("role", isEqualTo: "tenant")
-        .get();
+    try {
+      final tenantsSnapshot = await _firestore
+          .collection("users")
+          .where("ownerId", isEqualTo: user.uid)
+          .get();
 
-    final roomsSnapshot = await _firestore
+      final roomsSnapshot = await _firestore
         .collection("rooms")
         .where("ownerId", isEqualTo: user.uid)
         .get();
 
-    // Kunin lahat ng contracts ng owner na ito para malaman kung
-    // sino ang mga tenant AT alin sa mga room ang may ACTIVE contract pa
-    final contractsSnapshot = await _firestore
-        .collection("contracts")
-        .where("ownerId", isEqualTo: user.uid)
-        .get();
+      // Rooms are the source of truth for connected tenants. This also supports
+      // older tenant records whose ownerId was not saved correctly.
+      final tenantDocuments = <String, Map<String, dynamic>>{};
+      for (final doc in tenantsSnapshot.docs) {
+        final data = doc.data();
+        if (data["role"] == "tenant") {
+          tenantDocuments[doc.id] = data;
+        }
+      }
+
+      for (final roomDoc in roomsSnapshot.docs) {
+        final tenantId = roomDoc.data()["tenantId"]?.toString();
+        if (tenantId == null ||
+            tenantId.isEmpty ||
+            tenantDocuments.containsKey(tenantId)) {
+          continue;
+        }
+
+        final tenantDoc =
+            await _firestore.collection("users").doc(tenantId).get();
+        final tenantData = tenantDoc.data();
+        if (tenantDoc.exists &&
+            tenantData != null &&
+            tenantData["role"] == "tenant") {
+          tenantDocuments[tenantId] = tenantData;
+        }
+      }
+
+      // Kunin lahat ng contracts ng owner na ito para malaman kung
+      // sino ang mga tenant AT alin sa mga room ang may ACTIVE contract pa
+      final contractsSnapshot = await _firestore
+          .collection("contracts")
+          .where("ownerId", isEqualTo: user.uid)
+          .get();
 
     //ADDED: kapag renewal, huwag isama ang lumang contract sa
     // pag-compute ng "active" tenants/rooms -- dahil ito mismo ang
@@ -117,38 +145,48 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         .whereType<String>()
         .toSet();
 
-    setState(() {
-      _tenantOptions = tenantsSnapshot.docs
-          .where((doc) => !tenantIdsWithActiveContract.contains(doc.id))
-          .map((doc) {
-        final data = doc.data();
-        return {
-          "id": doc.id,
-          "name": data["name"] ?? "Tenant",
-        };
-      }).toList();
+      setState(() {
+        _tenantOptions = tenantDocuments.entries
+            .map((entry) {
+          final data = entry.value;
+          final hasActiveContract =
+              tenantIdsWithActiveContract.contains(entry.key);
+          final name = (data["name"] ?? "Tenant").toString();
+          return {
+            "id": entry.key,
+            "name": name,
+            "displayName": hasActiveContract
+                ? "$name (Active contract)"
+                : name,
+            "hasActiveContract": hasActiveContract,
+          };
+        }).toList();
 
-      _roomOptions = roomsSnapshot.docs
-          .where((doc) => !roomIdsWithActiveContract.contains(doc.id))
-          .map((doc) {
-        final data = doc.data();
+        _roomOptions = roomsSnapshot.docs
+            .map((doc) {
+          final data = doc.data();
+          final hasActiveContract = roomIdsWithActiveContract.contains(doc.id);
 
-        return {
-          "id": doc.id,
-          "roomNumber": data["roomNumber"] ?? "Room",
-          "monthlyRent": (data["monthlyRent"] ?? 0).toDouble(),
-          "electricRate": (data["electricRate"] ?? 12).toDouble(),
-          "waterRate": (data["waterRate"] ?? 30).toDouble(),
-          "tenantId": data["tenantId"],
-        };
-      }).toList();
+          return {
+            "id": doc.id,
+            "roomNumber": data["roomNumber"] ?? "Room",
+            "displayRoomNumber": hasActiveContract
+                ? "${data["roomNumber"] ?? "Room"} (Active contract)"
+                : (data["roomNumber"] ?? "Room"),
+            "monthlyRent": (data["monthlyRent"] ?? 0).toDouble(),
+            "electricRate": (data["electricRate"] ?? 12).toDouble(),
+            "waterRate": (data["waterRate"] ?? 30).toDouble(),
+            "tenantId": data["tenantId"],
+            "hasActiveContract": hasActiveContract,
+          };
+        }).toList();
 
-      _isLoading = false;
+        _isLoading = false;
 
       //ADDED: kung renewal mode, i-pre-fill ang lahat ng field
       // gamit ang datos ng lumang contract.
-      if (_isRenewal) {
-        final r = widget.renewalData!;
+        if (_isRenewal) {
+          final r = widget.renewalData!;
 
         _selectedTenantId = r["tenantId"] as String?;
         _selectedRoomId = r["roomId"] as String?;
@@ -163,9 +201,16 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
             ((r["electricRate"] ?? 0) as num).toStringAsFixed(2);
         _waterRateController.text =
             ((r["waterRate"] ?? 0) as num).toStringAsFixed(2);
-        _termsController.text = (r["termsAndConditions"] ?? "").toString();
-      }
-    });
+          _termsController.text = (r["termsAndConditions"] ?? "").toString();
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      showAppWarningBanner(context, friendlyAuthError(e));
+    }
   }
 
   Future<void> _pickDate({required bool isStart}) async {
@@ -210,6 +255,40 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       return;
     }
 
+    Map<String, dynamic>? selectedTenant;
+    for (final item in _tenantOptions) {
+      if (item["id"] == _selectedTenantId) {
+        selectedTenant = item;
+        break;
+      }
+    }
+
+    Map<String, dynamic>? selectedRoom;
+    for (final item in _roomOptions) {
+      if (item["id"] == _selectedRoomId) {
+        selectedRoom = item;
+        break;
+      }
+    }
+
+    if (selectedTenant == null || selectedRoom == null) {
+      showAppWarningBanner(
+        context,
+        "The selected tenant or room is no longer available. Please select them again.",
+      );
+      return;
+    }
+
+    if (!_isRenewal &&
+        (selectedTenant["hasActiveContract"] == true ||
+            selectedRoom["hasActiveContract"] == true)) {
+      showAppWarningBanner(
+        context,
+        "This tenant or room already has an active contract. Use Renew Contract instead.",
+      );
+      return;
+    }
+
     if (startDate == null || endDate == null) {
       debugPrint(
         "Create Contract failed: start or end date missing. start=$startDate end=$endDate",
@@ -220,21 +299,20 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       return;
     }
 
-    final tenant = _tenantOptions.firstWhere(
-      (item) => item["id"] == _selectedTenantId,
-      orElse: () => {
-        "name": _isRenewal ? widget.renewalData!["tenantName"] : "Tenant",
-      },
-    );
+    final tenant = selectedTenant;
 
-    final room = _roomOptions.firstWhere(
-      (item) => item["id"] == _selectedRoomId,
-      orElse: () => {
-        "roomNumber":
-            _isRenewal ? widget.renewalData!["roomNumber"] : "Room",
-        "monthlyRent": 0.0,
-      },
-    );
+    // Read the current name immediately before saving so the contract never
+    // stores the fallback label when the tenant profile already has a name.
+    final tenantSnapshot = await _firestore
+        .collection("users")
+        .doc(_selectedTenantId)
+        .get();
+    final tenantData = tenantSnapshot.data();
+    final tenantName = (tenantData?["name"] ?? tenant["name"] ?? "Tenant")
+        .toString()
+        .trim();
+
+    final room = selectedRoom;
 
     try {
       debugPrint("Saving contract to Firestore...");
@@ -242,7 +320,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       await _firestore.collection("contracts").add({
         "ownerId": user.uid,
         "tenantId": _selectedTenantId,
-        "tenantName": tenant["name"],
+        "tenantName": tenantName.isEmpty ? "Tenant" : tenantName,
         "roomId": _selectedRoomId,
         "roomNumber": room["roomNumber"],
         "monthlyRent": double.tryParse(_rentController.text.trim()) ?? 0.0,
@@ -363,7 +441,8 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                     items: _tenantOptions.map((tenant) {
                       return DropdownMenuItem<String>(
                         value: tenant["id"],
-                        child: Text(tenant["name"]),
+                        enabled: tenant["hasActiveContract"] != true || _isRenewal,
+                        child: Text(tenant["displayName"]),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -384,7 +463,8 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                     items: _roomOptions.map((room) {
                       return DropdownMenuItem<String>(
                         value: room["id"],
-                        child: Text(room["roomNumber"]),
+                        enabled: room["hasActiveContract"] != true || _isRenewal,
+                        child: Text(room["displayRoomNumber"]),
                       );
                     }).toList(),
                     onChanged: _roomOptions.isEmpty

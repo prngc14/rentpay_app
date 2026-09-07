@@ -93,6 +93,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   .doc(user.uid)
                   .snapshots(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      "Unable to load tenant information: ${snapshot.error}",
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
                 if (!snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(),
@@ -393,22 +403,33 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               stream: FirebaseFirestore.instance
                   .collection("users")
                   .where(
-                    "ownerId",
-                    isEqualTo: ownerId,
-                  )
-                  .where(
                     "role",
                     isEqualTo: "tenant",
                   )
                   .snapshots(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      "Unable to load tenant IDs: ${snapshot.error}",
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
                 if (!snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
                 }
 
-                if (snapshot.data!.docs.isEmpty) {
+                final tenants = snapshot.data!.docs.where((tenant) {
+                  final data = tenant.data() as Map<String, dynamic>;
+                  return data["ownerId"] == ownerId;
+                }).toList();
+
+                if (tenants.isEmpty) {
                   return const Center(
                     child: Text("No tenants found"),
                   );
@@ -416,9 +437,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                 return ListView.builder(
                   shrinkWrap: true,
-                  itemCount: snapshot.data!.docs.length,
+                  itemCount: tenants.length,
                   itemBuilder: (context, index) {
-                    final tenant = snapshot.data!.docs[index];
+                    final tenant = tenants[index];
 
                     final data = tenant.data() as Map<String, dynamic>;
 
@@ -445,6 +466,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                           children: [
                             GestureDetector(
                               onTap: () {
+                                if (image.isEmpty) return;
+
                                 showDialog(
                                   context: context,
                                   builder: (_) {
@@ -453,6 +476,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                         child: Image.network(
                                           image,
                                           fit: BoxFit.contain,
+                                          errorBuilder: (_, __, ___) => const
+                                              Center(
+                                            child: Text(
+                                              "Unable to load Work ID image",
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     );
@@ -469,14 +498,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                   border: Border.all(
                                     color: Colors.grey.shade300,
                                   ),
-                                  image: image.isNotEmpty
-                                      ? DecorationImage(
-                                          image: NetworkImage(
-                                            image,
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
+                                    image: image.isNotEmpty
+                                        ? DecorationImage(
+                                            image: NetworkImage(image),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
                                 ),
                                 child: image.isEmpty
                                     ? const Center(

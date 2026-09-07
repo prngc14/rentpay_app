@@ -339,12 +339,19 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                       // TENANT INFORMATION
                       // ======================================
                       if (tenantId != null)
-                        FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
                               .collection("users")
                               .doc(tenantId)
-                              .get(),
+                              .snapshots(),
                           builder: (context, tenantSnapshot) {
+                            if (tenantSnapshot.hasError) {
+                              return Text(
+                                "Unable to load tenant information: ${tenantSnapshot.error}",
+                                style: const TextStyle(color: Colors.red),
+                              );
+                            }
+
                             if (!tenantSnapshot.hasData) {
                               return const Padding(
                                 padding: EdgeInsets.all(10),
@@ -446,6 +453,25 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                                       ),
                                     ],
                                   ),
+                                  if ((tenantData["workIdUrl"] ?? "")
+                                      .toString()
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 180,
+                                      child: Image.network(
+                                        tenantData["workIdUrl"].toString(),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const
+                                            Center(
+                                          child: Text(
+                                            "Unable to load Work ID image",
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             );

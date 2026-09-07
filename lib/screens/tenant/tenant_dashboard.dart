@@ -9,9 +9,15 @@ import 'tenant_profile_screen.dart';
 import 'tenant_connect_screen.dart';
 import 'tenant_contracts_screen.dart';
 import 'pending_payment_screen.dart';
+import '../../widgets/app_warning_banner.dart';
 
 class TenantDashboard extends StatefulWidget {
-  const TenantDashboard({super.key});
+  final bool showConnectionSuccess;
+
+  const TenantDashboard({
+    super.key,
+    this.showConnectionSuccess = false,
+  });
 
   @override
   State<TenantDashboard> createState() => _TenantDashboardState();
@@ -21,6 +27,18 @@ class _TenantDashboardState extends State<TenantDashboard> {
   int _currentIndex = 0;
 
   final FirestoreService firestore = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showConnectionSuccess) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showAppSuccessBanner(context, "Room connected successfully!");
+        }
+      });
+    }
+  }
 
   void logout() async {
     await FirebaseAuth.instance.signOut();

@@ -101,6 +101,13 @@ class PaymentRequestsScreen extends StatelessWidget {
                     .doc(tenantId)
                     .get(),
                 builder: (context, tenantSnapshot) {
+                  if (tenantSnapshot.hasError) {
+                    return Text(
+                      "Unable to load tenant: ${tenantSnapshot.error}",
+                      style: const TextStyle(color: Colors.red),
+                    );
+                  }
+
                   String tenantName = "Loading tenant...";
                   String tenantEmail = "";
 

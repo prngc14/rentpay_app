@@ -1,10 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../owner/owner_dashboard.dart';
 import '../tenant/tenant_connect_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
+
+  Future<void> _selectRole(BuildContext context, String role) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    await FirebaseFirestore.instance.collection("users").doc(user.uid).set(
+      {"role": role},
+      SetOptions(merge: true),
+    );
+
+    if (!context.mounted) return;
+
+    if (role == "owner") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OwnerDashboard()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const TenantConnectScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,14 +85,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const OwnerDashboard(),
-                        ),
-                      );
-                    },
+                    onPressed: () => _selectRole(context, "owner"),
                     child: const Text(
                       "Login as Owner",
                     ),
@@ -87,14 +106,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TenantConnectScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => _selectRole(context, "tenant"),
                     child: const Text(
                       "Login as Tenant",
                     ),

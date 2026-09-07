@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import 'tenant_dashboard.dart';
 
 class TenantConnectScreen extends StatefulWidget {
   const TenantConnectScreen({super.key});
@@ -139,9 +140,12 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
       });
 
       if (!mounted) return;
-      showAppSuccessBanner(context, "Room connected successfully!");
-
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TenantDashboard(showConnectionSuccess: true),
+        ),
+      );
     } catch (e) {
       print("ROOM ASSIGN ERROR: $e");
 

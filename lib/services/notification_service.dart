@@ -7,6 +7,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../main.dart';
 import '../screens/tenant/tenant_contracts_screen.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Background notification messages are displayed by Android automatically.
+  // This handler is required so data-only messages can be received safely.
+}
+
 /// Nag-aasikaso ng push notification setup: humihingi ng permission,
 /// kumukuha at nagse-save ng FCM device token sa Firestore (para
 /// malaman ng Cloud Function kung saan magpapadala ng notification),
@@ -19,6 +25,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
+  static bool _listenersRegistered = false;
+  static String? _pendingNotificationPayload;
 
   /// Payload na ilalagay sa lahat ng RentPay Reminder notification,
   /// para malaman ng tap handler kung saan dapat mag-navigate.
@@ -33,6 +41,10 @@ class NotificationService {
       await _saveTokenToFirestore();
       return;
     }
+
+    FirebaseMessaging.onBackgroundMessage(
+      _firebaseMessagingBackgroundHandler,
+    );
 
     await _messaging.requestPermission(
       alert: true,
@@ -52,17 +64,40 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
+    final launchDetails =
+        await _localNotifications.getNotificationAppLaunchDetails();
+    final launchResponse = launchDetails?.notificationResponse;
+    if (launchDetails?.didNotificationLaunchApp == true &&
+        launchResponse?.payload != null) {
+      _pendingNotificationPayload = launchResponse!.payload;
+    }
+
     await _saveTokenToFirestore();
 
-    _messaging.onTokenRefresh.listen((newToken) {
-      _saveTokenToFirestore(token: newToken);
-    });
+    if (!_listenersRegistered) {
+      _messaging.onTokenRefresh.listen((newToken) {
+        _saveTokenToFirestore(token: newToken);
+      });
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showLocalNotification(message);
-    });
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _showLocalNotification(message);
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _openContractsIfNeeded(message.data["type"] ??
+            (message.notification != null ? _contractReminderPayload : null));
+      });
+
+      _listenersRegistered = true;
+    }
 
     _initialized = true;
+
+    final pendingPayload = _pendingNotificationPayload;
+    _pendingNotificationPayload = null;
+    if (pendingPayload != null) {
+      _openContractsIfNeeded(pendingPayload);
+    }
   }
 
   static Future<void> _saveTokenToFirestore({String? token}) async {
@@ -99,7 +134,9 @@ class NotificationService {
       message.notification?.body ?? "",
       details,
       payload: _contractReminderPayload,
-    );
+    ).catchError((error) {
+      debugPrint("Local notification error: $error");
+    });
   }
 
   static Future<void> showLocalNotification({
@@ -120,7 +157,7 @@ class NotificationService {
       title,
       body,
       details,
-      // ✅ ADDED: payload para malaman ng tap handler na ito ay
+      // payload para malaman ng tap handler na ito ay
       // contract due reminder, at doon dapat mag-navigate.
       payload: _contractReminderPayload,
     );
@@ -133,14 +170,21 @@ class NotificationService {
   /// open screen) -- kaya wala itong Dashboard shell (AppBar/BottomNav)
   /// sa paligid.
   static void _onNotificationTapped(NotificationResponse response) {
-    if (response.payload != _contractReminderPayload) return;
+    _openContractsIfNeeded(response.payload);
+  }
+
+  static void _openContractsIfNeeded(String? payload) {
+    if (payload != _contractReminderPayload) return;
 
     final ctx = navigatorKey.currentContext;
-    if (ctx == null) return;
+    if (ctx == null) {
+      _pendingNotificationPayload = payload;
+      return;
+    }
 
     Navigator.of(ctx).push(
       MaterialPageRoute(
-        builder: (_) => const TenantContractsScreen(standalone: true),
+        builder: (_) => const TenantContractsScreen(),
       ),
     );
   }

@@ -101,7 +101,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = doc.data();
 
-      String role = data?["role"] ?? "";
+        String role = data?["role"] ?? "";
+
+        // Recover older/Google accounts whose role was never saved. A tenant
+        // connected to an owner or room can be identified from these fields.
+        if (role.isEmpty &&
+          (data?["ownerId"]?.toString().isNotEmpty == true ||
+            data?["room"]?.toString().isNotEmpty == true ||
+            data?["connected"] == true)) {
+        role = "tenant";
+        await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .update({"role": role});
+        }
 
       
       // OWNER
@@ -176,7 +189,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = doc.data();
 
-      String role = data?["role"] ?? "";
+        String role = data?["role"] ?? "";
+
+        if (role.isEmpty &&
+          (data?["ownerId"]?.toString().isNotEmpty == true ||
+            data?["room"]?.toString().isNotEmpty == true ||
+            data?["connected"] == true)) {
+        role = "tenant";
+        await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .update({"role": role});
+        }
 
       
       // OWNER

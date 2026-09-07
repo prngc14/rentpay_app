@@ -23,6 +23,12 @@ class BoardingScreen extends StatelessWidget {
           : StreamBuilder<QuerySnapshot>(
               stream: firestore.getOwnerTenants(user.uid),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text("Error loading tenants: ${snapshot.error}"),
+                  );
+                }
+
                 if (!snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(),
