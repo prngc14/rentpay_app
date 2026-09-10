@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import '../../widgets/app_warning_banner.dart';
 
 class TenantContractsScreen extends StatefulWidget {
   const TenantContractsScreen({super.key});
@@ -16,7 +16,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
   final List<Offset> _signaturePoints = [];
   bool _isSavingSignature = false;
 
-  // ✅ ADDED: "Renewed"
+
   static const List<String> _inactiveStatuses = [
     'Expired',
     'Cancelled',
@@ -241,9 +241,8 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     );
   }
 
-  // ==========================================================
+
   // STATUS DISPLAY HELPERS
-  // ==========================================================
   Color _statusColor(String status) {
     switch (status) {
       case "Signed by Tenant":
@@ -266,9 +265,8 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
     }
   }
 
-  // ==========================================================
+
   // SMALL DETAIL ROW (icon + label + value)
-  // ==========================================================
   Widget _detailRow({
     required IconData icon,
     required String label,

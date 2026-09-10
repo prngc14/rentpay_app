@@ -2,15 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../widgets/app_warning_banner.dart'; //ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart';
 
 class CreateContractScreen extends StatefulWidget {
-  // ADDED: kung meron nito, "renewal" mode ito -- pre-fills ang
-  // form gamit ang datos ng lumang contract, at ini-mark ang lumang
-  // contract bilang "Renewed" pagkatapos gumawa ng bago.
-  // Inaasahang laman: contractId, tenantId, tenantName, roomId,
-  // roomNumber, monthlyRent, securityDeposit, advancePayment,
-  // electricRate, waterRate, termsAndConditions.
+
   final Map<String, dynamic>? renewalData;
 
   const CreateContractScreen({

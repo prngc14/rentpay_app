@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 
-/// BannerType
-/// Uri ng banner - kada type may sariling kulay at icon, pero PAREHONG
-/// shape, size, position, at auto-dismiss timing.
 
 enum BannerType { warning, success }
 
@@ -33,10 +30,6 @@ const Map<BannerType, _BannerStyle> _bannerStyles = {
 };
 
 
-/// AppBanner
-/// Isang consistent banner design (parehong shape/size/position) para
-/// gamitin sa LAHAT ng screens: Login, Register, Owner, Tenant,
-/// Contract, Payment, etc. Nagbabago lang ang kulay/icon base sa type.
 
 class AppBanner extends StatelessWidget {
   final String message;
@@ -144,14 +137,7 @@ void _showBanner(BuildContext context, String message, BannerType type) {
 }
 
 
-/// showAppWarningBanner / showAppSuccessBanner
-/// Tawagin saan mang page para lumabas ang banner sa pinakataas ng
-/// screen. Parehong shape, size, position, at 2-second auto-dismiss --
-/// nagkakaiba lang ng kulay (red vs green) at icon.
-///
-/// USAGE:
-///   showAppWarningBanner(context, "Wrong username or password.");
-///   showAppSuccessBanner(context, "Registered Successfully.");
+
 void showAppWarningBanner(BuildContext context, String message) {
   _showBanner(context, message, BannerType.warning);
 }
@@ -160,13 +146,7 @@ void showAppSuccessBanner(BuildContext context, String message) {
   _showBanner(context, message, BannerType.success);
 }
 
-/// friendlyAuthError
-/// Ginagawang readable/user-friendly ang raw exception mula sa Firebase
-/// Auth o iba pang error (hal. "[firebase_auth/invalid-credential] ...")
-/// para hindi na technical jargon ang makikita ng user sa banner.
-///
-/// USAGE:
-///   showAppWarningBanner(context, friendlyAuthError(e));
+
 String friendlyAuthError(Object error) {
   final msg = error.toString().toLowerCase();
 

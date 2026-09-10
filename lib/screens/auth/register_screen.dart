@@ -41,7 +41,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// ginagawang parang email format ito sa likod-likod (hal.
   /// "andrea06@rentpay.local"), dahil kailangan talaga ng Firebase
   /// Auth ng valid email format kahit hindi ito makikita ng user.
-  /// 
   /// (spaces, special symbols) para laging valid ang resulta.
   String _buildFakeEmail(String username) {
     final sanitized = username
@@ -87,7 +86,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     // I-check kung may nabuong valid na username matapos i-sanitize
     // (example. kung puro special characters lang ang na-type, magiging
-    // blangko ito).
     if (fakeEmail.startsWith('@')) {
       showAppWarningBanner(
         context,

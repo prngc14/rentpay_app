@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import '../../widgets/app_warning_banner.dart';
 import 'tenant_dashboard.dart';
 
 class TenantConnectScreen extends StatefulWidget {
@@ -94,9 +94,8 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
     setState(() => loading = false);
   }
 
-  // =========================
+
   // ASSIGN ROOM
-  // =========================
   Future<void> assignRoom() async {
     if (selectedRoom == null) {
       showAppWarningBanner(context, "Select a room");

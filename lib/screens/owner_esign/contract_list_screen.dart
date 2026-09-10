@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'contract_preview_screen.dart';
 import 'create_contract_screen.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; 
 
 class ContractListScreen extends StatelessWidget {
   const ContractListScreen({super.key});
@@ -14,7 +14,7 @@ class ContractListScreen extends StatelessWidget {
   // ginamit natin sa create_contract_screen.dart para consistent ang
   // filtering logic sa buong app. Ang mga contract na may ganitong
   // status ay itatago (hindi ipapakita) sa listahan.
-  // ✅ ADDED: "Renewed"
+  
   static const List<String> _inactiveStatuses = [
     'Expired',
     'Cancelled',

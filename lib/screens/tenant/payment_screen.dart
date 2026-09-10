@@ -9,7 +9,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import '../../widgets/app_warning_banner.dart';
 import 'tenant_payment_history_screen.dart';
 
 class PaymentScreen extends StatefulWidget {

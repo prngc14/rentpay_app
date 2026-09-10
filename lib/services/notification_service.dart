@@ -8,17 +8,8 @@ import '../main.dart';
 import '../screens/tenant/tenant_dashboard.dart';
 
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Background notification messages are displayed by Android automatically.
-  // This handler is required so data-only messages can be received safely.
-}
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
-/// Nag-aasikaso ng push notification setup: humihingi ng permission,
-/// kumukuha at nagse-save ng FCM device token sa Firestore (para
-/// malaman ng Cloud Function kung saan magpapadala ng notification),
-/// at nagpapakita ng notification kahit bukas ang app (foreground).
-/// Kapag tinapik ang notification, dinadala ang tenant sa Contracts tab
-/// sa loob ng Tenant Dashboard.
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -28,14 +19,8 @@ class NotificationService {
   static bool _listenersRegistered = false;
   static String? _pendingNotificationPayload;
 
-  /// Payload na ilalagay sa lahat ng RentPay Reminder notification,
-  /// para malaman ng tap handler kung saan dapat mag-navigate.
   static const String _contractReminderPayload = "contract_due_reminder";
 
-  /// Tawagin ito pagkatapos ng successful login (email/password man o
-  /// Google). Ligtas itong tawagin nang paulit-ulit - may guard na
-  /// para hindi ito mag-initialize ng dalawang beses sa parehong
-  /// session.
   static Future<void> initialize() async {
     if (_initialized) {
       await _saveTokenToFirestore();
@@ -56,9 +41,6 @@ class NotificationService {
         AndroidInitializationSettings("@mipmap/ic_launcher");
     final initSettings = InitializationSettings(android: androidSettings);
 
-    // ADDED: onDidReceiveNotificationResponse -- ito ang tumatawag
-    // pag tinapik ng user ang isang notification (foreground o
-    // background, habang bukas pa rin ang app process).
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
@@ -113,8 +95,7 @@ class NotificationService {
           .doc(user.uid)
           .update({"fcmToken": fcmToken});
     } catch (e) {
-      // Hindi natin ito ginagawang blocker sa login flow kung
-      // sakaling mabigo ka pag move on nlang uwu
+      debugPrint("Unable to save notification token: $e");
     }
   }
 
@@ -159,14 +140,10 @@ class NotificationService {
       title,
       body,
       details,
-      // payload para malaman ng tap handler na ito ay
-      // contract due reminder, at doon dapat mag-navigate.
       payload: _contractReminderPayload,
     );
   }
 
-  /// Tinatawag kapag tinapik ng user ang notification. Binubuksan ang
-  /// Contracts tab gamit ang buong Tenant Dashboard shell.
   static void _onNotificationTapped(NotificationResponse response) {
     _openContractsIfNeeded(response.payload);
   }
@@ -188,8 +165,6 @@ class NotificationService {
     );
   }
 
-  /// Tawagin ito sa logout, para hindi na makatanggap ng notification
-  /// ang device na ito para sa lumang account.
   static Future<void> clearTokenOnLogout() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -200,7 +175,7 @@ class NotificationService {
           .doc(user.uid)
           .update({"fcmToken": FieldValue.delete()});
     } catch (e) {
-      // ok lang i-ignore kung mabigo
+      // ok lang i-ignore kung mabigo ahh sad
     }
   }
 }

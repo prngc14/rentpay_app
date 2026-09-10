@@ -76,9 +76,7 @@ class RoomDetailsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Assign tenant
-                  },
+                  onPressed: () {},
                   icon: const Icon(Icons.person_add),
                   label: const Text("Assign Tenant"),
                   style: ElevatedButton.styleFrom(
@@ -86,9 +84,7 @@ class RoomDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Edit room
-                  },
+                  onPressed: () {},
                   icon: const Icon(Icons.edit),
                   label: const Text("Edit"),
                   style: ElevatedButton.styleFrom(

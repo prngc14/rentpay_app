@@ -479,9 +479,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                           },
                         ),
 
-                      // ======================================
+                      
                       // BILLING INFO
-                      // ======================================
+                      
                       const Text(
                         "Utility Billing",
                         style: TextStyle(
@@ -535,9 +535,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
                       const SizedBox(height: 15),
 
-                      // ======================================
+                    
                       // PAYMENT STATUS
-                      // ======================================
+                    
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(15),
@@ -677,11 +677,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                                   .doc(roomDoc.id)
                                   .delete();
 
-                              // Ginagamit ang context ng buong Screen (hindi
-                              // yung sa specific room card) dahil natatanggal
-                              // agad ang card na ito sa StreamBuilder pagka-
-                              // delete -- kaya laging naka-check ang mounted
-                              // ng State mismo, hindi ng nawawalang card.
+                            
                               if (!mounted) return;
                               showAppSuccessBanner(
                                   this.context, "Room deleted successfully");

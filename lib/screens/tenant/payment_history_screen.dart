@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location 
+import '../../widgets/app_warning_banner.dart';
 
 class TenantPaymentHistoryScreen extends StatelessWidget {
   final String ownerId;
