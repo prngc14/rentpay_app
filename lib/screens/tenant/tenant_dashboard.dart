@@ -13,10 +13,12 @@ import '../../widgets/app_warning_banner.dart';
 
 class TenantDashboard extends StatefulWidget {
   final bool showConnectionSuccess;
+  final int initialTabIndex;
 
   const TenantDashboard({
     super.key,
     this.showConnectionSuccess = false,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -24,13 +26,14 @@ class TenantDashboard extends StatefulWidget {
 }
 
 class _TenantDashboardState extends State<TenantDashboard> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
   final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialTabIndex.clamp(0, 3);
     if (widget.showConnectionSuccess) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -128,13 +131,12 @@ class _TenantDashboardState extends State<TenantDashboard> {
     );
   }
 
-  
   // MAIN BODY (per tab)
   // Home / Contracts / Profile = normal, walang lock.
   // Payments tab lang ang naka-gate: kung may
   // activePaymentId, PendingPaymentScreen ang lalabas
   // imbes na ang normal na PaymentScreen (upload form).
-  
+
   Widget _buildBody(String uid) {
     switch (_currentIndex) {
       case 0:

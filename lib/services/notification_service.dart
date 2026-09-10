@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../main.dart';
-import '../screens/tenant/tenant_contracts_screen.dart';
+import '../screens/tenant/tenant_dashboard.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -17,8 +17,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 /// kumukuha at nagse-save ng FCM device token sa Firestore (para
 /// malaman ng Cloud Function kung saan magpapadala ng notification),
 /// at nagpapakita ng notification kahit bukas ang app (foreground).
-/// Kapag tinapik ang notification, dinadala ang tenant sa Contracts
-/// screen, dahil doon nakabase ang RentPay Reminder notification.
+/// Kapag tinapik ang notification, dinadala ang tenant sa Contracts tab
+/// sa loob ng Tenant Dashboard.
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -128,13 +128,15 @@ class NotificationService {
     );
     const details = NotificationDetails(android: androidDetails);
 
-    _localNotifications.show(
+    _localNotifications
+        .show(
       message.hashCode,
       message.notification?.title ?? "RentPay",
       message.notification?.body ?? "",
       details,
       payload: _contractReminderPayload,
-    ).catchError((error) {
+    )
+        .catchError((error) {
       debugPrint("Local notification error: $error");
     });
   }
@@ -163,12 +165,8 @@ class NotificationService {
     );
   }
 
-  /// Tinatawag kapag tinapik ng user ang notification. Dinadala ang
-  /// user sa Contracts screen sa STANDALONE mode (may sariling
-  /// AppBar), dahil direktang naka-push ito gamit ang global navigatorKey
-  /// (static context, walang sariling BuildContext mula sa kasalukuyang
-  /// open screen) -- kaya wala itong Dashboard shell (AppBar/BottomNav)
-  /// sa paligid.
+  /// Tinatawag kapag tinapik ng user ang notification. Binubuksan ang
+  /// Contracts tab gamit ang buong Tenant Dashboard shell.
   static void _onNotificationTapped(NotificationResponse response) {
     _openContractsIfNeeded(response.payload);
   }
@@ -182,10 +180,11 @@ class NotificationService {
       return;
     }
 
-    Navigator.of(ctx).push(
+    Navigator.of(ctx).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => const TenantContractsScreen(),
+        builder: (_) => const TenantDashboard(initialTabIndex: 2),
       ),
+      (route) => false,
     );
   }
 

@@ -19,31 +19,31 @@ class OwnerRoomsScreen extends StatefulWidget {
 class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
   final firestore = FirestoreService();
 
-  // ======================================
+  
   // SHOW BILLING DIALOG
-  // ======================================
+  
   void showBillingDialog(
     String roomId,
     Map<String, dynamic> room,
   ) {
     final rentController = TextEditingController(
-      text: room["monthlyRent"].toString(),
+      text: (room["monthlyRent"] ?? 0).toString(),
     );
 
     final prevElectricController = TextEditingController(
-      text: room["previousElectric"].toString(),
+      text: (room["previousElectric"] ?? 0).toString(),
     );
 
     final currentElectricController = TextEditingController(
-      text: room["currentElectric"].toString(),
+      text: (room["currentElectric"] ?? 0).toString(),
     );
 
     final prevWaterController = TextEditingController(
-      text: room["previousWater"].toString(),
+      text: (room["previousWater"] ?? 0).toString(),
     );
 
     final currentWaterController = TextEditingController(
-      text: room["currentWater"].toString(),
+      text: (room["currentWater"] ?? 0).toString(),
     );
 
     showDialog(
@@ -65,7 +65,8 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
               const SizedBox(height: 10),
               TextField(
                 controller: rentController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: "Monthly Rent",
                   prefixText: "₱ ",
@@ -187,9 +188,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     );
   }
 
-  // ======================================
+  
   // FORMAT DATE
-  // ======================================
+  
   String formatDate(Timestamp? timestamp) {
     if (timestamp == null) {
       return "Not yet paid";
@@ -201,9 +202,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
         "${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
-  // ======================================
+ 
   // PAYMENT STATUS DISPLAY HELPERS
-  // ======================================
+  
   Color _statusColor(String status) {
     switch (status) {
       case "paid":
@@ -293,9 +294,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
               double amountPaid = (room["amountPaid"] ?? 0).toDouble();
 
-              double remainingBalance = (room["remainingBalance"] ??
-                      (totalBill - amountPaid))
-                  .toDouble();
+              double remainingBalance =
+                  (room["remainingBalance"] ?? (totalBill - amountPaid))
+                      .toDouble();
 
               double carriedOverBalance =
                   (room["carriedOverBalance"] ?? 0).toDouble();
@@ -335,9 +336,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
                       const Divider(),
 
-                      // ======================================
+                      
                       // TENANT INFORMATION
-                      // ======================================
+                      
                       if (tenantId != null)
                         StreamBuilder<DocumentSnapshot>(
                           stream: FirebaseFirestore.instance
@@ -463,8 +464,8 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                                       child: Image.network(
                                         tenantData["workIdUrl"].toString(),
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const
-                                            Center(
+                                        errorBuilder: (_, __, ___) =>
+                                            const Center(
                                           child: Text(
                                             "Unable to load Work ID image",
                                           ),
@@ -591,9 +592,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
                       const SizedBox(height: 15),
 
-                      // ======================================
+                      
                       // UPDATE BILLING BUTTON
-                      // ======================================
+                     
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -618,9 +619,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
                       const SizedBox(height: 10),
 
-                      // ======================================
+                     
                       // DELETE ROOM
-                      // ======================================
+                      
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
