@@ -160,33 +160,51 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
         title: const Text("Connect to Owner"),
         backgroundColor: Colors.deepOrange,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: Container(
+        color: const Color(0xFFFFF8FC),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             // OWNER CODE
             TextField(
-              controller: codeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "Enter 6-digit owner code",
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Owner Code",
+                  hintText: "Enter 6-digit owner code",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: Colors.deepOrange,
+                      width: 2,
+                    ),
+                  ),
+                ),
               ),
-            ),
 
             const SizedBox(height: 20),
 
             // FIND ROOMS BUTTON
-            ElevatedButton(
-              onPressed: loading ? null : connectToOwner,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: loading ? null : connectToOwner,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Find Rooms"),
               ),
-              child: loading
-                  ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                  : const Text("Find Rooms"),
             ),
 
             const SizedBox(height: 30),
@@ -199,7 +217,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
                     const Text(
                       "Available Rooms",
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -215,6 +233,11 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
                               room["tenantId"].toString().isNotEmpty;
 
                           return Card(
+                            elevation: 1,
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             child: RadioListTile(
                               value: availableRooms[index].id,
                               groupValue: selectedRoom,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/user_model.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- gidungag:para ayuson ang path kung iba ang location mo
+import '../../widgets/app_warning_banner.dart'; 
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -37,11 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return (100000 + random.nextInt(900000)).toString();
   }
 
-  /// Kinukuha ang username na na-type ng user (hal. "andrea06") at
-  /// ginagawang parang email format ito sa likod-likod (hal.
-  /// "andrea06@rentpay.local"), dahil kailangan talaga ng Firebase
-  /// Auth ng valid email format kahit hindi ito makikita ng user.
-  /// (spaces, special symbols) para laging valid ang resulta.
+
   String _buildFakeEmail(String username) {
     final sanitized = username
         .trim()
@@ -50,9 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return '$sanitized@rentpay.local';
   }
 
-  /// gina-check kung valid ang password.
-  /// Dapat may kahit isang letra AT isang numero, at at least 8 characters.
-  /// Nire-return ang error message kung invalid, o null kung valid na.
+
   String? _validatePassword(String password) {
     if (password.length < 8) {
       return "Password must be at least 8 characters long";
@@ -84,8 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final username = emailController.text.trim();
     final fakeEmail = _buildFakeEmail(username);
 
-    // I-check kung may nabuong valid na username matapos i-sanitize
-    // (example. kung puro special characters lang ang na-type, magiging
+  
     if (fakeEmail.startsWith('@')) {
       showAppWarningBanner(
         context,
@@ -105,7 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (user == null) throw Exception("Registration failed");
 
-      // STEP 2: SAVE USER DATA (ONLY ONE WRITE)
+    
       if (role == "owner") {
         String ownerCode = generateOwnerCode();
 
@@ -151,12 +144,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration inputStyle(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      enabledBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey),
+      filled: true,
+      fillColor: const Color(0xFFFFFBF8),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
       ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.deepOrange, width: 2),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
       ),
     );
   }
@@ -164,22 +164,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: Center(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFF6A1A), Color(0xFFFFC5A4), Color(0xFFFFF8F3)],
+            stops: [0, 0.28, 0.8],
+          ),
+        ),
+        child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 5),
-                )
+              color: Colors.white.withOpacity(0.97),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: const [
+                BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10)),
               ],
             ),
             child: Column(
@@ -188,13 +191,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Center(
                   child: Column(
                     children: [
-                      const Icon(Icons.home,
-                          size: 70, color: Colors.deepOrange),
-                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          "assets/rentpay_logo.png",
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       const Text(
                         "Create Account",
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -276,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

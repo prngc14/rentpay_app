@@ -85,7 +85,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xffF5F6FA),
+      backgroundColor: const Color(0xFFFFF8F3),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection("users")
@@ -93,16 +93,20 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
             .snapshots(),
         builder: (context, userSnapshot) {
           if (!userSnapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return const _TenantHomeStateView(
+              icon: Icons.home_work_outlined,
+              title: "Loading your home",
+              message: "Getting your room and billing details...",
             );
           }
 
           final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
 
           if (userData == null) {
-            return const Center(
-              child: Text("No user data"),
+            return const _TenantHomeStateView(
+              icon: Icons.person_outline,
+              title: "Profile unavailable",
+              message: "We could not load your account details yet.",
             );
           }
 
@@ -110,10 +114,10 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
           final ownerId = userData["ownerId"] ?? "";
 
           if (room.isEmpty || ownerId.isEmpty) {
-            return const Center(
-              child: Text(
-                "No room connected yet",
-              ),
+            return const _TenantHomeStateView(
+              icon: Icons.meeting_room_outlined,
+              title: "No room connected yet",
+              message: "Connect to your owner to view your monthly billing.",
             );
           }
 
@@ -132,14 +136,18 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                 .snapshots(),
             builder: (context, roomSnapshot) {
               if (!roomSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
+                return const _TenantHomeStateView(
+                  icon: Icons.receipt_long_outlined,
+                  title: "Loading billing",
+                  message: "Getting the latest room billing details...",
                 );
               }
 
               if (roomSnapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Text("Room not found"),
+                return const _TenantHomeStateView(
+                  icon: Icons.search_off_outlined,
+                  title: "Room not found",
+                  message: "Your owner may need to check the room connection.",
                 );
               }
 
@@ -461,6 +469,77 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TenantHomeStateView extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _TenantHomeStateView({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFF6A1A),
+            Color(0xFFFFC5A4),
+            Color(0xFFFFF8F3),
+          ],
+          stops: [0, 0.25, 0.75],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.96),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 20,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 58, color: Colors.deepOrange),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

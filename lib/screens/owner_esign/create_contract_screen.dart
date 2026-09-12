@@ -41,11 +41,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
   bool get _isRenewal => widget.renewalData != null;
 
-  // Mga status na HINDI dapat mag-block sa tenant/room sa dropdown
-  // (ibig sabihin: pwede na ulit i-select kapag ganito na ang status)
-  // ADDED: "Renewed" -- dating status ng contract na kapapalit
-  // lang ng bago, kaya dapat din itong hindi nag-b-block sa
-  // tenant/room sa dropdown.
+
   static const List<String> _inactiveContractStatuses = [
     "Expired",
     "Cancelled",
@@ -80,8 +76,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         .where("ownerId", isEqualTo: user.uid)
         .get();
 
-      // Rooms are the source of truth for connected tenants. This also supports
-      // older tenant records whose ownerId was not saved correctly.
+
       final tenantDocuments = <String, Map<String, dynamic>>{};
       for (final doc in tenantsSnapshot.docs) {
         final data = doc.data();
@@ -108,8 +103,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         }
       }
 
-      // Kunin lahat ng contracts ng owner na ito para malaman kung
-      // sino ang mga tenant AT alin sa mga room ang may ACTIVE contract pa
+
       final contractsSnapshot = await _firestore
           .collection("contracts")
           .where("ownerId", isEqualTo: user.uid)
@@ -178,8 +172,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
         _isLoading = false;
 
-      //ADDED: kung renewal mode, i-pre-fill ang lahat ng field
-      // gamit ang datos ng lumang contract.
+    
         if (_isRenewal) {
           final r = widget.renewalData!;
 
@@ -296,8 +289,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
     final tenant = selectedTenant;
 
-    // Read the current name immediately before saving so the contract never
-    // stores the fallback label when the tenant profile already has a name.
+
     final tenantSnapshot = await _firestore
         .collection("users")
         .doc(_selectedTenantId)
@@ -343,10 +335,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
             double.tryParse(_waterRateController.text.trim()) ?? 0.0,
       });
 
-      //ADDED: kung renewal, i-mark ang lumang contract bilang
-      // "Renewed" para hindi na ito lumabas sa listahan ng active
-      // contracts, pero nananatili pa rin ito sa Firestore bilang
-      // record/history.
+
       if (_isRenewal) {
         final oldContractId = widget.renewalData!["contractId"] as String?;
         if (oldContractId != null) {
@@ -379,6 +368,27 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     }
   }
 
+  InputDecoration _contractInputDecoration(String label, {String? prefixText}) {
+    return InputDecoration(
+      labelText: label,
+      prefixText: prefixText,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -388,10 +398,12 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         ),
         backgroundColor: Colors.deepOrange,
       ),
-      body: _isLoading
+        body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+          : Container(
+            color: const Color(0xFFFFF8FC),
+            child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -429,10 +441,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
                   DropdownButtonFormField<String>(
                     value: _selectedTenantId,
-                    decoration: const InputDecoration(
-                      labelText: "Tenant",
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: _contractInputDecoration("Tenant"),
                     items: _tenantOptions.map((tenant) {
                       return DropdownMenuItem<String>(
                         value: tenant["id"],
@@ -451,10 +460,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
                   DropdownButtonFormField<String>(
                     value: _selectedRoomId,
-                    decoration: const InputDecoration(
-                      labelText: "Room",
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: _contractInputDecoration("Room"),
                     items: _roomOptions.map((room) {
                       return DropdownMenuItem<String>(
                         value: room["id"],
@@ -489,10 +495,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _rentController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Monthly Rent",
+                    decoration: _contractInputDecoration(
+                      "Monthly Rent",
                       prefixText: "₱ ",
-                      border: OutlineInputBorder(),
                     ),
                   ),
 
@@ -501,10 +506,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _electricRateController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Electric Rate per kWh",
+                    decoration: _contractInputDecoration(
+                      "Electric Rate per kWh",
                       prefixText: "₱ ",
-                      border: OutlineInputBorder(),
                     ),
                   ),
 
@@ -513,10 +517,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _waterRateController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Water Rate per m³",
+                    decoration: _contractInputDecoration(
+                      "Water Rate per m³",
                       prefixText: "₱ ",
-                      border: OutlineInputBorder(),
                     ),
                   ),
 
@@ -525,10 +528,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _depositController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Security Deposit",
+                    decoration: _contractInputDecoration(
+                      "Security Deposit",
                       prefixText: "₱ ",
-                      border: OutlineInputBorder(),
                     ),
                   ),
 
@@ -537,10 +539,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _advanceController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Advance Payment",
+                    decoration: _contractInputDecoration(
+                      "Advance Payment",
                       prefixText: "₱ ",
-                      border: OutlineInputBorder(),
                     ),
                   ),
 
@@ -581,10 +582,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                   TextField(
                     controller: _termsController,
                     maxLines: 8,
-                    decoration: const InputDecoration(
-                      labelText: "Terms and Conditions",
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: _contractInputDecoration("Terms and Conditions"),
                   ),
 
                   const SizedBox(height: 15),
@@ -614,6 +612,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
     );

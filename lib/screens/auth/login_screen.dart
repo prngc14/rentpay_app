@@ -28,10 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   bool _obscurePassword = true;
 
-  /// same logic ang ginamit nako dere sa register_screen.dart --
-  /// gikinukuha ang username na na-type ng user at ginagawang valid
-  /// email format ito (para sa Firebase Auth), na hindi na kailangang
-  /// makita/pansinin ng user.
+
   String _buildFakeEmail(String username) {
     final sanitized = username
         .trim()
@@ -89,8 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Login failed");
       }
 
-      // GI-setup ang push notifications para sa device/session na ito
-      // (Ga kukuha og magse-save ng FCM token sa Firestore).
+    
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -103,8 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         String role = data?["role"] ?? "";
 
-        // Recover older/Google accounts whose role was never saved. A tenant
-        // connected to an owner or room can be identified from these fields.
+
         if (role.isEmpty &&
           (data?["ownerId"]?.toString().isNotEmpty == true ||
             data?["room"]?.toString().isNotEmpty == true ||
@@ -178,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      // I-setup ang push notifications para sa device/session na dere
+    
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -258,8 +253,19 @@ class _LoginScreenState extends State<LoginScreen> {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
+      filled: true,
+      fillColor: const Color(0xFFFFFBF8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
       ),
     );
   }
@@ -267,38 +273,69 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Container(
-            padding: const EdgeInsets.all(25),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(
-                25,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFF6A1A),
+                    Color(0xFFFFC5A4),
+                    Color(0xFFFFF8F3),
+                  ],
+                  stops: [0, 0.28, 0.8],
                 ),
-              ],
+              ),
             ),
-            child: Column(
+          ),
+          Positioned(
+            top: -90,
+            right: -80,
+            child: Icon(
+              Icons.home_work_outlined,
+              size: 330,
+              color: Colors.white.withOpacity(0.18),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.97),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 24,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
               children: [
-                const Icon(
-                  Icons.home,
-                  size: 70,
-                  color: Colors.deepOrange,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Image.asset(
+                    "assets/rentpay_logo.png",
+                    width: 92,
+                    height: 92,
+                    fit: BoxFit.cover,
+                  ),
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
 
                 const Text(
                   "RentPay Login",
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -348,13 +385,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: isLoading ? null : loginUser,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          15,
-                        ),
+                          borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     child: isLoading
@@ -388,13 +421,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       "Continue with Google",
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          15,
-                        ),
+                          borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                   ),
@@ -417,9 +446,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
