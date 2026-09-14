@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- GIDUNGAG: Ge ayus ang path kung lahi ang location dere
+import '../../widgets/app_warning_banner.dart';
 
 import '../owner/owner_dashboard.dart';
 import '../tenant/tenant_dashboard.dart';
