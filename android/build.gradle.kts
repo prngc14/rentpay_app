@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.LibraryExtension
+
 buildscript {
     repositories {
         google()
@@ -25,6 +27,16 @@ subprojects {
 
 subprojects {
     project.evaluationDependsOn(":app")
+}
+
+gradle.beforeProject {
+    if (name == "printing") {
+        afterEvaluate {
+            extensions.configure<LibraryExtension> {
+                compileSdk = 36
+            }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
