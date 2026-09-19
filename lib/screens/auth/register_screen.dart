@@ -1,9 +1,14 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/user_model.dart';
-import '../../widgets/app_warning_banner.dart'; 
+import '../../widgets/app_warning_banner.dart';
+
+import '../owner/owner_dashboard.dart';
+import '../tenant/tenant_dashboard.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -78,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final username = emailController.text.trim();
     final fakeEmail = _buildFakeEmail(username);
 
-  
+
     if (fakeEmail.startsWith('@')) {
       showAppWarningBanner(
         context,
@@ -96,9 +101,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passwordController.text.trim(),
       );
 
-      if (user == null) throw Exception("Registration failed");
+      if (user == null) {
+        throw Exception("Registration failed");
+      }
 
-    
+      // CHECK FIREBASE AUTHENTICATION
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      debugPrint(
+        'REGISTERED USER UID: ${currentUser?.uid}',
+      );
+
+      debugPrint(
+        'REGISTERED USER EMAIL: ${currentUser?.email}',
+      );
+
+      if (currentUser == null) {
+        throw Exception(
+          "Firebase authentication session is missing.",
+        );
+      }
+
       if (role == "owner") {
         String ownerCode = generateOwnerCode();
 
@@ -127,9 +150,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      showAppSuccessBanner(context, "Registered Successfully. You can now log in.");
+      showAppSuccessBanner(
+        context,
+        "Account created successfully!",
+      );
 
-      Navigator.pushReplacementNamed(context, '/login');
+      if (role == "owner") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OwnerDashboard(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TenantDashboard(),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
 

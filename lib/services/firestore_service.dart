@@ -25,7 +25,6 @@ class FirestoreService {
       "paymayaQr": null,
       "ownerId": null,
       "room": "",
-      "approved": false,
       "connected": false,
       "activePaymentId": null,
     });
@@ -182,7 +181,14 @@ class FirestoreService {
     });
   }
 
-  // UPDATE ROOM BILLING
+  // UPDATE ROOM BILLING WITH MONTHLY HISTORY
+  //
+  // Bagong buwan  -> ini-archive ang nakaraang buwan sa history, ang
+  //                  hindi pa nababayaran ay nagiging carriedOverBalance,
+  //                  at nagre-reset sa 0 ang amountPaid.
+  // Parehong buwan -> hindi nagre-reset ang amountPaid, at hindi
+  //                  nadodoble ang carriedOverBalance. Ang status ay
+  //                  kinukuwenta ulit mula sa bagong total bill.
   Future<void> updateRoomBilling({
     required String roomId,
     required double monthlyRent,
@@ -191,39 +197,105 @@ class FirestoreService {
     required double previousWater,
     required double currentWater,
   }) async {
-    final roomDoc = await _db.collection("rooms").doc(roomId).get();
-
+    final roomRef = _db.collection("rooms").doc(roomId);
+    final roomDoc = await roomRef.get();
     final data = roomDoc.data();
 
     if (data == null) return;
 
-    double electricRate = (data["electricRate"] ?? 12).toDouble();
-    double waterRate = (data["waterRate"] ?? 30).toDouble();
+    final double electricRate =
+        (data["electricRate"] ?? 12).toDouble();
 
-    double electricConsumption = currentElectric - previousElectric;
-    double electricBill = electricConsumption * electricRate;
+    final double waterRate =
+        (data["waterRate"] ?? 30).toDouble();
 
-    double waterConsumption = currentWater - previousWater;
-    double waterBill = waterConsumption * waterRate;
+    final double electricConsumption =
+        currentElectric - previousElectric;
 
-    double previousTotalBill = (data["totalBill"] ?? 0).toDouble();
-    double previousAmountPaid = (data["amountPaid"] ?? 0).toDouble();
-    String previousStatus = data["paymentStatus"] ?? "unpaid";
+    final double electricBill =
+        electricConsumption * electricRate;
 
-    double carriedOverBalance = previousStatus == "paid"
-        ? 0
-        : (previousTotalBill - previousAmountPaid);
+    final double waterConsumption =
+        currentWater - previousWater;
 
-    if (carriedOverBalance < 0) carriedOverBalance = 0;
+    final double waterBill =
+        waterConsumption * waterRate;
 
-    double totalBill =
-        monthlyRent + electricBill + waterBill + carriedOverBalance;
+    final double previousTotalBill =
+        (data["totalBill"] ?? 0).toDouble();
 
-    DateTime now = DateTime.now();
-    DateTime dueDate = DateTime(now.year, now.month, 5);
-    String monthKey = "${now.year}-${now.month.toString().padLeft(2, '0')}";
+    final double previousAmountPaid =
+        (data["amountPaid"] ?? 0).toDouble();
 
-    await _db.collection("rooms").doc(roomId).update({
+    final double previousCarriedOver =
+        (data["carriedOverBalance"] ?? 0).toDouble();
+
+    final String previousStatus =
+        (data["paymentStatus"] ?? "unpaid").toString();
+
+    final String previousBillingMonth =
+        (data["billingMonth"] ?? "").toString();
+
+    final DateTime now = DateTime.now();
+
+    final DateTime dueDate =
+        DateTime(now.year, now.month, 5);
+
+    final String currentMonthKey =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}";
+
+    final bool isSameMonth = previousBillingMonth == currentMonthKey;
+
+    double carriedOverBalance;
+    double amountPaid;
+
+    if (isSameMonth) {
+      // Same-month edit: keep the existing carry-over and payments.
+      carriedOverBalance = previousCarriedOver;
+      amountPaid = previousAmountPaid;
+    } else {
+      // New month: unpaid balance moves forward, payments start at zero.
+      carriedOverBalance = previousStatus == "paid"
+          ? 0
+          : previousTotalBill - previousAmountPaid;
+      amountPaid = 0.0;
+    }
+
+    if (carriedOverBalance < 0) {
+      carriedOverBalance = 0;
+    }
+
+    final double totalBill =
+        monthlyRent +
+        electricBill +
+        waterBill +
+        carriedOverBalance;
+
+    if (amountPaid > totalBill) {
+      amountPaid = totalBill;
+    }
+
+    double remainingBalance = totalBill - amountPaid;
+
+    if (remainingBalance < 0) {
+      remainingBalance = 0;
+    }
+
+    final String paymentStatus;
+
+    if (amountPaid > 0 && remainingBalance <= 0.01) {
+      paymentStatus = "paid";
+    } else if (amountPaid > 0) {
+      paymentStatus = "partial";
+    } else {
+      paymentStatus = "unpaid";
+    }
+
+    final dynamic paidAt = paymentStatus == "paid"
+        ? (data["paidAt"] ?? Timestamp.now())
+        : null;
+
+    final Map<String, dynamic> updates = {
       "monthlyRent": monthlyRent,
       "previousElectric": previousElectric,
       "currentElectric": currentElectric,
@@ -234,16 +306,18 @@ class FirestoreService {
       "waterConsumption": waterConsumption,
       "waterBill": waterBill,
       "totalBill": totalBill,
-      "amountPaid": 0,
-      "remainingBalance": totalBill,
+      "amountPaid": amountPaid,
+      "remainingBalance": remainingBalance,
       "carriedOverBalance": carriedOverBalance,
-      "paymentStatus": "unpaid",
-      "paidAt": null,
+      "paymentStatus": paymentStatus,
+      "paidAt": paidAt,
       "dueDate": Timestamp.fromDate(dueDate),
       "isOverdue": false,
-      "billingMonth": monthKey,
-      "history.$monthKey": {
-        "month": monthKey,
+      "billingMonth": currentMonthKey,
+
+      // Save the current billing history
+      "history.$currentMonthKey": {
+        "month": currentMonthKey,
         "monthlyRent": monthlyRent,
         "electricConsumption": electricConsumption,
         "waterConsumption": waterConsumption,
@@ -251,10 +325,34 @@ class FirestoreService {
         "waterBill": waterBill,
         "carriedOverBalance": carriedOverBalance,
         "totalBill": totalBill,
-        "paymentStatus": "unpaid",
-        "paidAt": null,
+        "amountPaid": amountPaid,
+        "remainingBalance": remainingBalance,
+        "paymentStatus": paymentStatus,
+        "paidAt": paidAt,
+        "updatedAt": Timestamp.now(),
       },
-    });
+    };
+
+    // Save previous month before moving to a new month
+    if (previousBillingMonth.isNotEmpty && !isSameMonth) {
+      updates["history.$previousBillingMonth"] = {
+        "month": previousBillingMonth,
+        "monthlyRent": data["monthlyRent"] ?? 0,
+        "electricConsumption": data["electricConsumption"] ?? 0,
+        "waterConsumption": data["waterConsumption"] ?? 0,
+        "electricBill": data["electricBill"] ?? 0,
+        "waterBill": data["waterBill"] ?? 0,
+        "carriedOverBalance": data["carriedOverBalance"] ?? 0,
+        "totalBill": previousTotalBill,
+        "amountPaid": previousAmountPaid,
+        "remainingBalance": data["remainingBalance"] ?? 0,
+        "paymentStatus": previousStatus,
+        "paidAt": data["paidAt"],
+        "archivedAt": Timestamp.now(),
+      };
+    }
+
+    await roomRef.update(updates);
   }
 
   // GET OWNER ROOMS
@@ -435,34 +533,45 @@ class FirestoreService {
   }
 
   // APPROVE PAYMENT
-  // ✅ CHANGED: hindi na natin awtomatikong ini-clear ang
-  // activePaymentId kahit "partial" na ang bagong status. Ang
-  // PendingPaymentScreen na ngayon ang bahala magpakita ng tamang
-  // mensahe (buo o partial, gamit ang isPartial field ng payment
-  // doc), at ang tenant mismo ang mag-tap ng "Continue/Go to
-  // Dashboard" bago ma-clear ang lock -- consistent na ang
-  // behavior para sa buo at partial na bayad.
+  // Hindi ini-clear ang activePaymentId dito, kahit "partial" na ang
+  // bagong status. Ang PendingPaymentScreen ang bahala magpakita ng
+  // tamang mensahe (buo o partial, gamit ang isPartial field ng
+  // payment doc), at ang tenant mismo ang mag-tap ng "Continue/Go to
+  // Dashboard" bago ma-clear ang lock -- consistent ang behavior para
+  // sa buo at partial na bayad.
+  //
+  // Lahat ng updates (payment, room, tenant) ay nasa iisang batch, kaya
+  // either sabay-sabay silang mag-succeed o wala. Kapag may error,
+  // nire-rethrow para makita ng caller.
   Future<void> approvePayment(
     String paymentId,
     String tenantId,
   ) async {
     try {
-      final paymentDoc =
-          await _db.collection("payments").doc(paymentId).get();
+      final paymentRef = _db.collection("payments").doc(paymentId);
 
+      final paymentDoc = await paymentRef.get();
       final paymentData = paymentDoc.data();
 
-      if (paymentData == null) return;
+      if (paymentData == null) {
+        throw Exception("Payment not found");
+      }
 
-      String roomNumber = paymentData["room"] ?? "";
-      double approvedAmount = (paymentData["amount"] ?? 0).toDouble();
-      Timestamp approvedTime = Timestamp.now();
-      String paymentMonth = paymentData["paymentMonth"] ?? "";
+      final String roomNumber =
+          (paymentData["room"] ?? "").toString();
 
-      await _db.collection("payments").doc(paymentId).update({
-        "status": "verified",
-        "verifiedAt": approvedTime,
-      });
+      final double approvedAmount =
+          paymentData["amount"] is num
+              ? (paymentData["amount"] as num).toDouble()
+              : double.tryParse(
+                    (paymentData["amount"] ?? "0").toString(),
+                  ) ??
+                  0.0;
+
+      final String paymentMonth =
+          (paymentData["paymentMonth"] ?? "").toString();
+
+      final Timestamp approvedTime = Timestamp.now();
 
       final roomQuery = await _db
           .collection("rooms")
@@ -471,43 +580,93 @@ class FirestoreService {
           .limit(1)
           .get();
 
-      String newStatus = "paid";
-
-      if (roomQuery.docs.isNotEmpty) {
-        final roomRef = roomQuery.docs.first.reference;
-        final roomData = roomQuery.docs.first.data();
-
-        double totalBill = (roomData["totalBill"] ?? 0).toDouble();
-        double currentAmountPaid = (roomData["amountPaid"] ?? 0).toDouble();
-        double newAmountPaid = currentAmountPaid + approvedAmount;
-
-        if (newAmountPaid > totalBill) newAmountPaid = totalBill;
-
-        double newRemaining = totalBill - newAmountPaid;
-        if (newRemaining < 0) newRemaining = 0;
-
-        bool isFull = newRemaining <= 0.01;
-        newStatus = isFull ? "paid" : "partial";
-
-        await roomRef.update({
-          "amountPaid": newAmountPaid,
-          "remainingBalance": newRemaining,
-          "paymentStatus": newStatus,
-          "paidAt": isFull ? approvedTime : null,
-          "isOverdue": false,
-          "history.$paymentMonth.paymentStatus": newStatus,
-          "history.$paymentMonth.paidAt": isFull ? approvedTime : null,
-          "history.$paymentMonth.amountPaid": newAmountPaid,
-        });
+      if (roomQuery.docs.isEmpty) {
+        throw Exception("Room not found for this tenant");
       }
 
-      await _db.collection("users").doc(tenantId).update({
+      final roomDoc = roomQuery.docs.first;
+      final roomRef = roomDoc.reference;
+      final roomData = roomDoc.data();
+
+      final double totalBill =
+          roomData["totalBill"] is num
+              ? (roomData["totalBill"] as num).toDouble()
+              : 0.0;
+
+      final double currentAmountPaid =
+          roomData["amountPaid"] is num
+              ? (roomData["amountPaid"] as num).toDouble()
+              : 0.0;
+
+      double newAmountPaid =
+          currentAmountPaid + approvedAmount;
+
+      if (newAmountPaid > totalBill) {
+        newAmountPaid = totalBill;
+      }
+
+      double newRemainingBalance =
+          totalBill - newAmountPaid;
+
+      if (newRemainingBalance < 0) {
+        newRemainingBalance = 0;
+      }
+
+      final bool isFullPayment =
+          newRemainingBalance <= 0.01;
+
+      final String newStatus =
+          isFullPayment ? "paid" : "partial";
+
+      final batch = _db.batch();
+
+      // UPDATE PAYMENT STATUS
+      batch.update(paymentRef, {
+        "status": "verified",
+        "verifiedAt": approvedTime,
+      });
+
+      // UPDATE ROOM PAYMENT STATUS
+      final Map<String, dynamic> roomUpdates = {
+        "amountPaid": newAmountPaid,
+        "remainingBalance": newRemainingBalance,
+        "paymentStatus": newStatus,
+        "paidAt": isFullPayment ? approvedTime : null,
+        "isOverdue": false,
+      };
+
+      if (paymentMonth.isNotEmpty) {
+        roomUpdates["history.$paymentMonth.paymentStatus"] =
+            newStatus;
+
+        roomUpdates["history.$paymentMonth.paidAt"] =
+            isFullPayment ? approvedTime : null;
+
+        roomUpdates["history.$paymentMonth.amountPaid"] =
+            newAmountPaid;
+      }
+
+      batch.update(roomRef, roomUpdates);
+
+      // UPDATE TENANT STATUS
+      final tenantRef =
+          _db.collection("users").doc(tenantId);
+
+      batch.update(tenantRef, {
         "approved": true,
         "paymentStatus": newStatus,
         "lastPaymentDate": approvedTime,
       });
+
+      // APPLY ALL UPDATES TOGETHER
+      await batch.commit();
+
+      print(
+        "PAYMENT APPROVED: $paymentId | STATUS: $newStatus",
+      );
     } catch (e) {
       print("APPROVE PAYMENT ERROR: $e");
+      rethrow;
     }
   }
 
@@ -550,25 +709,89 @@ class FirestoreService {
   }
 
   // CHECK OVERDUE
-  Future<void> checkOverdueRooms() async {
-    final rooms = await _db.collection("rooms").get();
+  //
+  // Kapag may ownerId: ang rooms ng owner na iyon lang ang sinusuri, at ang
+  // due date ay kinukuha sa contract ng tenant (parehong logic sa notification
+  // na natatanggap ng tenant). Kapag walang contract ang tenant, ang dueDate
+  // field ng room ang gamit.
+  //
+  // Ang vacant room at ang room na "paid" na ay hindi kailanman overdue.
+  // Nagsusulat lang sa Firestore kapag nagbago ang value ng isOverdue.
+  Future<void> checkOverdueRooms({String? ownerId}) async {
+    final Query<Map<String, dynamic>> roomsQuery = ownerId == null
+        ? _db.collection("rooms")
+        : _db.collection("rooms").where("ownerId", isEqualTo: ownerId);
 
-    DateTime now = DateTime.now();
+    final rooms = await roomsQuery.get();
 
-    for (var room in rooms.docs) {
+    // Pinakabagong active contract (start date) ng bawat tenant.
+    final Map<String, DateTime> contractStartByTenant = {};
+
+    if (ownerId != null) {
+      final contracts = await _db
+          .collection("contracts")
+          .where("ownerId", isEqualTo: ownerId)
+          .get();
+
+      for (final doc in contracts.docs) {
+        final contract = doc.data();
+
+        final String status = (contract["status"] ?? "").toString();
+        if (_inactiveContractStatuses.contains(status)) continue;
+
+        final String contractTenantId =
+            (contract["tenantId"] ?? "").toString();
+        final Timestamp? startTimestamp =
+            contract["startDate"] as Timestamp?;
+
+        if (contractTenantId.isEmpty || startTimestamp == null) continue;
+
+        final DateTime startDate = startTimestamp.toDate();
+        final DateTime? existing = contractStartByTenant[contractTenantId];
+
+        if (existing == null || startDate.isAfter(existing)) {
+          contractStartByTenant[contractTenantId] = startDate;
+        }
+      }
+    }
+
+    final DateTime now = DateTime.now();
+
+    for (final room in rooms.docs) {
       final data = room.data();
 
-      Timestamp? dueTimestamp = data["dueDate"];
+      final String tenantId = (data["tenantId"] ?? "").toString();
+      final String paymentStatus =
+          (data["paymentStatus"] ?? "unpaid").toString().toLowerCase();
 
-      if (dueTimestamp == null) continue;
+      bool overdue = false;
 
-      DateTime dueDate = dueTimestamp.toDate();
-      String paymentStatus = data["paymentStatus"] ?? "unpaid";
-      bool overdue = now.isAfter(dueDate) && paymentStatus != "paid";
+      if (tenantId.isNotEmpty && paymentStatus != "paid") {
+        DateTime? dueDate;
 
-      await room.reference.update({
-        "isOverdue": overdue,
-      });
+        final DateTime? contractStart = contractStartByTenant[tenantId];
+
+        if (contractStart != null) {
+          // May contract: hindi pa overdue kung hindi pa nagsisimula.
+          if (!now.isBefore(contractStart)) {
+            dueDate = _computeContractDueDate(contractStart, now);
+          }
+        } else {
+          // Walang contract: gamitin ang dueDate ng room (kung meron).
+          final Timestamp? dueTimestamp = data["dueDate"] as Timestamp?;
+          dueDate = dueTimestamp?.toDate();
+        }
+
+        if (dueDate != null) {
+          overdue = !now.isBefore(dueDate);
+        }
+      }
+
+      if (data["isOverdue"] != overdue) {
+        await room.reference.update({
+          "isOverdue": overdue,
+        });
+      }
     }
   }
 

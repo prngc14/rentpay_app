@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
@@ -20,7 +22,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
-
   final passwordController = TextEditingController();
 
   final AuthService _auth = AuthService();
@@ -28,29 +29,32 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   bool _obscurePassword = true;
 
-
   String _buildFakeEmail(String username) {
     final sanitized = username
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+
     return '$sanitized@rentpay.local';
   }
 
-  
   // EMAIL LOGIN
-  
+
   Future<void> resendVerificationEmail() async {
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
-      showAppWarningBanner(context, "Please enter your username and password");
+      showAppWarningBanner(
+        context,
+        "Please enter your username and password",
+      );
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      final fakeEmail = _buildFakeEmail(emailController.text.trim());
+      final fakeEmail =
+          _buildFakeEmail(emailController.text.trim());
 
       await _auth.resendVerificationEmail(
         fakeEmail,
@@ -59,11 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      showAppSuccessBanner(context, "Verification email sent. Please check your inbox.");
+      showAppSuccessBanner(
+        context,
+        "Verification email sent. Please check your inbox.",
+      );
     } catch (e) {
       if (!mounted) return;
 
-      showAppWarningBanner(context, friendlyAuthError(e));
+      showAppWarningBanner(
+        context,
+        friendlyAuthError(e),
+      );
     }
 
     if (mounted) {
@@ -72,12 +82,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void loginUser() async {
+    if (emailController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty) {
+      showAppWarningBanner(
+        context,
+        "Please enter your username and password",
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
-      final fakeEmail = _buildFakeEmail(emailController.text.trim());
+      final fakeEmail =
+          _buildFakeEmail(emailController.text.trim());
 
-      var user = await _auth.login(
+      final user = await _auth.login(
         fakeEmail,
         passwordController.text.trim(),
       );
@@ -86,7 +106,17 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Login failed");
       }
 
-    
+      // CHECK FIREBASE AUTHENTICATION
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      debugPrint(
+        'Firebase UID: ${currentUser?.uid}',
+      );
+
+      debugPrint(
+        'Firebase Email: ${currentUser?.email}',
+      );
+
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -97,23 +127,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = doc.data();
 
-        String role = data?["role"] ?? "";
+      String role = data?["role"] ?? "";
 
-
-        if (role.isEmpty &&
+      if (role.isEmpty &&
           (data?["ownerId"]?.toString().isNotEmpty == true ||
-            data?["room"]?.toString().isNotEmpty == true ||
-            data?["connected"] == true)) {
+              data?["room"]?.toString().isNotEmpty == true ||
+              data?["connected"] == true)) {
         role = "tenant";
-        await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .update({"role": role});
-        }
 
-      
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(user.uid)
+            .update({
+          "role": role,
+        });
+      }
+
+      if (!mounted) return;
+
       // OWNER
-      
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -123,9 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      
       // TENANT
-      
       else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
@@ -135,9 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-     
       // NO ROLE YET
-     
       else {
         Navigator.pushReplacement(
           context,
@@ -149,7 +177,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      showAppWarningBanner(context, friendlyAuthError(e));
+      showAppWarningBanner(
+        context,
+        friendlyAuthError(e),
+      );
     }
 
     if (mounted) {
@@ -157,23 +188,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  
   // GOOGLE LOGIN
 
-  // login users.
   void googleLogin() async {
     setState(() => isLoading = true);
 
     try {
-      var user = await _auth.signInWithGoogle();
+      final user = await _auth.signInWithGoogle();
 
       if (user == null) {
-        throw Exception(
-          "Google login cancelled",
-        );
+        throw Exception("Google login cancelled");
       }
 
-    
+      // CHECK FIREBASE AUTHENTICATION
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      debugPrint(
+        'Google Firebase UID: ${currentUser?.uid}',
+      );
+
+      debugPrint(
+        'Google Firebase Email: ${currentUser?.email}',
+      );
+
       await NotificationService.initialize();
 
       // GET USER DATA
@@ -184,22 +221,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = doc.data();
 
-        String role = data?["role"] ?? "";
+      String role = data?["role"] ?? "";
 
-        if (role.isEmpty &&
+      if (role.isEmpty &&
           (data?["ownerId"]?.toString().isNotEmpty == true ||
-            data?["room"]?.toString().isNotEmpty == true ||
-            data?["connected"] == true)) {
+              data?["room"]?.toString().isNotEmpty == true ||
+              data?["connected"] == true)) {
         role = "tenant";
-        await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .update({"role": role});
-        }
 
-      
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(user.uid)
+            .update({
+          "role": role,
+        });
+      }
+
+      if (!mounted) return;
+
       // OWNER
-      
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -209,9 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      
       // TENANT
-      
       else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
@@ -221,9 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      
       // NO ROLE YET
-      
       else {
         Navigator.pushReplacement(
           context,
@@ -235,7 +271,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      showAppWarningBanner(context, friendlyAuthError(e));
+      showAppWarningBanner(
+        context,
+        friendlyAuthError(e),
+      );
     }
 
     if (mounted) {
@@ -243,9 +282,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  
   // INPUT STYLE
-  
+
   InputDecoration inputStyle(
     String label,
     IconData icon,
@@ -257,17 +295,60 @@ class _LoginScreenState extends State<LoginScreen> {
       fillColor: const Color(0xFFFFFBF8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+        borderSide: const BorderSide(
+          color: Color(0xFFB8B8BE),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
+        borderSide: const BorderSide(
+          color: Color(0xFFB8B8BE),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
+        borderSide: const BorderSide(
+          color: Colors.deepOrange,
+          width: 2,
+        ),
       ),
     );
+  }
+
+  String friendlyAuthError(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case "user-not-found":
+          return "No account found for that username.";
+
+        case "wrong-password":
+          return "Incorrect password.";
+
+        case "invalid-email":
+          return "Invalid username.";
+
+        case "invalid-credential":
+          return "Invalid login credentials.";
+
+        case "user-disabled":
+          return "This account has been disabled.";
+
+        default:
+          return e.message ?? "Login failed. Please try again.";
+      }
+    }
+
+    return e.toString().replaceFirst(
+          "Exception: ",
+          "",
+        );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -291,6 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+
           Positioned(
             top: -90,
             right: -80,
@@ -300,13 +382,24 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white.withOpacity(0.18),
             ),
           ),
+
           Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 28,
+              ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
+                constraints: const BoxConstraints(
+                  maxWidth: 560,
+                ),
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+                  padding: const EdgeInsets.fromLTRB(
+                    24,
+                    28,
+                    24,
+                    22,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.97),
                     borderRadius: BorderRadius.circular(28),
@@ -319,133 +412,147 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   child: Column(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: Image.asset(
-                    "assets/rentpay_logo.png",
-                    width: 92,
-                    height: 92,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                const Text(
-                  "RentPay Login",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // USERNAME
-                TextField(
-                  controller: emailController,
-                  decoration: inputStyle(
-                    "Username",
-                    Icons.person,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // PASSWORD
-                TextField(
-                  controller: passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: inputStyle(
-                    "Password",
-                    Icons.lock,
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          "assets/rentpay_logo.png",
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: 25),
+                      const SizedBox(height: 14),
 
-                // LOGIN BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : loginUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+                      const Text(
+                        "RentPay Login",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    child: isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white,
-                          )
-                        : const Text(
-                            "Login",
+
+                      const SizedBox(height: 30),
+
+                      // USERNAME
+                      TextField(
+                        controller: emailController,
+                        decoration: inputStyle(
+                          "Username",
+                          Icons.person,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // PASSWORD
+                      TextField(
+                        controller: passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: inputStyle(
+                          "Password",
+                          Icons.lock,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword =
+                                    !_obscurePassword;
+                              });
+                            },
                           ),
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-
-                TextButton(
-                  onPressed: isLoading ? null : resendVerificationEmail,
-                  child: const Text("Resend Verification Email"),
-                ),
-
-                const SizedBox(height: 10),
-
-                // GOOGLE LOGIN
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: isLoading ? null : googleLogin,
-                    icon: const Icon(
-                      Icons.login,
-                    ),
-                    label: const Text(
-                      "Continue with Google",
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: 10),
+                      const SizedBox(height: 25),
 
-                // REGISTER
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterScreen(),
+                      // LOGIN BUTTON
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed:
+                              isLoading ? null : loginUser,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange,
+                            padding:
+                                const EdgeInsets.symmetric(
+                              vertical: 15,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(15),
+                            ),
+                          ),
+                          child: isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text("Login"),
+                        ),
                       ),
-                    );
-                  },
-                  child: const Text(
-                    "Create Account",
-                  ),
-                ),
-              ],
+
+                      const SizedBox(height: 15),
+
+                      // RESEND VERIFICATION
+                      TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : resendVerificationEmail,
+                        child: const Text(
+                          "Resend Verification Email",
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // GOOGLE LOGIN
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              isLoading ? null : googleLogin,
+                          icon: const Icon(Icons.login),
+                          label: const Text(
+                            "Continue with Google",
+                          ),
+                          style:
+                              OutlinedButton.styleFrom(
+                            padding:
+                                const EdgeInsets.symmetric(
+                              vertical: 15,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(15),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // REGISTER
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const RegisterScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Create Account",
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

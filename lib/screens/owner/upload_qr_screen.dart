@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../services/firestore_service.dart';
 import '../../widgets/app_warning_banner.dart';
 
@@ -32,7 +34,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
     try {
       final data = await firestore.getOwnerQrData();
 
-      if (data != null) {
+      if (data != null && mounted) {
         setState(() {
           gcashUrl = data['gcashQr'];
           mayaUrl = data['paymayaQr'];
@@ -42,9 +44,11 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       debugPrint("Error loading QR: $e");
     }
 
-    setState(() {
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> pickImage(String type) async {
@@ -52,7 +56,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       source: ImageSource.gallery,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         if (type == "gcash") {
           gcashImage = File(picked.path);
@@ -69,17 +73,22 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
         isLoading = true;
       });
 
-      File? selectedFile = type == "gcash" ? gcashImage : mayaImage;
+      final File? selectedFile =
+          type == "gcash" ? gcashImage : mayaImage;
 
       if (selectedFile == null) {
         if (mounted) {
           showAppWarningBanner(
-              context, "Please select a $type QR image first");
+            context,
+            "Please select a $type QR image first",
+          );
         }
 
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
 
         return;
       }
@@ -92,219 +101,322 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       await loadExistingQr();
 
       if (!mounted) return;
+
       showAppSuccessBanner(
-          context, "${type.toUpperCase()} QR uploaded successfully");
+        context,
+        "${type.toUpperCase()} QR uploaded successfully",
+      );
     } catch (e) {
       if (mounted) {
-        showAppWarningBanner(context, friendlyAuthError(e));
+        showAppWarningBanner(
+          context,
+          friendlyAuthError(e),
+        );
       }
     }
 
-    setState(() {
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
-  Widget buildQrCard({
+  Widget buildQrSection({
     required String title,
     required File? localFile,
     required String? networkUrl,
-    required Color buttonColor,
     required VoidCallback onPick,
     required VoidCallback onUpload,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+    final bool hasImage =
+        localFile != null ||
+        (networkUrl != null && networkUrl.isNotEmpty);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // =====================================================
+        // QR TITLE
+        // =====================================================
+
+        Center(
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF123E5A),
             ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              height: 260,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: GestureDetector(
-                  onTap: () {
-                    if (localFile != null ||
-                        (networkUrl != null && networkUrl.isNotEmpty)) {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Dialog(
-                          backgroundColor: Colors.black,
-                          insetPadding: const EdgeInsets.all(10),
-                          child: Stack(
-                            children: [
-                              InteractiveViewer(
-                                child: localFile != null
-                                    ? Image.file(
-                                        localFile,
-                                        fit: BoxFit.contain,
-                                      )
-                                    : Image.network(
-                                        networkUrl!,
-                                        fit: BoxFit.contain,
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // =====================================================
+        // QR IMAGE
+        // =====================================================
+
+        GestureDetector(
+          onTap: () {
+            if (!hasImage) return;
+
+            showDialog(
+              context: context,
+              builder: (_) {
+                return Dialog(
+                  backgroundColor: Colors.white,
+                  insetPadding: const EdgeInsets.all(20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Stack(
+                      children: [
+                        InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: localFile != null
+                              ? Image.file(
+                                  localFile,
+                                  fit: BoxFit.contain,
+                                )
+                              : Image.network(
+                                  networkUrl!,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (
+                                    context,
+                                    error,
+                                    stackTrace,
+                                  ) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(30),
+                                      child: Center(
+                                        child: Text(
+                                          "Failed to load QR image",
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
-                              ),
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 30,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.pop(context);
+                                    );
                                   },
                                 ),
-                              ),
-                            ],
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              size: 22,
+                              color: Color(0xFF123E5A),
+                            ),
                           ),
                         ),
-                      );
-                    }
-                  },
-                  child: localFile != null
-                      ? Image.file(
-                          localFile,
-                          fit: BoxFit.contain,
-                        )
-                      : (networkUrl != null && networkUrl.isNotEmpty)
-                          ? Image.network(
-                              networkUrl,
-                              fit: BoxFit.contain,
-                              errorBuilder: (
-                                context,
-                                error,
-                                stackTrace,
-                              ) {
-                                return const Center(
-                                  child: Text(
-                                    "Failed to load QR image",
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : const Center(
-                              child: Text(
-                                "No QR uploaded yet",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onPick,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonColor,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      30,
+                      ],
                     ),
                   ),
+                );
+              },
+            );
+          },
+          child: Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: localFile != null
+                ? Image.file(
+                    localFile,
+                    fit: BoxFit.contain,
+                  )
+                : (networkUrl != null && networkUrl.isNotEmpty)
+                    ? Image.network(
+                        networkUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (
+                          context,
+                          error,
+                          stackTrace,
+                        ) {
+                          return const Center(
+                            child: Text(
+                              "Failed to load QR image",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 11,
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : const Center(
+                        child: Text(
+                          "No QR uploaded yet",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // =====================================================
+        // ACTION BUTTONS
+        // =====================================================
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // SELECT IMAGE
+            GestureDetector(
+              onTap: onPick,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Text(
                   "Select Image",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF123E5A),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onUpload,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      30,
+
+            const SizedBox(width: 12),
+
+            // UPLOAD QR
+            GestureDetector(
+              onTap: onUpload,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
+                  ],
                 ),
                 child: const Text(
                   "Upload QR",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF123E5A),
                   ),
                 ),
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F8FA),
+
+      // =====================================================
+      // APP BAR
+      // =====================================================
+
       appBar: AppBar(
-        title: const Text("Upload QR"),
-        backgroundColor: Colors.deepOrange,
+        title: const Text(
+          "Rentpay",
+          style: TextStyle(
+            fontFamily: 'RentpayScript',
+            fontSize: 32,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF123E5A),
+            letterSpacing: 0.5,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF123E5A),
+        centerTitle: true,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
+
+      // =====================================================
+      // BODY
+      // =====================================================
+
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(),
             )
           : SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  25,
+                  16,
+                  24,
+                ),
                 child: Column(
                   children: [
-                    buildQrCard(
+                    // =================================================
+                    // GCASH QR
+                    // =================================================
+
+                    buildQrSection(
                       title: "GCash QR",
                       localFile: gcashImage,
                       networkUrl: gcashUrl,
-                      buttonColor: Colors.green,
                       onPick: () => pickImage("gcash"),
                       onUpload: () => uploadQr("gcash"),
                     ),
-                    const SizedBox(height: 20),
-                    buildQrCard(
+
+                    // Mas malaking spacing bago ang PayMaya
+                    const SizedBox(height: 75),
+
+                    // =================================================
+                    // PAYMAYA QR
+                    // =================================================
+
+                    buildQrSection(
                       title: "PayMaya QR",
                       localFile: mayaImage,
                       networkUrl: mayaUrl,
-                      buttonColor: Colors.blue,
                       onPick: () => pickImage("maya"),
                       onUpload: () => uploadQr("maya"),
                     ),
-                    const SizedBox(height: 30),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

@@ -15,58 +15,71 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Firebase
-  firebase_core: ^2.30.0
-  firebase_auth: ^4.19.0
-  cloud_firestore: ^4.17.0
-  firebase_storage: ^11.7.0
-  firebase_messaging: ^14.9.2
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  firebase_storage: ^13.6.0
+  firebase_messaging: ^16.7.0
 
-  # Local Notifications (para makita ng tenant ang reminder kahit bukas ang app)
-  flutter_local_notifications: ^17.1.2
+  # Local Notifications
+  flutter_local_notifications: ^22.3.1
 
   # Google Sign-In
-  google_sign_in: ^6.2.1
+  google_sign_in: 6.2.2
 
   # Image Upload
-  image_picker: ^1.0.7
+  image_picker: ^1.2.3
+  image_cropper: ^12.2.1
   http: ^1.2.1
 
-  # Blur Detection
+  # Blur Detection / Image Compression
   flutter_image_compress: ^2.3.0
 
+  # Free On-Device Receipt OCR
+  google_mlkit_text_recognition: ^0.13.1
+
   # Charts
-  fl_chart: ^0.68.0
+  fl_chart: ^1.2.0
   intl: ^0.20.2
 
   # PDF / Print
   pdf: ^3.11.3
   printing: ^5.13.1
+  cloud_functions: ^6.5.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.6
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/rentpay_logo.png"
+  image_path: "assets/images/rentpay_logo.png"
   remove_alpha_ios: true
 
 flutter_native_splash:
   color: "#000000"
-  image: assets/rentpay_logo.png
+  image: assets/images/rentpay_logo.png
   android_12:
     color: "#000000"
-    image: assets/rentpay_logo.png
+    image: assets/images/rentpay_logo.png
     icon_background_color: "#000000"
   ios: true
   web: false
 
 flutter:
   uses-material-design: true
+
   assets:
+    - assets/images/rentpay_logo.png
+    - assets/images/juggernaut_logo.png
     - assets/rentpay_logo.png
+
+  fonts:
+    - family: RentpayScript
+      fonts:
+        - asset: assets/fonts/GrandHotel-Regular.ttf

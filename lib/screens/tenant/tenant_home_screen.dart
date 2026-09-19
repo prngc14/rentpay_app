@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/rentpay_backdrop.dart';
 
 class TenantHomeScreen extends StatefulWidget {
   const TenantHomeScreen({super.key});
@@ -85,13 +86,14 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F3),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("users")
-            .doc(user.uid)
-            .snapshots(),
-        builder: (context, userSnapshot) {
+      backgroundColor: const Color(0xFFF1F8FA),
+      body: RentPayBackdrop(
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection("users")
+              .doc(user.uid)
+              .snapshots(),
+          builder: (context, userSnapshot) {
           if (!userSnapshot.hasData) {
             return const _TenantHomeStateView(
               icon: Icons.home_work_outlined,
@@ -393,7 +395,8 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
               );
             },
           );
-        },
+          },
+        ),
       ),
     );
   }

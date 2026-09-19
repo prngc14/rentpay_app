@@ -118,7 +118,8 @@ class ContractPreviewScreen extends StatelessWidget {
     final electricRate = contractData['electricRate'] ?? 0;
     final waterRate = contractData['waterRate'] ?? 0;
 
-    final terms = contractData['termsAndConditions'] ?? 'No terms provided';
+    final terms =
+        contractData['termsAndConditions'] ?? 'No terms provided';
 
     Timestamp? startDate = contractData['startDate'];
     Timestamp? endDate = contractData['endDate'];
@@ -173,7 +174,10 @@ class ContractPreviewScreen extends StatelessWidget {
               ),
             ),
             pw.SizedBox(height: 12),
-            pw.Divider(color: PdfColors.blueGrey700, thickness: 1.2),
+            pw.Divider(
+              color: PdfColors.blueGrey700,
+              thickness: 1.2,
+            ),
           ],
         ),
         footer: (context) => pw.Column(
@@ -202,6 +206,7 @@ class ContractPreviewScreen extends StatelessWidget {
         ),
         build: (context) => [
           pw.SizedBox(height: 10),
+
           pw.Text(
             'PARTIES',
             style: pw.TextStyle(
@@ -210,19 +215,28 @@ class ContractPreviewScreen extends StatelessWidget {
               decoration: pw.TextDecoration.underline,
             ),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
             'This Rental Agreement is entered into between the property owner '
             'identified by Owner ID $ownerId and the tenant identified below.',
-            style: const pw.TextStyle(fontSize: 10, lineSpacing: 3),
+            style: const pw.TextStyle(
+              fontSize: 10,
+              lineSpacing: 3,
+            ),
           ),
+
           pw.SizedBox(height: 14),
+
           pw.Container(
             width: double.infinity,
             padding: const pw.EdgeInsets.all(12),
             decoration: pw.BoxDecoration(
               color: PdfColors.grey100,
-              border: pw.Border.all(color: PdfColors.grey400),
+              border: pw.Border.all(
+                color: PdfColors.grey400,
+              ),
               borderRadius: pw.BorderRadius.circular(4),
             ),
             child: pw.Column(
@@ -242,47 +256,74 @@ class ContractPreviewScreen extends StatelessWidget {
                     1: pw.FlexColumnWidth(1),
                   },
                   children: [
-                    pw.TableRow(children: [
-                      pw.Text('Tenant Name\n$tenantName'),
-                      pw.Text('Room Number\n$roomNumber'),
-                    ]),
-                    pw.TableRow(children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Contract Status\n$status'),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Contract Term\n$start to $end'),
-                      ),
-                    ]),
-                    pw.TableRow(children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Monthly Rent\n₱$monthlyRent'),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Security Deposit\n₱$securityDeposit'),
-                      ),
-                    ]),
-                    pw.TableRow(children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text('Advance Payment\n₱$advancePayment'),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.only(top: 8),
-                        child: pw.Text(
-                            'Utility Rates\nElectric: ₱$electricRate/kWh\nWater: ₱$waterRate/m³'),
-                      ),
-                    ]),
+                    pw.TableRow(
+                      children: [
+                        pw.Text(
+                          'Tenant Name\n$tenantName',
+                        ),
+                        pw.Text(
+                          'Room Number\n$roomNumber',
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Contract Status\n$status',
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Contract Term\n$start to $end',
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Monthly Rent\n₱$monthlyRent',
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Security Deposit\n₱$securityDeposit',
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Advance Payment\n₱$advancePayment',
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Text(
+                            'Utility Rates\n'
+                            'Electric: ₱$electricRate/kWh\n'
+                            'Water: ₱$waterRate/m³',
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ],
             ),
           ),
+
           pw.SizedBox(height: 18),
+
           pw.Text(
             'CONSIDERATION',
             style: pw.TextStyle(
@@ -291,13 +332,20 @@ class ContractPreviewScreen extends StatelessWidget {
               decoration: pw.TextDecoration.underline,
             ),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
             'The Tenant agrees to pay the amounts stated in this Agreement '
             'in exchange for the use of the assigned rental premises.',
-            style: const pw.TextStyle(fontSize: 10, lineSpacing: 3),
+            style: const pw.TextStyle(
+              fontSize: 10,
+              lineSpacing: 3,
+            ),
           ),
+
           pw.SizedBox(height: 14),
+
           pw.Text(
             'TERMS AND CONDITIONS',
             style: pw.TextStyle(
@@ -306,12 +354,21 @@ class ContractPreviewScreen extends StatelessWidget {
               decoration: pw.TextDecoration.underline,
             ),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
-            terms.trim().isEmpty ? 'No additional terms provided.' : terms,
-            style: const pw.TextStyle(fontSize: 10, lineSpacing: 3),
+            terms.trim().isEmpty
+                ? 'No additional terms provided.'
+                : terms,
+            style: const pw.TextStyle(
+              fontSize: 10,
+              lineSpacing: 3,
+            ),
           ),
+
           pw.SizedBox(height: 22),
+
           pw.Text(
             'ACKNOWLEDGMENT AND SIGNATURE',
             style: pw.TextStyle(
@@ -320,18 +377,32 @@ class ContractPreviewScreen extends StatelessWidget {
               decoration: pw.TextDecoration.underline,
             ),
           ),
+
           pw.SizedBox(height: 6),
+
           pw.Text(
             'By signing below, the Tenant acknowledges that the information '
             'and terms in this Rental Agreement have been reviewed and accepted.',
-            style: const pw.TextStyle(fontSize: 10, lineSpacing: 3),
+            style: const pw.TextStyle(
+              fontSize: 10,
+              lineSpacing: 3,
+            ),
           ),
+
           pw.SizedBox(height: 16),
+
           pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 8),
+            padding: const pw.EdgeInsets.fromLTRB(
+              12,
+              10,
+              12,
+              8,
+            ),
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey400),
+              border: pw.Border.all(
+                color: PdfColors.grey400,
+              ),
               borderRadius: pw.BorderRadius.circular(4),
             ),
             child: pw.Column(
@@ -347,10 +418,14 @@ class ContractPreviewScreen extends StatelessWidget {
                 pw.SizedBox(height: 6),
                 _buildSignatureWidget(signaturePoints),
                 pw.SizedBox(height: 6),
-                pw.Divider(color: PdfColors.grey700),
+                pw.Divider(
+                  color: PdfColors.grey700,
+                ),
                 pw.Text(
                   'Tenant: $tenantName',
-                  style: const pw.TextStyle(fontSize: 9),
+                  style: const pw.TextStyle(
+                    fontSize: 9,
+                  ),
                 ),
               ],
             ),
@@ -364,9 +439,10 @@ class ContractPreviewScreen extends StatelessWidget {
     );
   }
 
-  
-  // SMALL DETAIL ROW (icon + label + value)
-  
+  // =====================================================
+  // SMALL DETAIL ROW
+  // =====================================================
+
   Widget _detailRow({
     required IconData icon,
     required String label,
@@ -377,7 +453,11 @@ class ContractPreviewScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
+          Icon(
+            icon,
+            size: 18,
+            color: Colors.grey.shade600,
+          ),
           const SizedBox(width: 10),
           Text(
             "$label: ",
@@ -407,20 +487,37 @@ class ContractPreviewScreen extends StatelessWidget {
     final tenantName = contractData['tenantName'] ?? 'Tenant';
     final roomNumber = contractData['roomNumber'] ?? 'Room';
     final status = contractData['status'] ?? 'Pending Signature';
-    final terms = contractData['termsAndConditions'] ?? 'No terms provided';
+    final terms =
+        contractData['termsAndConditions'] ?? 'No terms provided';
     final monthlyRent = contractData['monthlyRent'] ?? 0;
-    final securityDeposit = contractData['securityDeposit'] ?? 0;
-    final advancePayment = contractData['advancePayment'] ?? 0;
-    final electricRate = contractData['electricRate'] ?? 0;
-    final waterRate = contractData['waterRate'] ?? 0;
+    final securityDeposit =
+        contractData['securityDeposit'] ?? 0;
+    final advancePayment =
+        contractData['advancePayment'] ?? 0;
+    final electricRate =
+        contractData['electricRate'] ?? 0;
+    final waterRate =
+        contractData['waterRate'] ?? 0;
+
     final signaturePoints = _getSignaturePoints();
     final hasTenantSignature = signaturePoints.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
+
       appBar: AppBar(
-        title: const Text('Contract Preview'),
-        backgroundColor: Colors.deepOrange,
+        title: const Text(
+          'Contract Preview',
+          style: TextStyle(
+            color: Color(0xFF123E5A),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF123E5A),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
           IconButton(
             onPressed: () => _generatePdf(context),
@@ -429,6 +526,7 @@ class ContractPreviewScreen extends StatelessWidget {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -448,47 +546,39 @@ class ContractPreviewScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.deepOrange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.description_outlined,
-                        color: Colors.deepOrange,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'RENTAL AGREEMENT CONTRACT',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ],
+
+                // =================================================
+                // CONTRACT TITLE
+                // =================================================
+
+                const Text(
+                  'RENTAL AGREEMENT CONTRACT',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xff1D1D1F),
+                    letterSpacing: 0.2,
+                  ),
                 ),
 
                 const SizedBox(height: 18),
 
-                //  PARTIES 
+                // =================================================
+                // PARTIES
+                // =================================================
+
                 _detailRow(
                   icon: Icons.person_outline,
                   label: 'Tenant',
                   value: tenantName,
                 ),
+
                 _detailRow(
                   icon: Icons.meeting_room_outlined,
                   label: 'Room',
                   value: roomNumber.toString(),
                 ),
+
                 _detailRow(
                   icon: Icons.flag_outlined,
                   label: 'Status',
@@ -496,20 +586,29 @@ class ContractPreviewScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 10),
-                Divider(color: Colors.grey.shade200),
+
+                Divider(
+                  color: Colors.grey.shade200,
+                ),
+
                 const SizedBox(height: 10),
 
+                // =================================================
                 // FINANCIALS
+                // =================================================
+
                 _detailRow(
                   icon: Icons.payments_outlined,
                   label: 'Monthly Rent',
                   value: '₱$monthlyRent',
                 ),
+
                 _detailRow(
                   icon: Icons.shield_outlined,
                   label: 'Security Deposit',
                   value: '₱$securityDeposit',
                 ),
+
                 _detailRow(
                   icon: Icons.request_quote_outlined,
                   label: 'Advance Payment',
@@ -517,15 +616,23 @@ class ContractPreviewScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 10),
-                Divider(color: Colors.grey.shade200),
+
+                Divider(
+                  color: Colors.grey.shade200,
+                ),
+
                 const SizedBox(height: 10),
 
-                //UTILITIES 
+                // =================================================
+                // UTILITIES
+                // =================================================
+
                 _detailRow(
                   icon: Icons.flash_on_outlined,
                   label: 'Electric Rate',
                   value: '₱$electricRate per kWh',
                 ),
+
                 _detailRow(
                   icon: Icons.water_drop_outlined,
                   label: 'Water Rate',
@@ -534,7 +641,10 @@ class ContractPreviewScreen extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                //SUMMARY 
+                // =================================================
+                // SUMMARY
+                // =================================================
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -543,7 +653,8 @@ class ContractPreviewScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
@@ -563,7 +674,9 @@ class ContractPreviewScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 6),
+
                       Text(
                         terms,
                         style: TextStyle(
@@ -577,18 +690,19 @@ class ContractPreviewScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 18),
-                Divider(color: Colors.grey.shade200),
+
+                Divider(
+                  color: Colors.grey.shade200,
+                ),
+
                 const SizedBox(height: 12),
 
-                //SIGNATURE
+                // =================================================
+                // SIGNATURE
+                // =================================================
+
                 Row(
                   children: [
-                    Icon(
-                      Icons.draw_outlined,
-                      size: 16,
-                      color: Colors.grey.shade700,
-                    ),
-                    const SizedBox(width: 6),
                     Text(
                       'Tenant Signature Preview',
                       style: TextStyle(
@@ -599,56 +713,47 @@ class ContractPreviewScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(height: 8),
+
                 if (hasTenantSignature)
-                  Container(
+                  SizedBox(
                     width: double.infinity,
                     height: 140,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(14),
-                      color: Colors.white,
-                    ),
-                    //FIXED: ClipRRect + fixed painter (may scaling/
-                    // fitting na ngayon, kaya hindi na umaapaw ang
-                    // signature palabas ng box).
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
+                    child: ClipRect(
                       child: CustomPaint(
                         size: Size.infinite,
-                        painter: SignaturePreviewPainter(signaturePoints),
+                        painter: SignaturePreviewPainter(
+                          signaturePoints,
+                        ),
                       ),
                     ),
                   )
                 else
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: Colors.orange.shade700,
-                        ),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            'Tenant signature has not been captured yet.',
-                            style: TextStyle(color: Colors.orange),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Tenant signature has not been captured yet.',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
 
                 const SizedBox(height: 18),
-                Divider(color: Colors.grey.shade200),
+
+                Divider(
+                  color: Colors.grey.shade200,
+                ),
+
                 const SizedBox(height: 10),
+
+                // =================================================
+                // PDF NOTE
+                // =================================================
 
                 Row(
                   children: [
@@ -676,18 +781,20 @@ class ContractPreviewScreen extends StatelessWidget {
   }
 }
 
-// FIXED: normalize/scale ang signature points papasok sa laman ng
-// box (parehong logic gaya ng ginagamit ng PDF generator sa itaas)
-// -- dati, raw coordinates lang ang direktang idinra-draw, kaya
-// umaapaw ang signature palabas ng preview box kapag mas malaki ang
-// orihinal na drawing kaysa sa laki ng box na ito.
+// =====================================================
+// SIGNATURE PREVIEW PAINTER
+// =====================================================
+
 class SignaturePreviewPainter extends CustomPainter {
   final List<ui.Offset> points;
 
   SignaturePreviewPainter(this.points);
 
   @override
-  void paint(ui.Canvas canvas, ui.Size size) {
+  void paint(
+    ui.Canvas canvas,
+    ui.Size size,
+  ) {
     if (points.length < 2) {
       return;
     }
@@ -704,19 +811,35 @@ class SignaturePreviewPainter extends CustomPainter {
       if (point.dy > maxY) maxY = point.dy;
     }
 
-    final rawWidth = (maxX - minX) == 0 ? 1.0 : (maxX - minX);
-    final rawHeight = (maxY - minY) == 0 ? 1.0 : (maxY - minY);
+    final rawWidth =
+        (maxX - minX) == 0 ? 1.0 : (maxX - minX);
+
+    final rawHeight =
+        (maxY - minY) == 0 ? 1.0 : (maxY - minY);
 
     const padding = 12.0;
-    final scaleX = (size.width - padding * 2) / rawWidth;
-    final scaleY = (size.height - padding * 2) / rawHeight;
-    final scale = scaleX < scaleY ? scaleX : scaleY;
 
-    // I-center ang drawing sa loob ng box
+    final scaleX =
+        (size.width - padding * 2) / rawWidth;
+
+    final scaleY =
+        (size.height - padding * 2) / rawHeight;
+
+    final scale =
+        scaleX < scaleY ? scaleX : scaleY;
+
+    // =====================================================
+    // CENTER SIGNATURE
+    // =====================================================
+
     final scaledWidth = rawWidth * scale;
     final scaledHeight = rawHeight * scale;
-    final offsetX = (size.width - scaledWidth) / 2;
-    final offsetY = (size.height - scaledHeight) / 2;
+
+    final offsetX =
+        (size.width - scaledWidth) / 2;
+
+    final offsetY =
+        (size.height - scaledHeight) / 2;
 
     final paint = ui.Paint()
       ..color = Colors.black
@@ -731,14 +854,24 @@ class SignaturePreviewPainter extends CustomPainter {
     }
 
     for (int i = 1; i < points.length; i++) {
-      final previousPoint = transform(points[i - 1]);
-      final currentPoint = transform(points[i]);
-      canvas.drawLine(previousPoint, currentPoint, paint);
+      final previousPoint =
+          transform(points[i - 1]);
+
+      final currentPoint =
+          transform(points[i]);
+
+      canvas.drawLine(
+        previousPoint,
+        currentPoint,
+        paint,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant SignaturePreviewPainter oldDelegate) {
+  bool shouldRepaint(
+    covariant SignaturePreviewPainter oldDelegate,
+  ) {
     return oldDelegate.points != points;
   }
 }

@@ -61,6 +61,8 @@ class _TenantDashboardState extends State<TenantDashboard> {
       );
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: _currentIndex == 1
           ? null
@@ -74,7 +76,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                             ? "Contracts"
                             : "Profile",
               ),
-              backgroundColor: Colors.deepOrange,
+              backgroundColor: Colors.transparent,
               actions: [
                 // CONNECT TO OWNER BUTTON
                 IconButton(
@@ -101,8 +103,10 @@ class _TenantDashboardState extends State<TenantDashboard> {
       body: _buildBody(user.uid),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white.withOpacity(0.94),
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: const Color(0xFF8A8F98),
+        elevation: 0,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
           setState(() {

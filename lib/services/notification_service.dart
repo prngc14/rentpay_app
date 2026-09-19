@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,18 +9,29 @@ import '../main.dart';
 import '../screens/tenant/tenant_dashboard.dart';
 
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
+Future<void> _firebaseMessagingBackgroundHandler(
+  RemoteMessage message,
+) async {
+  // Background notification handler.
+}
 
 class NotificationService {
-  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _localNotifications =
+  static final FirebaseMessaging _messaging =
+      FirebaseMessaging.instance;
+
+  static final FlutterLocalNotificationsPlugin
+      _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
   static bool _listenersRegistered = false;
+
   static String? _pendingNotificationPayload;
 
-  static const String _contractReminderPayload = "contract_due_reminder";
+  static const String _contractReminderPayload =
+      'contract_due_reminder';
+
+  // INITIALIZE NOTIFICATIONS
 
   static Future<void> initialize() async {
     if (_initialized) {
@@ -38,144 +50,249 @@ class NotificationService {
     );
 
     const androidSettings =
-        AndroidInitializationSettings("@mipmap/ic_launcher");
-    final initSettings = InitializationSettings(android: androidSettings);
-
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
+        AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
     );
 
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+    );
+
+    await _localNotifications.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse:
+          _onNotificationTapped,
+    );
+
+    // CHECK IF APP WAS OPENED THROUGH A NOTIFICATION
+
     final launchDetails =
-        await _localNotifications.getNotificationAppLaunchDetails();
-    final launchResponse = launchDetails?.notificationResponse;
+        await _localNotifications
+            .getNotificationAppLaunchDetails();
+
+    final launchResponse =
+        launchDetails?.notificationResponse;
+
     if (launchDetails?.didNotificationLaunchApp == true &&
         launchResponse?.payload != null) {
-      _pendingNotificationPayload = launchResponse!.payload;
+      _pendingNotificationPayload =
+          launchResponse!.payload;
     }
+
+    // CREATE ANDROID NOTIFICATION CHANNEL
+
+    const androidChannel = AndroidNotificationChannel(
+      'rentpay_reminders',
+      'RentPay Reminders',
+      description: 'Payment due date reminders',
+      importance: Importance.high,
+    );
+
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidPlugin?.createNotificationChannel(
+      androidChannel,
+    );
+
+    // SAVE FCM TOKEN
 
     await _saveTokenToFirestore();
 
+    // REGISTER LISTENERS
+
     if (!_listenersRegistered) {
-      _messaging.onTokenRefresh.listen((newToken) {
-        _saveTokenToFirestore(token: newToken);
-      });
+      _messaging.onTokenRefresh.listen(
+        (newToken) {
+          _saveTokenToFirestore(
+            token: newToken,
+          );
+        },
+      );
 
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        _showLocalNotification(message);
-      });
+      FirebaseMessaging.onMessage.listen(
+        (RemoteMessage message) {
+          _showLocalNotification(message);
+        },
+      );
 
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        _openContractsIfNeeded(message.data["type"] ??
-            (message.notification != null ? _contractReminderPayload : null));
-      });
+      FirebaseMessaging.onMessageOpenedApp.listen(
+        (RemoteMessage message) {
+          final type = message.data['type'] ??
+              (message.notification != null
+                  ? _contractReminderPayload
+                  : null);
+
+          _openContractsIfNeeded(type);
+        },
+      );
 
       _listenersRegistered = true;
     }
 
     _initialized = true;
 
-    final pendingPayload = _pendingNotificationPayload;
+    // OPEN PENDING NOTIFICATION AFTER INITIALIZATION
+
+    final pendingPayload =
+        _pendingNotificationPayload;
+
     _pendingNotificationPayload = null;
+
     if (pendingPayload != null) {
       _openContractsIfNeeded(pendingPayload);
     }
   }
 
-  static Future<void> _saveTokenToFirestore({String? token}) async {
+  // SAVE FCM TOKEN TO FIRESTORE
+
+  static Future<void> _saveTokenToFirestore({
+    String? token,
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) return;
 
-    final fcmToken = token ?? await _messaging.getToken();
+    final fcmToken =
+        token ?? await _messaging.getToken();
+
     if (fcmToken == null) return;
 
     try {
       await FirebaseFirestore.instance
-          .collection("users")
+          .collection('users')
           .doc(user.uid)
-          .update({"fcmToken": fcmToken});
+          .update({
+        'fcmToken': fcmToken,
+      });
     } catch (e) {
-      debugPrint("Unable to save notification token: $e");
+      debugPrint(
+        'Unable to save notification token: $e',
+      );
     }
   }
 
-  static void _showLocalNotification(RemoteMessage message) {
-    const androidDetails = AndroidNotificationDetails(
-      "rentpay_reminders",
-      "RentPay Reminders",
-      channelDescription: "Payment due date reminders",
+  // SHOW FIREBASE MESSAGE AS LOCAL NOTIFICATION
+
+  static Future<void> _showLocalNotification(
+    RemoteMessage message,
+  ) async {
+    const androidDetails =
+        AndroidNotificationDetails(
+      'rentpay_reminders',
+      'RentPay Reminders',
+      channelDescription:
+          'Payment due date reminders',
       importance: Importance.high,
       priority: Priority.high,
     );
-    const details = NotificationDetails(android: androidDetails);
 
-    _localNotifications
-        .show(
-      message.hashCode,
-      message.notification?.title ?? "RentPay",
-      message.notification?.body ?? "",
-      details,
-      payload: _contractReminderPayload,
-    )
-        .catchError((error) {
-      debugPrint("Local notification error: $error");
-    });
+    const details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    try {
+      await _localNotifications.show(
+        id: message.hashCode,
+        title: message.notification?.title ?? 'RentPay',
+        body: message.notification?.body ?? '',
+        notificationDetails: details,
+        payload: _contractReminderPayload,
+      );
+    } catch (error) {
+      debugPrint(
+        'Local notification error: $error',
+      );
+    }
   }
+
+  // SHOW CUSTOM LOCAL NOTIFICATION
 
   static Future<void> showLocalNotification({
     required String title,
     required String body,
   }) async {
-    const androidDetails = AndroidNotificationDetails(
-      "rentpay_reminders",
-      "RentPay Reminders",
-      channelDescription: "Payment due date reminders",
+    const androidDetails =
+        AndroidNotificationDetails(
+      'rentpay_reminders',
+      'RentPay Reminders',
+      channelDescription:
+          'Payment due date reminders',
       importance: Importance.high,
       priority: Priority.high,
     );
-    const details = NotificationDetails(android: androidDetails);
+
+    const details = NotificationDetails(
+      android: androidDetails,
+    );
 
     await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      details,
+      id: DateTime.now()
+          .millisecondsSinceEpoch
+          .remainder(2147483647),
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: _contractReminderPayload,
     );
   }
 
-  static void _onNotificationTapped(NotificationResponse response) {
-    _openContractsIfNeeded(response.payload);
+  // NOTIFICATION TAP HANDLER
+
+  static void _onNotificationTapped(
+    NotificationResponse response,
+  ) {
+    _openContractsIfNeeded(
+      response.payload,
+    );
   }
 
-  static void _openContractsIfNeeded(String? payload) {
-    if (payload != _contractReminderPayload) return;
+  // OPEN CONTRACTS SCREEN
 
-    final ctx = navigatorKey.currentContext;
-    if (ctx == null) {
+  static void _openContractsIfNeeded(
+    String? payload,
+  ) {
+    if (payload != _contractReminderPayload) {
+      return;
+    }
+
+    final context =
+        navigatorKey.currentContext;
+
+    if (context == null) {
       _pendingNotificationPayload = payload;
       return;
     }
 
-    Navigator.of(ctx).pushAndRemoveUntil(
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => const TenantDashboard(initialTabIndex: 2),
+        builder: (_) => const TenantDashboard(
+          initialTabIndex: 2,
+        ),
       ),
       (route) => false,
     );
   }
 
+  // CLEAR TOKEN WHEN USER LOGS OUT
+
   static Future<void> clearTokenOnLogout() async {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) return;
 
     try {
       await FirebaseFirestore.instance
-          .collection("users")
+          .collection('users')
           .doc(user.uid)
-          .update({"fcmToken": FieldValue.delete()});
+          .update({
+        'fcmToken': FieldValue.delete(),
+      });
     } catch (e) {
-      // ok lang i-ignore kung mabigo ahh sad
+      debugPrint(
+        'Unable to clear notification token: $e',
+      );
     }
   }
 }
