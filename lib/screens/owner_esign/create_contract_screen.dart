@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -14,8 +13,7 @@ class CreateContractScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateContractScreen> createState() =>
-      _CreateContractScreenState();
+  State<CreateContractScreen> createState() => _CreateContractScreenState();
 }
 
 class _CreateContractScreenState extends State<CreateContractScreen> {
@@ -39,14 +37,31 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
   bool useESign = true;
   bool _isLoading = true;
+  bool _isSaving = false;
 
   bool get _isRenewal => widget.renewalData != null;
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _backgroundColor =>
+      _isDark ? Colors.black : const Color(0xFFFFF8FC);
+
+  Color get _surfaceColor => _isDark ? const Color(0xFF1B2124) : Colors.white;
+
+  Color get _primaryTextColor =>
+      _isDark ? Colors.white : const Color(0xFF123E5A);
+
+  Color get _secondaryTextColor =>
+      _isDark ? const Color(0xFFB8C2C7) : const Color(0xFF454B50);
+
+  Color get _borderColor =>
+      _isDark ? const Color(0xFF5A6A72) : const Color(0xFFB8B8BE);
+
   static const List<String> _inactiveContractStatuses = [
-    "Expired",
-    "Cancelled",
-    "Terminated",
-    "Renewed",
+    'Expired',
+    'Cancelled',
+    'Terminated',
+    'Renewed',
   ];
 
   @override
@@ -74,21 +89,23 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
       return;
     }
 
     try {
       final tenantsSnapshot = await _firestore
-          .collection("users")
-          .where("ownerId", isEqualTo: user.uid)
+          .collection('users')
+          .where('ownerId', isEqualTo: user.uid)
           .get();
 
       final roomsSnapshot = await _firestore
-          .collection("rooms")
-          .where("ownerId", isEqualTo: user.uid)
+          .collection('rooms')
+          .where('ownerId', isEqualTo: user.uid)
           .get();
 
       final tenantDocuments = <String, Map<String, dynamic>>{};
@@ -96,14 +113,13 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       for (final doc in tenantsSnapshot.docs) {
         final data = doc.data();
 
-        if (data["role"] == "tenant") {
+        if (data['role'] == 'tenant') {
           tenantDocuments[doc.id] = data;
         }
       }
 
       for (final roomDoc in roomsSnapshot.docs) {
-        final tenantId =
-            roomDoc.data()["tenantId"]?.toString();
+        final tenantId = roomDoc.data()['tenantId']?.toString();
 
         if (tenantId == null ||
             tenantId.isEmpty ||
@@ -111,48 +127,47 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
           continue;
         }
 
-        final tenantDoc = await _firestore
-            .collection("users")
-            .doc(tenantId)
-            .get();
+        final tenantDoc =
+            await _firestore.collection('users').doc(tenantId).get();
 
         final tenantData = tenantDoc.data();
 
         if (tenantDoc.exists &&
             tenantData != null &&
-            tenantData["role"] == "tenant") {
+            tenantData['role'] == 'tenant') {
           tenantDocuments[tenantId] = tenantData;
         }
       }
 
       final contractsSnapshot = await _firestore
-          .collection("contracts")
-          .where("ownerId", isEqualTo: user.uid)
+          .collection('contracts')
+          .where('ownerId', isEqualTo: user.uid)
           .get();
 
-      final String? renewingContractId = _isRenewal
-          ? widget.renewalData!["contractId"] as String?
-          : null;
+      final String? renewingContractId =
+          _isRenewal ? widget.renewalData!['contractId'] as String? : null;
 
       final activeContracts = contractsSnapshot.docs.where((doc) {
-        if (renewingContractId != null &&
-            doc.id == renewingContractId) {
+        if (renewingContractId != null && doc.id == renewingContractId) {
           return false;
         }
 
-        final status =
-            (doc.data()["status"] ?? "").toString();
+        final status = (doc.data()['status'] ?? '').toString();
 
         return !_inactiveContractStatuses.contains(status);
       });
 
       final tenantIdsWithActiveContract = activeContracts
-          .map((doc) => doc.data()["tenantId"] as String?)
+          .map(
+            (doc) => doc.data()['tenantId'] as String?,
+          )
           .whereType<String>()
           .toSet();
 
       final roomIdsWithActiveContract = activeContracts
-          .map((doc) => doc.data()["roomId"] as String?)
+          .map(
+            (doc) => doc.data()['roomId'] as String?,
+          )
           .whereType<String>()
           .toSet();
 
@@ -165,38 +180,34 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
           final hasActiveContract =
               tenantIdsWithActiveContract.contains(entry.key);
 
-          final name = (data["name"] ?? "Tenant").toString();
+          final name = (data['name'] ?? 'Tenant').toString();
 
           return {
-            "id": entry.key,
-            "name": name,
-            "displayName": hasActiveContract
-                ? "$name (Active contract)"
-                : name,
-            "hasActiveContract": hasActiveContract,
+            'id': entry.key,
+            'name': name,
+            'displayName': hasActiveContract ? '$name (Active contract)' : name,
+            'hasActiveContract': hasActiveContract,
           };
         }).toList();
 
         _roomOptions = roomsSnapshot.docs.map((doc) {
           final data = doc.data();
 
-          final hasActiveContract =
-              roomIdsWithActiveContract.contains(doc.id);
+          final hasActiveContract = roomIdsWithActiveContract.contains(doc.id);
+
+          final roomNumber = data['roomNumber'] ?? 'Room';
 
           return {
-            "id": doc.id,
-            "roomNumber": data["roomNumber"] ?? "Room",
-            "displayRoomNumber": hasActiveContract
-                ? "${data["roomNumber"] ?? "Room"} (Active contract)"
-                : (data["roomNumber"] ?? "Room"),
-            "monthlyRent":
-                (data["monthlyRent"] ?? 0).toDouble(),
-            "electricRate":
-                (data["electricRate"] ?? 12).toDouble(),
-            "waterRate":
-                (data["waterRate"] ?? 30).toDouble(),
-            "tenantId": data["tenantId"],
-            "hasActiveContract": hasActiveContract,
+            'id': doc.id,
+            'roomNumber': roomNumber,
+            'displayRoomNumber': hasActiveContract
+                ? '$roomNumber (Active contract)'
+                : roomNumber,
+            'monthlyRent': (data['monthlyRent'] ?? 0).toDouble(),
+            'electricRate': (data['electricRate'] ?? 12).toDouble(),
+            'waterRate': (data['waterRate'] ?? 30).toDouble(),
+            'tenantId': data['tenantId'],
+            'hasActiveContract': hasActiveContract,
           };
         }).toList();
 
@@ -205,31 +216,36 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
         if (_isRenewal) {
           final r = widget.renewalData!;
 
-          _selectedTenantId = r["tenantId"] as String?;
-          _selectedRoomId = r["roomId"] as String?;
+          _selectedTenantId = r['tenantId'] as String?;
+          _selectedRoomId = r['roomId'] as String?;
 
           _rentController.text =
-              ((r["monthlyRent"] ?? 0) as num)
-                  .toStringAsFixed(0);
+              ((r['monthlyRent'] ?? 0) as num).toStringAsFixed(0);
 
           _depositController.text =
-              ((r["securityDeposit"] ?? 0) as num)
-                  .toStringAsFixed(0);
+              ((r['securityDeposit'] ?? 0) as num).toStringAsFixed(0);
 
           _advanceController.text =
-              ((r["advancePayment"] ?? 0) as num)
-                  .toStringAsFixed(0);
+              ((r['advancePayment'] ?? 0) as num).toStringAsFixed(0);
 
           _electricRateController.text =
-              ((r["electricRate"] ?? 0) as num)
-                  .toStringAsFixed(2);
+              ((r['electricRate'] ?? 0) as num).toStringAsFixed(2);
 
           _waterRateController.text =
-              ((r["waterRate"] ?? 0) as num)
-                  .toStringAsFixed(2);
+              ((r['waterRate'] ?? 0) as num).toStringAsFixed(2);
 
-          _termsController.text =
-              (r["termsAndConditions"] ?? "").toString();
+          _termsController.text = (r['termsAndConditions'] ?? '').toString();
+
+          final renewalStartDate = r['startDate'];
+          final renewalEndDate = r['endDate'];
+
+          if (renewalStartDate is Timestamp) {
+            startDate = renewalStartDate.toDate();
+          }
+
+          if (renewalEndDate is Timestamp) {
+            endDate = renewalEndDate.toDate();
+          }
         }
       });
     } catch (e) {
@@ -253,14 +269,32 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   Future<void> _pickDate({
     required bool isStart,
   }) async {
+    final now = DateTime.now();
+    final currentDate = isStart ? startDate : endDate;
+
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: currentDate ?? now,
       firstDate: DateTime(2024),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: _isDark
+                      ? const Color(0xFFDDE3E6)
+                      : const Color(0xFF123E5A),
+                  onPrimary: _isDark ? const Color(0xFF111518) : Colors.white,
+                  surface: _surfaceColor,
+                  onSurface: _isDark ? Colors.white : Colors.black,
+                ),
+          ),
+          child: child!,
+        );
+      },
     );
 
-    if (pickedDate == null) return;
+    if (pickedDate == null || !mounted) return;
 
     setState(() {
       if (isStart) {
@@ -272,11 +306,161 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   }
 
   // =====================================================
+  // SMOOTH OWNER E-SIGNATURE
+  // =====================================================
+
+  Future<List<Offset>?> _showOwnerSignatureDialog({
+    required String roomNumber,
+  }) async {
+    final signatureNotifier = ValueNotifier<List<Offset?>>([]);
+
+    try {
+      final result = await showDialog<List<Offset>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: _surfaceColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Owner E-Signature',
+              style: TextStyle(
+                color: _primaryTextColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sign below to approve the contract '
+                  'for Room $roomNumber.',
+                  style: TextStyle(
+                    color: _secondaryTextColor,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: _isDark ? const Color(0xFF111518) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _borderColor,
+                    ),
+                  ),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: (details) {
+                      signatureNotifier.value = [
+                        ...signatureNotifier.value,
+                        null,
+                        details.localPosition,
+                      ];
+                    },
+                    onPanUpdate: (details) {
+                      signatureNotifier.value = [
+                        ...signatureNotifier.value,
+                        details.localPosition,
+                      ];
+                    },
+                    child: CustomPaint(
+                      painter: _ContractSignaturePainter(
+                        pointsNotifier: signatureNotifier,
+                        color: _primaryTextColor,
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      signatureNotifier.value = [];
+                    },
+                    icon: Icon(
+                      Icons.refresh,
+                      color: _primaryTextColor,
+                      size: 18,
+                    ),
+                    label: Text(
+                      'Clear',
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: _secondaryTextColor,
+                  ),
+                ),
+              ),
+              ValueListenableBuilder<List<Offset?>>(
+                valueListenable: signatureNotifier,
+                builder: (context, points, child) {
+                  final hasSignature = points.whereType<Offset>().isNotEmpty;
+
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isDark
+                          ? const Color(0xFFDDE3E6)
+                          : const Color(0xFF123E5A),
+                      foregroundColor:
+                          _isDark ? const Color(0xFF111518) : Colors.white,
+                    ),
+                    onPressed: !hasSignature
+                        ? null
+                        : () {
+                            final cleanPoints =
+                                points.whereType<Offset>().toList();
+
+                            Navigator.pop(
+                              dialogContext,
+                              cleanPoints,
+                            );
+                          },
+                    child: const Text(
+                      'Save Signature',
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+
+      return result;
+    } finally {
+      signatureNotifier.dispose();
+    }
+  }
+
+  // =====================================================
   // CREATE CONTRACT
   // =====================================================
 
   Future<void> _createContract() async {
-    debugPrint("Create Contract button clicked");
+    debugPrint('Create Contract button clicked');
+
+    if (_isSaving) return;
 
     final user = FirebaseAuth.instance.currentUser;
 
@@ -284,159 +468,207 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       if (mounted) {
         showAppWarningBanner(
           context,
-          "Please log in first.",
+          'Please log in first.',
         );
       }
       return;
     }
 
-    if (_selectedTenantId == null ||
-        _selectedRoomId == null) {
-      if (mounted) {
-        showAppWarningBanner(
-          context,
-          "Please select a tenant and room.",
-        );
-      }
-      return;
-    }
-
-    Map<String, dynamic>? selectedTenant;
-
-    for (final item in _tenantOptions) {
-      if (item["id"] == _selectedTenantId) {
-        selectedTenant = item;
-        break;
-      }
-    }
-
-    Map<String, dynamic>? selectedRoom;
-
-    for (final item in _roomOptions) {
-      if (item["id"] == _selectedRoomId) {
-        selectedRoom = item;
-        break;
-      }
-    }
-
-    if (selectedTenant == null || selectedRoom == null) {
+    if (_selectedTenantId == null || _selectedRoomId == null) {
       showAppWarningBanner(
         context,
-        "The selected tenant or room is no longer available. Please select them again.",
-      );
-      return;
-    }
-
-    if (!_isRenewal &&
-        (selectedTenant["hasActiveContract"] == true ||
-            selectedRoom["hasActiveContract"] == true)) {
-      showAppWarningBanner(
-        context,
-        "This tenant or room already has an active contract. Use Renew Contract instead.",
+        'Please select a tenant and room.',
       );
       return;
     }
 
     if (startDate == null || endDate == null) {
-      if (mounted) {
-        showAppWarningBanner(
-          context,
-          "Please select start and end dates.",
-        );
-      }
+      showAppWarningBanner(
+        context,
+        'Please select start and end dates.',
+      );
       return;
     }
 
-    final tenant = selectedTenant;
+    if (endDate!.isBefore(startDate!)) {
+      showAppWarningBanner(
+        context,
+        'End date cannot be before start date.',
+      );
+      return;
+    }
+
+    final selectedTenant =
+        _tenantOptions.cast<Map<String, dynamic>?>().firstWhere(
+              (tenant) => tenant!['id'] == _selectedTenantId,
+              orElse: () => null,
+            );
+
+    final selectedRoom = _roomOptions.cast<Map<String, dynamic>?>().firstWhere(
+          (room) => room!['id'] == _selectedRoomId,
+          orElse: () => null,
+        );
+
+    if (selectedTenant == null || selectedRoom == null) {
+      showAppWarningBanner(
+        context,
+        'The selected tenant or room is no longer available. '
+        'Please select them again.',
+      );
+      return;
+    }
+
+    if (!_isRenewal &&
+        (selectedTenant['hasActiveContract'] == true ||
+            selectedRoom['hasActiveContract'] == true)) {
+      showAppWarningBanner(
+        context,
+        'This tenant or room already has an active contract. '
+        'Use Renew Contract instead.',
+      );
+      return;
+    }
+
+    final rent = double.tryParse(_rentController.text.trim()) ?? 0.0;
+
+    final deposit = double.tryParse(_depositController.text.trim()) ?? 0.0;
+
+    final advance = double.tryParse(_advanceController.text.trim()) ?? 0.0;
+
+    final electricRate = double.tryParse(
+          _electricRateController.text.trim(),
+        ) ??
+        0.0;
+
+    final waterRate = double.tryParse(
+          _waterRateController.text.trim(),
+        ) ??
+        0.0;
+
+    final roomNumber = (selectedRoom['roomNumber'] ?? 'Room').toString();
+
+    List<Offset>? ownerSignaturePoints;
+
+    if (useESign) {
+      ownerSignaturePoints = await _showOwnerSignatureDialog(
+        roomNumber: roomNumber,
+      );
+
+      if (!mounted) return;
+
+      if (ownerSignaturePoints == null || ownerSignaturePoints.isEmpty) {
+        showAppWarningBanner(
+          context,
+          'Owner signature is required.',
+        );
+        return;
+      }
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
 
     try {
-      final tenantSnapshot = await _firestore
-          .collection("users")
-          .doc(_selectedTenantId)
-          .get();
+      final tenantSnapshot =
+          await _firestore.collection('users').doc(_selectedTenantId).get();
+
+      final ownerSnapshot =
+          await _firestore.collection('users').doc(user.uid).get();
 
       final tenantData = tenantSnapshot.data();
+      final ownerData = ownerSnapshot.data();
 
       final tenantName =
-          (tenantData?["name"] ?? tenant["name"] ?? "Tenant")
+          (tenantData?['name'] ?? selectedTenant['name'] ?? 'Tenant')
               .toString()
               .trim();
 
-      final room = selectedRoom;
+      final ownerName =
+          (ownerData?['name'] ?? user.displayName ?? 'Owner').toString().trim();
 
-      debugPrint("Saving contract to Firestore...");
+      final ownerSignature = ownerSignaturePoints
+          ?.map(
+            (point) => {
+              'x': point.dx,
+              'y': point.dy,
+            },
+          )
+          .toList();
 
-      await _firestore.collection("contracts").add({
-        "ownerId": user.uid,
-        "tenantId": _selectedTenantId,
-        "tenantName":
-            tenantName.isEmpty ? "Tenant" : tenantName,
-        "roomId": _selectedRoomId,
-        "roomNumber": room["roomNumber"],
-        "monthlyRent":
-            double.tryParse(_rentController.text.trim()) ?? 0.0,
-        "securityDeposit":
-            double.tryParse(_depositController.text.trim()) ?? 0.0,
-        "advancePayment":
-            double.tryParse(_advanceController.text.trim()) ?? 0.0,
-        "electricRate":
-            double.tryParse(_electricRateController.text.trim()) ?? 0.0,
-        "waterRate":
-            double.tryParse(_waterRateController.text.trim()) ?? 0.0,
-        "startDate": Timestamp.fromDate(startDate!),
-        "endDate": Timestamp.fromDate(endDate!),
-        "termsAndConditions": _termsController.text.trim(),
-        "useDigitalContract": useESign,
-        "createdAt": Timestamp.now(),
-        "status": "Pending Signature",
-      });
+      final contractData = <String, dynamic>{
+        'ownerId': user.uid,
+        'ownerName': ownerName.isEmpty ? 'Owner' : ownerName,
+        'tenantId': _selectedTenantId,
+        'tenantName': tenantName.isEmpty ? 'Tenant' : tenantName,
+        'roomId': _selectedRoomId,
+        'roomNumber': roomNumber,
+        'monthlyRent': rent,
+        'securityDeposit': deposit,
+        'advancePayment': advance,
+        'electricRate': electricRate,
+        'waterRate': waterRate,
+        'startDate': Timestamp.fromDate(startDate!),
+        'endDate': Timestamp.fromDate(endDate!),
+        'termsAndConditions': _termsController.text.trim(),
+        'useDigitalContract': useESign,
+        'createdAt': Timestamp.now(),
+        'status': useESign ? 'Pending Tenant Signature' : 'Pending Signature',
+      };
 
-      await _firestore
-          .collection("rooms")
-          .doc(_selectedRoomId)
-          .update({
-        "tenantId": _selectedTenantId,
-        "electricRate":
-            double.tryParse(_electricRateController.text.trim()) ?? 0.0,
-        "waterRate":
-            double.tryParse(_waterRateController.text.trim()) ?? 0.0,
+      if (useESign && ownerSignature != null && ownerSignature.isNotEmpty) {
+        contractData['ownerSignature'] = ownerSignature;
+        contractData['ownerSignedAt'] = Timestamp.now();
+        contractData['ownerSignatureLocked'] = true;
+      }
+
+      debugPrint('Saving contract to Firestore...');
+
+      await _firestore.collection('contracts').add(contractData);
+
+      await _firestore.collection('rooms').doc(_selectedRoomId).update({
+        'tenantId': _selectedTenantId,
+        'electricRate': electricRate,
+        'waterRate': waterRate,
       });
 
       if (_isRenewal) {
-        final oldContractId =
-            widget.renewalData!["contractId"] as String?;
+        final oldContractId = widget.renewalData!['contractId'] as String?;
 
-        if (oldContractId != null) {
-          await _firestore
-              .collection("contracts")
-              .doc(oldContractId)
-              .update({
-            "status": "Renewed",
-            "renewedAt": Timestamp.now(),
+        if (oldContractId != null && oldContractId.isNotEmpty) {
+          await _firestore.collection('contracts').doc(oldContractId).update({
+            'status': 'Renewed',
+            'renewedAt': Timestamp.now(),
           });
         }
       }
 
-      debugPrint("Contract saved successfully.");
+      debugPrint('Contract saved successfully.');
 
-      if (mounted) {
-        Navigator.pop(context);
+      if (!mounted) return;
 
-        showAppSuccessBanner(
-          context,
-          _isRenewal
-              ? "Contract renewed successfully."
-              : "Contract saved successfully.",
-        );
-      }
+      Navigator.pop(context);
+
+      showAppSuccessBanner(
+        context,
+        _isRenewal
+            ? 'Contract renewed successfully.'
+            : 'Contract saved successfully.',
+      );
     } catch (e) {
-      debugPrint("Create Contract save failed: $e");
+      debugPrint('Create Contract save failed: $e');
 
+      if (!mounted) return;
+
+      showAppWarningBanner(
+        context,
+        friendlyAuthError(e),
+      );
+    } finally {
       if (mounted) {
-        showAppWarningBanner(
-          context,
-          friendlyAuthError(e),
-        );
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
@@ -452,35 +684,38 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     return InputDecoration(
       labelText: label,
       prefixText: prefixText,
-
       isDense: true,
-
+      labelStyle: TextStyle(
+        color: _secondaryTextColor,
+      ),
+      hintStyle: TextStyle(
+        color: _secondaryTextColor,
+      ),
+      prefixStyle: TextStyle(
+        color: _primaryTextColor,
+      ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 14,
       ),
-
       filled: true,
-      fillColor: Colors.white,
-
+      fillColor: _surfaceColor,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xFFB8B8BE),
+        borderSide: BorderSide(
+          color: _borderColor,
         ),
       ),
-
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xFFB8B8BE),
+        borderSide: BorderSide(
+          color: _borderColor,
         ),
       ),
-
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xFF123E5A),
+        borderSide: BorderSide(
+          color: _primaryTextColor,
           width: 1.5,
         ),
       ),
@@ -496,48 +731,42 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     required DateTime? date,
     required VoidCallback onTap,
   }) {
+    final formattedDate = date == null
+        ? label
+        : '${date.year}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
-
       child: Container(
         height: 52,
-
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
         ),
-
         decoration: BoxDecoration(
-          color: Colors.white,
-
+          color: _surfaceColor,
           borderRadius: BorderRadius.circular(14),
-
           border: Border.all(
-            color: const Color(0xFFB8B8BE),
+            color: _borderColor,
           ),
         ),
-
         child: Row(
           children: [
             Expanded(
               child: Text(
-                date == null
-                    ? label
-                    : "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
-
+                formattedDate,
                 style: TextStyle(
                   fontSize: 15,
-                  color: date == null
-                      ? const Color(0xFF454B50)
-                      : const Color(0xFF123E5A),
+                  color: date == null ? _secondaryTextColor : _primaryTextColor,
                 ),
               ),
             ),
-
-            const Icon(
+            Icon(
               Icons.calendar_today_outlined,
               size: 22,
-              color: Color(0xFF454B50),
+              color: _secondaryTextColor,
             ),
           ],
         ),
@@ -552,98 +781,82 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8FC),
-
+      backgroundColor: _backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: true,
-
-        title: const Text(
-          "Rentpay",
-
+        title: Text(
+          'Rentpay',
           style: TextStyle(
             fontFamily: 'RentpayScript',
             fontSize: 30,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF123E5A),
+            color: _primaryTextColor,
             letterSpacing: 0.5,
           ),
         ),
-
-        backgroundColor: const Color(0xFFFFF8FC),
-        foregroundColor: const Color(0xFF123E5A),
-
+        backgroundColor: _backgroundColor,
+        foregroundColor: _primaryTextColor,
         centerTitle: true,
-
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
-
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: _primaryTextColor,
+              ),
             )
-
           : SafeArea(
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-
                 padding: const EdgeInsets.fromLTRB(
                   12,
                   8,
                   12,
                   20,
                 ),
-
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // =====================================
-                    // RENEWAL BANNER
-                    // =====================================
-
                     if (_isRenewal)
                       Container(
                         width: double.infinity,
-
                         margin: const EdgeInsets.only(
                           bottom: 10,
                         ),
-
                         padding: const EdgeInsets.all(10),
-
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-
-                          borderRadius:
-                              BorderRadius.circular(12),
-
+                          color: _isDark
+                              ? const Color(0xFF172A35)
+                              : Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.blue.shade200,
+                            color: _isDark
+                                ? const Color(0xFF34586B)
+                                : Colors.blue.shade200,
                           ),
                         ),
-
                         child: Row(
                           children: [
                             Icon(
                               Icons.info_outline,
-                              color: Colors.blue.shade700,
+                              color: _isDark
+                                  ? const Color(0xFFB8DDF5)
+                                  : Colors.blue.shade700,
                               size: 18,
                             ),
-
                             const SizedBox(width: 8),
-
                             Expanded(
                               child: Text(
-                                "Renewing contract for "
-                                "${widget.renewalData!["tenantName"] ?? "tenant"}. "
-                                "The old contract will automatically be marked "
+                                'Renewing contract for '
+                                '${widget.renewalData!['tenantName'] ?? 'tenant'}. '
+                                'The old contract will automatically be marked '
                                 'as "Renewed" after saving.',
-
                                 style: TextStyle(
-                                  color: Colors.blue.shade700,
+                                  color: _isDark
+                                      ? const Color(0xFFB8DDF5)
+                                      : Colors.blue.shade700,
                                   fontSize: 12,
                                 ),
                               ),
@@ -651,303 +864,307 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                           ],
                         ),
                       ),
-
-                    // =====================================
-                    // TENANT
-                    // =====================================
-
                     DropdownButtonFormField<String>(
                       value: _selectedTenantId,
-
                       isDense: true,
-
-                      decoration:
-                          _contractInputDecoration("Tenant"),
-
+                      dropdownColor: _surfaceColor,
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                        fontSize: 16,
+                      ),
+                      decoration: _contractInputDecoration('Tenant'),
                       items: _tenantOptions.map((tenant) {
                         return DropdownMenuItem<String>(
-                          value: tenant["id"],
-
+                          value: tenant['id'] as String,
                           enabled:
-                              tenant["hasActiveContract"] != true ||
-                                  _isRenewal,
-
+                              tenant['hasActiveContract'] != true || _isRenewal,
                           child: Text(
-                            tenant["displayName"],
+                            tenant['displayName'].toString(),
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _primaryTextColor,
+                            ),
                           ),
                         );
                       }).toList(),
-
                       onChanged: (value) {
                         setState(() {
                           _selectedTenantId = value;
                         });
                       },
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // ROOM
-                    // =====================================
-
                     DropdownButtonFormField<String>(
                       value: _selectedRoomId,
-
                       isDense: true,
-
-                      decoration:
-                          _contractInputDecoration("Room"),
-
+                      dropdownColor: _surfaceColor,
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                        fontSize: 16,
+                      ),
+                      decoration: _contractInputDecoration('Room'),
                       items: _roomOptions.map((room) {
                         return DropdownMenuItem<String>(
-                          value: room["id"],
-
+                          value: room['id'] as String,
                           enabled:
-                              room["hasActiveContract"] != true ||
-                                  _isRenewal,
-
+                              room['hasActiveContract'] != true || _isRenewal,
                           child: Text(
-                            room["displayRoomNumber"],
+                            room['displayRoomNumber'].toString(),
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _primaryTextColor,
+                            ),
                           ),
                         );
                       }).toList(),
-
                       onChanged: _roomOptions.isEmpty
                           ? null
                           : (value) {
-                              final selectedRoom =
-                                  _roomOptions.firstWhere(
-                                (room) => room["id"] == value,
+                              final selectedRoom = _roomOptions.firstWhere(
+                                (room) => room['id'] == value,
                               );
 
                               setState(() {
                                 _selectedRoomId = value;
 
                                 _rentController.text =
-                                    (selectedRoom["monthlyRent"] ?? 0.0)
+                                    (selectedRoom['monthlyRent'] ?? 0.0)
                                         .toStringAsFixed(0);
 
                                 _electricRateController.text =
-                                    (selectedRoom["electricRate"] ?? 0.0)
+                                    (selectedRoom['electricRate'] ?? 0.0)
                                         .toStringAsFixed(2);
 
                                 _waterRateController.text =
-                                    (selectedRoom["waterRate"] ?? 0.0)
+                                    (selectedRoom['waterRate'] ?? 0.0)
                                         .toStringAsFixed(2);
                               });
                             },
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // MONTHLY RENT
-                    // =====================================
-
                     TextField(
                       controller: _rentController,
-
-                      keyboardType: TextInputType.number,
-
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
                       decoration: _contractInputDecoration(
-                        "Monthly Rent",
-                        prefixText: "₱ ",
+                        'Monthly Rent',
+                        prefixText: '₱ ',
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // ELECTRIC RATE
-                    // =====================================
-
                     TextField(
                       controller: _electricRateController,
-
-                      keyboardType: TextInputType.number,
-
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
                       decoration: _contractInputDecoration(
-                        "Electric Rate per kWh",
-                        prefixText: "₱ ",
+                        'Electric Rate per kWh',
+                        prefixText: '₱ ',
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // WATER RATE
-                    // =====================================
-
                     TextField(
                       controller: _waterRateController,
-
-                      keyboardType: TextInputType.number,
-
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
                       decoration: _contractInputDecoration(
-                        "Water Rate per m³",
-                        prefixText: "₱ ",
+                        'Water Rate per m³',
+                        prefixText: '₱ ',
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // SECURITY DEPOSIT
-                    // =====================================
-
                     TextField(
                       controller: _depositController,
-
-                      keyboardType: TextInputType.number,
-
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
                       decoration: _contractInputDecoration(
-                        "Security Deposit",
-                        prefixText: "₱ ",
+                        'Security Deposit',
+                        prefixText: '₱ ',
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // ADVANCE PAYMENT
-                    // =====================================
-
                     TextField(
                       controller: _advanceController,
-
-                      keyboardType: TextInputType.number,
-
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
                       decoration: _contractInputDecoration(
-                        "Advance Payment",
-                        prefixText: "₱ ",
+                        'Advance Payment',
+                        prefixText: '₱ ',
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // START DATE
-                    // =====================================
-
                     _dateField(
-                      label: "Select Contract Start Date",
+                      label: 'Select Contract Start Date',
                       date: startDate,
-
-                      onTap: () =>
-                          _pickDate(isStart: true),
+                      onTap: () => _pickDate(isStart: true),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // END DATE
-                    // =====================================
-
                     _dateField(
-                      label: "Select Contract End Date",
+                      label: 'Select Contract End Date',
                       date: endDate,
-
-                      onTap: () =>
-                          _pickDate(isStart: false),
+                      onTap: () => _pickDate(isStart: false),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // TERMS AND CONDITIONS
-                    // =====================================
-
                     TextField(
                       controller: _termsController,
-
                       maxLines: 4,
                       minLines: 3,
-
-                      decoration:
-                          _contractInputDecoration(
-                        "Terms and Conditions",
+                      style: TextStyle(
+                        color: _primaryTextColor,
+                      ),
+                      decoration: _contractInputDecoration(
+                        'Terms and Conditions',
                       ),
                     ),
-
                     const SizedBox(height: 6),
-
-                    // =====================================
-                    // E-SIGNATURE SWITCH
-                    // =====================================
-
                     SwitchListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 4,
                       ),
-
                       dense: true,
-
                       value: useESign,
-
                       onChanged: (value) {
                         setState(() {
                           useESign = value;
                         });
                       },
-
-                      title: const Text(
-                        "Use Digital Contract with E-Signature",
-
+                      title: Text(
+                        'Use Digital Contract with E-Signature',
                         style: TextStyle(
                           fontSize: 13,
+                          color: _primaryTextColor,
                         ),
                       ),
+                      activeColor: _isDark
+                          ? const Color(0xFFDDE3E6)
+                          : const Color(0xFF123E5A),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // =====================================
-                    // SAVE BUTTON
-                    // =====================================
-
                     SizedBox(
                       width: double.infinity,
                       height: 46,
-
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF123E5A),
-
-                          foregroundColor: Colors.white,
-
+                          backgroundColor: _isDark
+                              ? const Color(0xFFDDE3E6)
+                              : const Color(0xFF123E5A),
+                          foregroundColor:
+                              _isDark ? const Color(0xFF111518) : Colors.white,
                           elevation: 0,
-
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-
-                        onPressed: _createContract,
-
-                        child: Text(
-                          _isRenewal
-                              ? "Renew Contract"
-                              : "Create Contract",
-
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        onPressed: _isSaving ? null : _createContract,
+                        child: _isSaving
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: _isDark
+                                      ? const Color(0xFF111518)
+                                      : Colors.white,
+                                ),
+                              )
+                            : Text(
+                                _isRenewal
+                                    ? 'Renew Contract'
+                                    : 'Create Contract',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-
                     const SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
     );
+  }
+}
+
+// =====================================================
+// SMOOTH SIGNATURE PAINTER
+// =====================================================
+
+class _ContractSignaturePainter extends CustomPainter {
+  final ValueNotifier<List<Offset?>> pointsNotifier;
+  final Color color;
+
+  _ContractSignaturePainter({
+    required this.pointsNotifier,
+    required this.color,
+  }) : super(repaint: pointsNotifier);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final points = pointsNotifier.value;
+
+    if (points.isEmpty) return;
+
+    Path? path;
+    bool hasPointInCurrentStroke = false;
+
+    for (final point in points) {
+      if (point == null) {
+        if (path != null && hasPointInCurrentStroke) {
+          canvas.drawPath(path!, paint);
+        }
+
+        path = null;
+        hasPointInCurrentStroke = false;
+        continue;
+      }
+
+      if (path == null) {
+        path = Path();
+        path.moveTo(point.dx, point.dy);
+        hasPointInCurrentStroke = true;
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+
+    if (path != null && hasPointInCurrentStroke) {
+      canvas.drawPath(path!, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(
+    covariant _ContractSignaturePainter oldDelegate,
+  ) {
+    return oldDelegate.color != color ||
+        oldDelegate.pointsNotifier != pointsNotifier;
   }
 }

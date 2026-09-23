@@ -20,22 +20,24 @@ dependencies:
   cloud_firestore: ^6.10.0
   firebase_storage: ^13.6.0
   firebase_messaging: ^16.7.0
+  cloud_functions: ^6.5.0
 
   # Local Notifications
   flutter_local_notifications: ^22.3.1
 
   # Google Sign-In
   google_sign_in: 6.2.2
+  google_fonts: ^6.2.1
 
   # Image Upload
   image_picker: ^1.2.3
   image_cropper: ^12.2.1
   http: ^1.2.1
 
-  # Blur Detection / Image Compression
+  # Image Compression
   flutter_image_compress: ^2.3.0
 
-  # Free On-Device Receipt OCR
+  # OCR
   google_mlkit_text_recognition: ^0.13.1
 
   # Charts
@@ -45,7 +47,9 @@ dependencies:
   # PDF / Print
   pdf: ^3.11.3
   printing: ^5.13.1
-  cloud_functions: ^6.5.0
+
+  # Local Storage
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
@@ -58,16 +62,15 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/rentpay_logo.png"
+  image_path: ""
   remove_alpha_ios: true
 
 flutter_native_splash:
-  color: "#000000"
-  image: assets/images/rentpay_logo.png
+  color: "#FFFFFF"
+
   android_12:
-    color: "#000000"
-    image: assets/images/rentpay_logo.png
-    icon_background_color: "#000000"
+    color: "#FFFFFF"
+
   ios: true
   web: false
 
@@ -75,9 +78,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/rentpay_logo.png
     - assets/images/juggernaut_logo.png
-    - assets/rentpay_logo.png
+    - assets/images/google_logo.png
 
   fonts:
     - family: RentpayScript

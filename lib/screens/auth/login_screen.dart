@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
@@ -29,18 +29,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   bool _obscurePassword = true;
 
+  static const Color darkBlue = Color(0xFF173F59);
+
   String _buildFakeEmail(String username) {
-    final sanitized = username
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+    final sanitized =
+        username.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9._-]'), '');
 
     return '$sanitized@rentpay.local';
   }
 
+  // ============================================================
   // EMAIL LOGIN
+  // ============================================================
 
-  Future<void> resendVerificationEmail() async {
+  Future<void> loginUser() async {
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
       showAppWarningBanner(
@@ -53,49 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
-      final fakeEmail =
-          _buildFakeEmail(emailController.text.trim());
-
-      await _auth.resendVerificationEmail(
-        fakeEmail,
-        passwordController.text.trim(),
+      final fakeEmail = _buildFakeEmail(
+        emailController.text.trim(),
       );
-
-      if (!mounted) return;
-
-      showAppSuccessBanner(
-        context,
-        "Verification email sent. Please check your inbox.",
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      showAppWarningBanner(
-        context,
-        friendlyAuthError(e),
-      );
-    }
-
-    if (mounted) {
-      setState(() => isLoading = false);
-    }
-  }
-
-  void loginUser() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
-      showAppWarningBanner(
-        context,
-        "Please enter your username and password",
-      );
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      final fakeEmail =
-          _buildFakeEmail(emailController.text.trim());
 
       final user = await _auth.login(
         fakeEmail,
@@ -106,20 +68,13 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Login failed");
       }
 
-      // CHECK FIREBASE AUTHENTICATION
       final currentUser = FirebaseAuth.instance.currentUser;
 
-      debugPrint(
-        'Firebase UID: ${currentUser?.uid}',
-      );
-
-      debugPrint(
-        'Firebase Email: ${currentUser?.email}',
-      );
+      debugPrint('Firebase UID: ${currentUser?.uid}');
+      debugPrint('Firebase Email: ${currentUser?.email}');
 
       await NotificationService.initialize();
 
-      // GET USER DATA
       final doc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
@@ -145,7 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // OWNER
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -153,20 +107,14 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) => const OwnerDashboard(),
           ),
         );
-      }
-
-      // TENANT
-      else if (role == "tenant") {
+      } else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => const TenantDashboard(),
           ),
         );
-      }
-
-      // NO ROLE YET
-      else {
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -188,9 +136,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // ============================================================
   // GOOGLE LOGIN
+  // ============================================================
 
-  void googleLogin() async {
+  Future<void> googleLogin() async {
     setState(() => isLoading = true);
 
     try {
@@ -200,20 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception("Google login cancelled");
       }
 
-      // CHECK FIREBASE AUTHENTICATION
       final currentUser = FirebaseAuth.instance.currentUser;
 
-      debugPrint(
-        'Google Firebase UID: ${currentUser?.uid}',
-      );
-
-      debugPrint(
-        'Google Firebase Email: ${currentUser?.email}',
-      );
+      debugPrint('Google Firebase UID: ${currentUser?.uid}');
+      debugPrint('Google Firebase Email: ${currentUser?.email}');
 
       await NotificationService.initialize();
 
-      // GET USER DATA
       final doc = await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
@@ -239,7 +182,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // OWNER
       if (role == "owner") {
         Navigator.pushReplacement(
           context,
@@ -247,20 +189,14 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) => const OwnerDashboard(),
           ),
         );
-      }
-
-      // TENANT
-      else if (role == "tenant") {
+      } else if (role == "tenant") {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => const TenantDashboard(),
           ),
         );
-      }
-
-      // NO ROLE YET
-      else {
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -282,7 +218,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // ============================================================
   // INPUT STYLE
+  // ============================================================
 
   InputDecoration inputStyle(
     String label,
@@ -290,30 +228,50 @@ class _LoginScreenState extends State<LoginScreen> {
   ) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      labelStyle: const TextStyle(
+        color: Color(0xFF4B5358),
+        fontSize: 14,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: darkBlue,
+        fontWeight: FontWeight.w600,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: const Color(0xFF4B5358),
+        size: 20,
+      ),
       filled: true,
-      fillColor: const Color(0xFFFFFBF8),
+      fillColor: const Color(0xFFF7F7F8),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 12,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
           color: Color(0xFFB8B8BE),
         ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
           color: Color(0xFFB8B8BE),
         ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
-          color: Colors.deepOrange,
+          color: darkBlue,
           width: 2,
         ),
       ),
     );
   }
+
+  // ============================================================
+  // FRIENDLY AUTH ERROR
+  // ============================================================
 
   String friendlyAuthError(Object e) {
     if (e is FirebaseAuthException) {
@@ -333,6 +291,12 @@ class _LoginScreenState extends State<LoginScreen> {
         case "user-disabled":
           return "This account has been disabled.";
 
+        case "too-many-requests":
+          return "Too many attempts. Please try again later.";
+
+        case "network-request-failed":
+          return "Please check your internet connection.";
+
         default:
           return e.message ?? "Login failed. Please try again.";
       }
@@ -351,214 +315,242 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ============================================================
+  // BUILD UI
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFF6A1A),
-                    Color(0xFFFFC5A4),
-                    Color(0xFFFFF8F3),
-                  ],
-                  stops: [0, 0.28, 0.8],
-                ),
-              ),
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 24,
             ),
-          ),
-
-          Positioned(
-            top: -90,
-            right: -80,
-            child: Icon(
-              Icons.home_work_outlined,
-              size: 330,
-              color: Colors.white.withOpacity(0.18),
-            ),
-          ),
-
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 28,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 320,
               ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 560,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  12,
                 ),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(
-                    24,
-                    28,
-                    24,
-                    22,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.97),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 24,
-                        offset: Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: Image.asset(
-                          "assets/rentpay_logo.png",
-                          width: 92,
-                          height: 92,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      const Text(
-                        "RentPay Login",
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // USERNAME
-                      TextField(
-                        controller: emailController,
-                        decoration: inputStyle(
-                          "Username",
-                          Icons.person,
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // PASSWORD
-                      TextField(
-                        controller: passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: inputStyle(
-                          "Password",
-                          Icons.lock,
-                        ).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword =
-                                    !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      // LOGIN BUTTON
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed:
-                              isLoading ? null : loginUser,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepOrange,
-                            padding:
-                                const EdgeInsets.symmetric(
-                              vertical: 15,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(15),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // RENTPAY LOGIN TITLE
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "Rentpay",
+                            style: GoogleFonts.lobster(
+                              fontSize: 80,
+                              color: const Color.fromARGB(255, 7, 7, 7),
                             ),
                           ),
-                          child: isLoading
-                              ? const CircularProgressIndicator(
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // USERNAME
+                    TextField(
+                      controller: emailController,
+                      textInputAction: TextInputAction.next,
+                      keyboardType: TextInputType.text,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                      cursorColor: Colors.black,
+                      decoration: inputStyle(
+                        "Username",
+                        Icons.person,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // PASSWORD
+                    TextField(
+                      controller: passwordController,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                      cursorColor: Colors.black,
+                      onSubmitted: (_) {
+                        if (!isLoading) {
+                          loginUser();
+                        }
+                      },
+                      decoration: inputStyle(
+                        "Password",
+                        Icons.lock,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          splashRadius: 20,
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: const Color(0xFF4B5358),
+                            size: 19,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // LOGIN BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : loginUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 7, 7, 7),
+                          disabledBackgroundColor: darkBlue.withOpacity(0.55),
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
                                   color: Colors.white,
-                                )
-                              : const Text("Login"),
-                        ),
+                                ),
+                              )
+                            : const Center(
+                                child: Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                       ),
+                    ),
 
-                      const SizedBox(height: 15),
+                    const SizedBox(height: 14),
 
-                      // RESEND VERIFICATION
-                      TextButton(
-                        onPressed: isLoading
-                            ? null
-                            : resendVerificationEmail,
-                        child: const Text(
-                          "Resend Verification Email",
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // GOOGLE LOGIN
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              isLoading ? null : googleLogin,
-                          icon: const Icon(Icons.login),
-                          label: const Text(
-                            "Continue with Google",
+                    // GOOGLE LOGIN
+                    SizedBox(
+                      width: double.infinity,
+                      height: 40,
+                      child: OutlinedButton(
+                        onPressed: isLoading ? null : googleLogin,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
                           ),
-                          style:
-                              OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(
-                              vertical: 15,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(15),
-                            ),
+                          side: const BorderSide(
+                            color: Color(0xFF858585),
+                            width: 1,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // REGISTER
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const RegisterScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          "Create Account",
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/google_logo.png',
+                                width: 18,
+                                height: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  color: Color(0xFF202124),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // "or" DIVIDER between Google button and Create Account
+                    const Text(
+                      "or",
+                      style: TextStyle(
+                        color: Color(0xFF858585),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    // CREATE ACCOUNT
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: darkBlue,
+                      ),
+                      child: const Text(
+                        "Create Account",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

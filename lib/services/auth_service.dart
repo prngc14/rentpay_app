@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -14,8 +13,7 @@ class AuthService {
     String password,
   ) async {
     try {
-      final result =
-          await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -34,8 +32,7 @@ class AuthService {
     String password,
   ) async {
     try {
-      final result =
-          await _auth.createUserWithEmailAndPassword(
+      final result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -89,31 +86,26 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      final googleUser =
-          await GoogleSignIn().signIn();
+      final googleUser = await GoogleSignIn().signIn();
 
       if (googleUser == null) {
         return null;
       }
 
-      final googleAuth =
-          await googleUser.authentication;
+      final googleAuth = await googleUser.authentication;
 
-      final credential =
-          GoogleAuthProvider.credential(
+      final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final result =
-          await _auth.signInWithCredential(
+      final result = await _auth.signInWithCredential(
         credential,
       );
 
       final user = result.user!;
 
-      final docRef =
-          _db.collection('users').doc(user.uid);
+      final docRef = _db.collection('users').doc(user.uid);
 
       final doc = await docRef.get();
 

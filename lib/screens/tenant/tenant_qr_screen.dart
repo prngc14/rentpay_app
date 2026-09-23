@@ -50,7 +50,7 @@ class TenantQRScreen extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                //PayMaya 
+                //PayMaya
                 buildQR(
                   context,
                   "PayMaya",

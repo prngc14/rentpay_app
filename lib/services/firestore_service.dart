@@ -183,12 +183,17 @@ class FirestoreService {
 
   // UPDATE ROOM BILLING WITH MONTHLY HISTORY
   //
-  // Bagong buwan  -> ini-archive ang nakaraang buwan sa history, ang
-  //                  hindi pa nababayaran ay nagiging carriedOverBalance,
-  //                  at nagre-reset sa 0 ang amountPaid.
-  // Parehong buwan -> hindi nagre-reset ang amountPaid, at hindi
-  //                  nadodoble ang carriedOverBalance. Ang status ay
-  //                  kinukuwenta ulit mula sa bagong total bill.
+  // Bawat update ng owner ay BAGONG BILL: ang babayaran ng tenant ay ang
+  // bagong total na inilagay ng owner, at nagre-reset sa 0 ang amountPaid.
+  // Hindi dinededuct sa bagong bill ang mga nakaraang bayad. (Nasa
+  // "payments" collection pa rin ang lahat ng nakaraang bayad ng tenant,
+  // kaya hindi nawawala ang record.)
+  //
+  // Bagong buwan   -> ini-archive ang nakaraang buwan sa history, at ang
+  //                   hindi pa nababayaran ay nagiging carriedOverBalance.
+  // Parehong buwan -> hindi nadodoble ang carriedOverBalance: kapag "paid"
+  //                   na ang huling bill, 0 na ito (bayad na); kung hindi,
+  //                   nananatili ang dating carriedOverBalance.
   Future<void> updateRoomBilling({
     required String roomId,
     required double monthlyRent,
@@ -203,29 +208,21 @@ class FirestoreService {
 
     if (data == null) return;
 
-    final double electricRate =
-        (data["electricRate"] ?? 12).toDouble();
+    final double electricRate = (data["electricRate"] ?? 12).toDouble();
 
-    final double waterRate =
-        (data["waterRate"] ?? 30).toDouble();
+    final double waterRate = (data["waterRate"] ?? 30).toDouble();
 
-    final double electricConsumption =
-        currentElectric - previousElectric;
+    final double electricConsumption = currentElectric - previousElectric;
 
-    final double electricBill =
-        electricConsumption * electricRate;
+    final double electricBill = electricConsumption * electricRate;
 
-    final double waterConsumption =
-        currentWater - previousWater;
+    final double waterConsumption = currentWater - previousWater;
 
-    final double waterBill =
-        waterConsumption * waterRate;
+    final double waterBill = waterConsumption * waterRate;
 
-    final double previousTotalBill =
-        (data["totalBill"] ?? 0).toDouble();
+    final double previousTotalBill = (data["totalBill"] ?? 0).toDouble();
 
-    final double previousAmountPaid =
-        (data["amountPaid"] ?? 0).toDouble();
+    final double previousAmountPaid = (data["amountPaid"] ?? 0).toDouble();
 
     final double previousCarriedOver =
         (data["carriedOverBalance"] ?? 0).toDouble();
@@ -233,13 +230,11 @@ class FirestoreService {
     final String previousStatus =
         (data["paymentStatus"] ?? "unpaid").toString();
 
-    final String previousBillingMonth =
-        (data["billingMonth"] ?? "").toString();
+    final String previousBillingMonth = (data["billingMonth"] ?? "").toString();
 
     final DateTime now = DateTime.now();
 
-    final DateTime dueDate =
-        DateTime(now.year, now.month, 5);
+    final DateTime dueDate = DateTime(now.year, now.month, 5);
 
     final String currentMonthKey =
         "${now.year}-${now.month.toString().padLeft(2, '0')}";
@@ -247,18 +242,15 @@ class FirestoreService {
     final bool isSameMonth = previousBillingMonth == currentMonthKey;
 
     double carriedOverBalance;
-    double amountPaid;
 
     if (isSameMonth) {
-      // Same-month edit: keep the existing carry-over and payments.
-      carriedOverBalance = previousCarriedOver;
-      amountPaid = previousAmountPaid;
+      // Same-month edit: kung bayad na ang huling bill, bayad na rin ang
+      // carry-over nito, kaya hindi na ito isasama ulit.
+      carriedOverBalance = previousStatus == "paid" ? 0 : previousCarriedOver;
     } else {
-      // New month: unpaid balance moves forward, payments start at zero.
-      carriedOverBalance = previousStatus == "paid"
-          ? 0
-          : previousTotalBill - previousAmountPaid;
-      amountPaid = 0.0;
+      // New month: unpaid balance moves forward.
+      carriedOverBalance =
+          previousStatus == "paid" ? 0 : previousTotalBill - previousAmountPaid;
     }
 
     if (carriedOverBalance < 0) {
@@ -266,34 +258,13 @@ class FirestoreService {
     }
 
     final double totalBill =
-        monthlyRent +
-        electricBill +
-        waterBill +
-        carriedOverBalance;
+        monthlyRent + electricBill + waterBill + carriedOverBalance;
 
-    if (amountPaid > totalBill) {
-      amountPaid = totalBill;
-    }
-
-    double remainingBalance = totalBill - amountPaid;
-
-    if (remainingBalance < 0) {
-      remainingBalance = 0;
-    }
-
-    final String paymentStatus;
-
-    if (amountPaid > 0 && remainingBalance <= 0.01) {
-      paymentStatus = "paid";
-    } else if (amountPaid > 0) {
-      paymentStatus = "partial";
-    } else {
-      paymentStatus = "unpaid";
-    }
-
-    final dynamic paidAt = paymentStatus == "paid"
-        ? (data["paidAt"] ?? Timestamp.now())
-        : null;
+    // BAGONG BILL: walang ibinabawas na nakaraang bayad.
+    const double amountPaid = 0.0;
+    final double remainingBalance = totalBill;
+    const String paymentStatus = "unpaid";
+    const dynamic paidAt = null;
 
     final Map<String, dynamic> updates = {
       "monthlyRent": monthlyRent,
@@ -313,6 +284,7 @@ class FirestoreService {
       "paidAt": paidAt,
       "dueDate": Timestamp.fromDate(dueDate),
       "isOverdue": false,
+      "billUpdated": true,
       "billingMonth": currentMonthKey,
 
       // Save the current billing history
@@ -353,6 +325,19 @@ class FirestoreService {
     }
 
     await roomRef.update(updates);
+
+    // Isabay ang status ng tenant (users doc) sa bagong bill.
+    final String tenantId = (data["tenantId"] ?? "").toString();
+
+    if (tenantId.isNotEmpty) {
+      try {
+        await _db.collection("users").doc(tenantId).update({
+          "paymentStatus": paymentStatus,
+        });
+      } catch (e) {
+        print("UPDATE TENANT STATUS ERROR: $e");
+      }
+    }
   }
 
   // GET OWNER ROOMS
@@ -508,8 +493,7 @@ class FirestoreService {
     }
 
     DateTime now = DateTime.now();
-    String paymentMonth =
-        "${now.year}-${now.month.toString().padLeft(2, '0')}";
+    String paymentMonth = "${now.year}-${now.month.toString().padLeft(2, '0')}";
 
     bool isPartial = amount < remainingBalance - 0.01;
 
@@ -557,16 +541,14 @@ class FirestoreService {
         throw Exception("Payment not found");
       }
 
-      final String roomNumber =
-          (paymentData["room"] ?? "").toString();
+      final String roomNumber = (paymentData["room"] ?? "").toString();
 
-      final double approvedAmount =
-          paymentData["amount"] is num
-              ? (paymentData["amount"] as num).toDouble()
-              : double.tryParse(
-                    (paymentData["amount"] ?? "0").toString(),
-                  ) ??
-                  0.0;
+      final double approvedAmount = paymentData["amount"] is num
+          ? (paymentData["amount"] as num).toDouble()
+          : double.tryParse(
+                (paymentData["amount"] ?? "0").toString(),
+              ) ??
+              0.0;
 
       final String paymentMonth =
           (paymentData["paymentMonth"] ?? "").toString();
@@ -588,35 +570,29 @@ class FirestoreService {
       final roomRef = roomDoc.reference;
       final roomData = roomDoc.data();
 
-      final double totalBill =
-          roomData["totalBill"] is num
-              ? (roomData["totalBill"] as num).toDouble()
-              : 0.0;
+      final double totalBill = roomData["totalBill"] is num
+          ? (roomData["totalBill"] as num).toDouble()
+          : 0.0;
 
-      final double currentAmountPaid =
-          roomData["amountPaid"] is num
-              ? (roomData["amountPaid"] as num).toDouble()
-              : 0.0;
+      final double currentAmountPaid = roomData["amountPaid"] is num
+          ? (roomData["amountPaid"] as num).toDouble()
+          : 0.0;
 
-      double newAmountPaid =
-          currentAmountPaid + approvedAmount;
+      double newAmountPaid = currentAmountPaid + approvedAmount;
 
       if (newAmountPaid > totalBill) {
         newAmountPaid = totalBill;
       }
 
-      double newRemainingBalance =
-          totalBill - newAmountPaid;
+      double newRemainingBalance = totalBill - newAmountPaid;
 
       if (newRemainingBalance < 0) {
         newRemainingBalance = 0;
       }
 
-      final bool isFullPayment =
-          newRemainingBalance <= 0.01;
+      final bool isFullPayment = newRemainingBalance <= 0.01;
 
-      final String newStatus =
-          isFullPayment ? "paid" : "partial";
+      final String newStatus = isFullPayment ? "paid" : "partial";
 
       final batch = _db.batch();
 
@@ -624,6 +600,8 @@ class FirestoreService {
       batch.update(paymentRef, {
         "status": "verified",
         "verifiedAt": approvedTime,
+        "resultType": isFullPayment ? "approved_full" : "approved_partial",
+        "tenantSeen": false,
       });
 
       // UPDATE ROOM PAYMENT STATUS
@@ -636,21 +614,18 @@ class FirestoreService {
       };
 
       if (paymentMonth.isNotEmpty) {
-        roomUpdates["history.$paymentMonth.paymentStatus"] =
-            newStatus;
+        roomUpdates["history.$paymentMonth.paymentStatus"] = newStatus;
 
         roomUpdates["history.$paymentMonth.paidAt"] =
             isFullPayment ? approvedTime : null;
 
-        roomUpdates["history.$paymentMonth.amountPaid"] =
-            newAmountPaid;
+        roomUpdates["history.$paymentMonth.amountPaid"] = newAmountPaid;
       }
 
       batch.update(roomRef, roomUpdates);
 
       // UPDATE TENANT STATUS
-      final tenantRef =
-          _db.collection("users").doc(tenantId);
+      final tenantRef = _db.collection("users").doc(tenantId);
 
       batch.update(tenantRef, {
         "approved": true,
@@ -682,6 +657,8 @@ class FirestoreService {
     try {
       await _db.collection("payments").doc(paymentId).update({
         "status": "rejected",
+        "resultType": "rejected",
+        "tenantSeen": false,
       });
     } catch (e) {
       print("REJECT PAYMENT ERROR: $e");
@@ -739,10 +716,8 @@ class FirestoreService {
         final String status = (contract["status"] ?? "").toString();
         if (_inactiveContractStatuses.contains(status)) continue;
 
-        final String contractTenantId =
-            (contract["tenantId"] ?? "").toString();
-        final Timestamp? startTimestamp =
-            contract["startDate"] as Timestamp?;
+        final String contractTenantId = (contract["tenantId"] ?? "").toString();
+        final Timestamp? startTimestamp = contract["startDate"] as Timestamp?;
 
         if (contractTenantId.isEmpty || startTimestamp == null) continue;
 

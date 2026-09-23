@@ -29,6 +29,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String role = "tenant";
   bool _obscurePassword = true;
 
+  static const Color accentColor = Colors.black;
+
   @override
   void dispose() {
     nameController.dispose();
@@ -42,15 +44,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return (100000 + random.nextInt(900000)).toString();
   }
 
-
   String _buildFakeEmail(String username) {
-    final sanitized = username
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+    final sanitized =
+        username.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9._-]'), '');
     return '$sanitized@rentpay.local';
   }
-
 
   String? _validatePassword(String password) {
     if (password.length < 8) {
@@ -65,6 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
+  // ============================================================
+  // REGISTER USER
+  // ============================================================
+
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
@@ -73,7 +75,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // CHECK PASSWORD STRENGTH BEFORE PROCEEDING
     final passwordError = _validatePassword(passwordController.text.trim());
     if (passwordError != null) {
       showAppWarningBanner(context, passwordError);
@@ -82,7 +83,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final username = emailController.text.trim();
     final fakeEmail = _buildFakeEmail(username);
-
 
     if (fakeEmail.startsWith('@')) {
       showAppWarningBanner(
@@ -95,7 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => isLoading = true);
 
     try {
-      // STEP 1: REGISTER USER
       var user = await _auth.register(
         fakeEmail,
         passwordController.text.trim(),
@@ -105,7 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         throw Exception("Registration failed");
       }
 
-      // CHECK FIREBASE AUTHENTICATION
       final currentUser = FirebaseAuth.instance.currentUser;
 
       debugPrint(
@@ -181,152 +179,241 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  // ============================================================
+  // INPUT STYLE
+  // ============================================================
+
   InputDecoration inputStyle(String label) {
     return InputDecoration(
       labelText: label,
+      labelStyle: const TextStyle(
+        color: Color(0xFF4B5358),
+        fontSize: 14,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: accentColor,
+        fontWeight: FontWeight.w600,
+      ),
       filled: true,
-      fillColor: const Color(0xFFFFFBF8),
+      fillColor: const Color(0xFFF7F7F8),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 12,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFB8B8BE)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.deepOrange, width: 2),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: accentColor, width: 2),
       ),
     );
   }
 
+  // ============================================================
+  // BUILD UI
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF6A1A), Color(0xFFFFC5A4), Color(0xFFFFF8F3)],
-            stops: [0, 0.28, 0.8],
-          ),
-        ),
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
         child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.97),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: const [
-                BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10)),
-              ],
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 24,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: Image.asset(
-                          "assets/rentpay_logo.png",
-                          width: 92,
-                          height: 92,
-                          fit: BoxFit.cover,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 320,
+              ),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  12,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // TITLE
+                    const Text(
+                      "Create Account",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // NAME
+                    TextField(
+                      controller: nameController,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                      cursorColor: Colors.black,
+                      decoration: inputStyle("Name"),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // USERNAME
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.text,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                      cursorColor: Colors.black,
+                      decoration: inputStyle("Username"),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // PASSWORD
+                    TextField(
+                      controller: passwordController,
+                      obscureText: _obscurePassword,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                      cursorColor: Colors.black,
+                      decoration: inputStyle("Password").copyWith(
+                        helperText:
+                            "Must be 8+ characters with letters and numbers",
+                        helperMaxLines: 2,
+                        helperStyle: const TextStyle(fontSize: 11),
+                        suffixIcon: IconButton(
+                          splashRadius: 20,
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: const Color(0xFF4B5358),
+                            size: 19,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        "Create Account",
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ROLE
+                    DropdownButtonFormField<String>(
+                      value: role,
+                      decoration: inputStyle("Role"),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: "tenant",
+                          child: Text("Tenant"),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-                TextField(
-                  controller: nameController,
-                  decoration: inputStyle("Name"),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.text,
-                  decoration: inputStyle("Username"),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: inputStyle("Password").copyWith(
-                    helperText:
-                        "Must be 8+ characters with letters and numbers",
-                    helperMaxLines: 2,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
+                        DropdownMenuItem(
+                          value: "owner",
+                          child: Text("Owner"),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => role = v);
+                        }
                       },
                     ),
-                  ),
-                ),
-                const SizedBox(height: 25),
-                DropdownButtonFormField<String>(
-                  value: role,
-                  decoration: inputStyle("Role"),
-                  items: const [
-                    DropdownMenuItem(value: "tenant", child: Text("Tenant")),
-                    DropdownMenuItem(value: "owner", child: Text("Owner")),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() => role = v);
-                    }
-                  },
-                ),
-                const SizedBox(height: 35),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : registerUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+
+                    const SizedBox(height: 18),
+
+                    // REGISTER BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : registerUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          disabledBackgroundColor:
+                              accentColor.withOpacity(0.55),
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Center(
+                                child: Text(
+                                  "Register",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
-                    child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Register"),
-                  ),
+
+                    const SizedBox(height: 10),
+
+                    // BACK TO LOGIN
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: accentColor,
+                        ),
+                        child: const Text(
+                          "Already have an account? Login",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 15),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Already have an account? Login"),
-                  ),
-                )
-              ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

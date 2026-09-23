@@ -47,8 +47,7 @@ class BoardingScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: tenants.length,
                   itemBuilder: (context, index) {
-                    var data =
-                        tenants[index].data() as Map<String, dynamic>;
+                    var data = tenants[index].data() as Map<String, dynamic>;
 
                     return Card(
                       shape: RoundedRectangleBorder(
@@ -60,7 +59,6 @@ class BoardingScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-
                             // DELETE BUTTON
                             Align(
                               alignment: Alignment.topRight,
@@ -70,7 +68,6 @@ class BoardingScreen extends StatelessWidget {
                                   color: Colors.red,
                                 ),
                                 onPressed: () async {
-
                                   bool? confirm = await showDialog(
                                     context: context,
                                     builder: (context) => AlertDialog(
@@ -96,12 +93,9 @@ class BoardingScreen extends StatelessWidget {
                                   );
 
                                   if (confirm == true) {
+                                    String tenantId = tenants[index].id;
 
-                                    String tenantId =
-                                        tenants[index].id;
-
-                                    await firestore
-                                        .deletePayment(tenantId);
+                                    await firestore.deletePayment(tenantId);
 
                                     if (!context.mounted) return;
                                     showAppSuccessBanner(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/firestore_service.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/app_warning_banner.dart';
 import 'room_details_screen.dart';
 
@@ -43,6 +44,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     String roomId,
     Map<String, dynamic> room,
   ) {
+    // Mga kulay na sumusunod sa light/dark mode
+    final c = AppColors.of(context);
+
     final rentController = TextEditingController(
       text: (room["monthlyRent"] ?? 0).toString(),
     );
@@ -80,11 +84,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-
               TextField(
                 controller: rentController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(
+                keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 decoration: const InputDecoration(
@@ -93,9 +95,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -106,7 +106,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-
               TextField(
                 controller: prevElectricController,
                 keyboardType: TextInputType.number,
@@ -115,9 +114,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 10),
-
               TextField(
                 controller: currentElectricController,
                 keyboardType: TextInputType.number,
@@ -126,9 +123,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -139,7 +134,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-
               TextField(
                 controller: prevWaterController,
                 keyboardType: TextInputType.number,
@@ -148,9 +142,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 10),
-
               TextField(
                 controller: currentWaterController,
                 keyboardType: TextInputType.number,
@@ -171,10 +163,10 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
           // CANCEL
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               "Cancel",
               style: TextStyle(
-                color: Color(0xFF123E5A),
+                color: c.title,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -227,10 +219,10 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 "Billing updated successfully",
               );
             },
-            child: const Text(
+            child: Text(
               "Save",
               style: TextStyle(
-                color: Color(0xFF123E5A),
+                color: c.title,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -247,25 +239,27 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Mga kulay na sumusunod sa light/dark mode
+    final c = AppColors.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Rentpay",
           style: TextStyle(
             fontFamily: 'RentpayScript',
             fontSize: 32,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF123E5A),
+            color: c.title,
             letterSpacing: 0.5,
           ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF123E5A),
+        foregroundColor: c.title,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: firestore.getOwnerRooms(widget.ownerId),
         builder: (context, snapshot) {
@@ -277,8 +271,8 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   "ERROR: ${snapshot.error}",
-                  style: const TextStyle(
-                    color: Colors.red,
+                  style: TextStyle(
+                    color: c.danger,
                   ),
                 ),
               ),
@@ -298,8 +292,11 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
           final rooms = snapshot.data!.docs.toList();
 
           if (rooms.isEmpty) {
-            return const Center(
-              child: Text("No rooms created"),
+            return Center(
+              child: Text(
+                "No rooms created",
+                style: TextStyle(color: c.subtitle),
+              ),
             );
           }
 
@@ -320,17 +317,13 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
           // =================================================
 
           rooms.sort((a, b) {
-            final roomA =
-                (a.data() as Map<String, dynamic>)["roomNumber"];
+            final roomA = (a.data() as Map<String, dynamic>)["roomNumber"];
 
-            final roomB =
-                (b.data() as Map<String, dynamic>)["roomNumber"];
+            final roomB = (b.data() as Map<String, dynamic>)["roomNumber"];
 
-            final numberA =
-                int.tryParse(roomA.toString()) ?? 0;
+            final numberA = int.tryParse(roomA.toString()) ?? 0;
 
-            final numberB =
-                int.tryParse(roomB.toString()) ?? 0;
+            final numberB = int.tryParse(roomB.toString()) ?? 0;
 
             return numberA.compareTo(numberB);
           });
@@ -344,8 +337,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             itemBuilder: (context, index) {
               final roomDoc = rooms[index];
 
-              final room =
-                  roomDoc.data() as Map<String, dynamic>;
+              final room = roomDoc.data() as Map<String, dynamic>;
 
               return _buildCompactRoomCard(
                 context,
@@ -368,6 +360,9 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     String roomId,
     Map<String, dynamic> room,
   ) {
+    // Mga kulay na sumusunod sa light/dark mode
+    final c = AppColors.of(context);
+
     final tenantId = room["tenantId"]?.toString() ?? "";
     final isOccupied = tenantId.isNotEmpty;
 
@@ -377,11 +372,11 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
         vertical: 7,
       ),
       elevation: 0,
-      color: Colors.white.withOpacity(0.78),
+      color: c.glass(),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-          color: Colors.white.withOpacity(0.8),
+          color: c.glassBorder(),
         ),
       ),
       child: ListTile(
@@ -389,7 +384,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
           horizontal: 16,
           vertical: 6,
         ),
-
         leading: const CircleAvatar(
           backgroundColor: Color(0x1AE88916),
           child: Icon(
@@ -397,22 +391,19 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             color: Color(0xFFE88916),
           ),
         ),
-
         title: Text(
           "Room ${room["roomNumber"]}",
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: Color(0xFF123E5A),
+            color: c.title,
           ),
         ),
-
         subtitle: Text(
           "Monthly Rent: ₱${room["monthlyRent"]}",
-          style: const TextStyle(
-            color: Color(0xFF587287),
+          style: TextStyle(
+            color: c.subtitle,
           ),
         ),
-
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -427,35 +418,37 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(
+            Icon(
               Icons.chevron_right,
-              color: Color(0xFF587287),
+              color: c.subtitle,
             ),
           ],
         ),
-
         onTap: () {
           Navigator.push(
             context,
             _fadeRoute(
               RoomDetailsScreen(
+                // Kailangan ng RoomDetailsScreen ang roomId bilang
+                // hiwalay na parameter (hindi lang sa loob ng Map)
+                // para makapag-listen ito ng LIVE data sa Firestore
+                // at agad na mag-reflect ang updateRoomBilling().
+                roomId: roomId,
+
                 roomData: {
                   ...room,
                   "roomId": roomId,
                 },
 
-                onUpdateBilling: () =>
-                    showBillingDialog(
+                onUpdateBilling: () => showBillingDialog(
                   roomId,
                   room,
                 ),
 
                 onDeleteRoom: () async {
-                  final confirmed =
-                      await showDialog<bool>(
+                  final confirmed = await showDialog<bool>(
                     context: context,
-                    builder: (dialogContext) =>
-                        AlertDialog(
+                    builder: (dialogContext) => AlertDialog(
                       title: const Text(
                         "Delete Room",
                       ),
@@ -464,8 +457,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () =>
-                              Navigator.pop(
+                          onPressed: () => Navigator.pop(
                             dialogContext,
                             false,
                           ),
@@ -474,8 +466,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () =>
-                              Navigator.pop(
+                          onPressed: () => Navigator.pop(
                             dialogContext,
                             true,
                           ),

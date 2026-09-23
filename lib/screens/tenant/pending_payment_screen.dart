@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class PendingPaymentScreen extends StatelessWidget {
   final String paymentId;
@@ -16,59 +15,75 @@ class PendingPaymentScreen extends StatelessWidget {
     required this.onSubmitNew,
   });
 
-  void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (!context.mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final textPrimary =
+        isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
+
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Payment Status"),
-        backgroundColor: Colors.deepOrange,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: "Logout",
-            onPressed: () => _logout(context),
+        title: Text(
+          'Rentpay',
+          style: TextStyle(
+            fontFamily: 'RentpayScript',
+            fontSize: 32,
+            fontWeight: FontWeight.w400,
+            color: textPrimary,
+            letterSpacing: 0.5,
           ),
-        ],
+        ),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
-            .collection("payments")
+            .collection('payments')
             .doc(paymentId)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return _buildRejected(
               context,
-              "Hindi na ma-access ang payment record na ito "
-              "(maaaring na-delete na). Pindutin sa ibaba para "
-              "makabalik sa normal na payment screen.",
+              'Hindi na ma-access ang payment record na ito.\n'
+              'Pindutin ang button sa ibaba para magsumite ulit.',
             );
           }
 
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: textPrimary,
+                strokeWidth: 2,
+              ),
+            );
           }
 
           if (!snapshot.data!.exists) {
-            return _buildRejected(context, "Payment record not found.");
+            return _buildRejected(
+              context,
+              'Payment record not found.\n'
+              'Pindutin ang button sa ibaba para magsumite ulit.',
+            );
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
-          final String status = data["status"] ?? "pending";
-          final bool isPartial = data["isPartial"] ?? false;
+          final status = (data['status'] ?? 'pending').toString();
+          final isPartial = data['isPartial'] == true;
 
-          if (status == "verified") {
+          if (status == 'verified') {
             return isPartial
                 ? _buildPartialApproved(context)
                 : _buildApproved(context);
-          } else if (status == "rejected") {
+          }
+
+          if (status == 'rejected') {
             return _buildRejected(context, null);
           }
 
@@ -78,172 +93,134 @@ class PendingPaymentScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPending(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.hourglass_top, color: Colors.orange, size: 72),
-            const SizedBox(height: 20),
-            const Text(
-              "Payment Submitted",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Your payment screenshot has been sent successfully.\nPlease wait for the owner to review and accept it.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "STATUS: PENDING REVIEW",
-                style: TextStyle(
-                  color: Colors.deepOrange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildStatusCard(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String message,
+    String? statusText,
+    String? buttonText,
+    VoidCallback? onPressed,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-  Widget _buildApproved(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 72),
-            const SizedBox(height: 20),
-            const Text(
-              "Payment Approved!",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Your payment has been reviewed and accepted by the owner.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: Colors.grey),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text("Continue to Dashboard"),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final textPrimary =
+        isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
 
-  Widget _buildPartialApproved(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.task_alt, color: Colors.blue, size: 72),
-            const SizedBox(height: 20),
-            const Text(
-              "Partial Payment Accepted!",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Your partial payment has been reviewed and accepted by the owner.\nYou may check your remaining balance on the dashboard.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "STATUS: PARTIAL PAYMENT",
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text("Go to Dashboard"),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final textSecondary =
+        isDark ? const Color(0xFFA9B4B8) : const Color(0xFF587287);
 
-  Widget _buildRejected(BuildContext context, String? overrideMessage) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cancel, color: Colors.red, size: 72),
-            const SizedBox(height: 20),
-            const Text(
-              "Payment Rejected",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
+            Icon(icon, color: iconColor, size: 30),
             const SizedBox(height: 12),
             Text(
-              overrideMessage ??
-                  "Your payment could not be verified.\nPlease submit a new payment screenshot.",
+              title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, color: Colors.grey),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onSubmitNew,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text("Submit New Payment"),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: textPrimary,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(fontSize: 12.5, height: 1.4, color: textSecondary),
+            ),
+            if (statusText != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                statusText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  color: textSecondary,
+                ),
+              ),
+            ],
+            if (buttonText != null && onPressed != null) ...[
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: onPressed,
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: textPrimary,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero),
+                ),
+                icon: Icon(Icons.upload_file_outlined,
+                    size: 16, color: textPrimary),
+                label: Text(
+                  buttonText,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  Widget _buildPending(BuildContext context) => _buildStatusCard(
+        context,
+        icon: Icons.send_rounded,
+        iconColor: const Color(0xFFDDE3E6),
+        title: 'Payment Submitted',
+        message:
+            'Your payment screenshot has been sent successfully.\nPlease wait for the owner to review and accept it.',
+        statusText: 'STATUS: PENDING REVIEW',
+      );
+
+  Widget _buildApproved(BuildContext context) => _buildStatusCard(
+        context,
+        icon: Icons.check_circle_outline_rounded,
+        iconColor: const Color(0xFF1EBA63),
+        title: 'Payment Approved!',
+        message: 'Your payment has been reviewed and accepted by the owner.',
+        buttonText: 'Continue to Dashboard',
+        onPressed: onContinue,
+      );
+
+  Widget _buildPartialApproved(BuildContext context) => _buildStatusCard(
+        context,
+        icon: Icons.check_circle_outline_rounded,
+        iconColor: const Color(0xFF3E8BEA),
+        title: 'Partial Payment Accepted!',
+        message:
+            'Your partial payment has been reviewed and accepted by the owner.\nYou may check your remaining balance on the dashboard.',
+        buttonText: 'Continue to Dashboard',
+        onPressed: onContinue,
+      );
+
+  Widget _buildRejected(BuildContext context, String? overrideMessage) =>
+      _buildStatusCard(
+        context,
+        icon: Icons.close_rounded,
+        iconColor: const Color(0xFFE93636),
+        title: 'Payment Rejected',
+        message: overrideMessage ??
+            'Your payment could not be verified.\nPlease submit a new payment screenshot.',
+        buttonText: 'Submit New Payment',
+        onPressed: onSubmitNew,
+      );
 }

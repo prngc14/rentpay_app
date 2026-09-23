@@ -6,14 +6,17 @@ import 'owner_rooms_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../owner_esign/contract_list_screen.dart';
 
 import 'payment_requests_screen.dart';
+import '../shared/messages_screen.dart';
 import 'upload_qr_screen.dart';
 import '../../widgets/app_warning_banner.dart';
 import '../../widgets/rentpay_backdrop.dart';
+import '../../widgets/messenger_icon.dart';
 import '../../widgets/juggernaut_chat_screen.dart';
 import '../../services/cloudinary_service.dart';
 import '../../services/firestore_service.dart';
@@ -32,14 +35,24 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
   // ===== THEME-AWARE COLORS (dark mode support) =====
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
-  Color get _textPrimary => _isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
-  Color get _textSecondary => _isDark ? const Color(0xFFA9B4B8) : const Color(0xFF587287);
-  Color get _panelTint => _isDark ? const Color(0xCC1B2124) : const Color(0xB8FFFFFF);
-  Color get _panelBorder => _isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.82);
-  Color get _avatarBg => _isDark ? const Color(0xFF232A2E) : const Color(0xD9FFFFFF);
-  Color get _navBg => _isDark ? const Color(0xFF15191B).withOpacity(0.92) : Colors.white.withOpacity(0.92);
-  Color get _navIndicator => _isDark ? const Color(0xFF26313A) : const Color(0xFFE5F1F3);
-  Color get _iconCircleBg => _isDark ? Colors.white.withOpacity(0.12) : const Color(0x66FFFFFF);
+  Color get _textPrimary =>
+      _isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
+  Color get _textSecondary =>
+      _isDark ? const Color(0xFFA9B4B8) : const Color(0xFF587287);
+  Color get _panelTint =>
+      _isDark ? const Color(0xCC1B2124) : const Color(0xB8FFFFFF);
+  Color get _panelBorder =>
+      _isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.82);
+  Color get _avatarBg =>
+      _isDark ? const Color(0xFF232A2E) : const Color(0xD9FFFFFF);
+  Color get _navBg => _isDark
+      ? const Color(0xFF15191B).withOpacity(0.92)
+      : Colors.white.withOpacity(0.92);
+  Color get _navIndicator =>
+      _isDark ? const Color(0xFF26313A) : const Color(0xFFE5F1F3);
+  // Border used for input fields/dividers inside dialogs & sheets.
+  Color get _inputBorder =>
+      _isDark ? const Color(0xFF3A464C) : const Color(0xFFCBD8DE);
 
   @override
   void initState() {
@@ -112,9 +125,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               backgroundColor: Colors.transparent,
               centerTitle: true,
               leading: user != null ? _buildNotificationButton(user.uid) : null,
-              actions: [
-                _buildDarkModeButton(),
-              ],
+              actions: const [],
             )
           : null,
       body: _selectedIndex == 0
@@ -138,16 +149,18 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         }
 
                         if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
 
                         final userData =
                             snapshot.data!.data() as Map<String, dynamic>;
 
-                        final String ownerCode = userData["ownerCode"] ?? "------";
+                        final String ownerCode =
+                            userData["ownerCode"] ?? "------";
                         final String name = userData["name"] ?? "Owner";
-                        final String? profileImageUrl =
-                            _profileImageOverride ?? userData["profileImageUrl"];
+                        final String? profileImageUrl = _profileImageOverride ??
+                            userData["profileImageUrl"];
 
                         return StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance
@@ -156,20 +169,24 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               .snapshots(),
                           builder: (context, roomsSnapshot) {
                             if (!roomsSnapshot.hasData) {
-                              return const Center(child: CircularProgressIndicator());
+                              return const Center(
+                                  child: CircularProgressIndicator());
                             }
 
                             final rooms = roomsSnapshot.data!.docs;
                             final totalRooms = rooms.length;
                             final occupiedRooms = rooms.where((room) {
                               final data = room.data() as Map<String, dynamic>;
-                              final tenantId = data["tenantId"]?.toString() ?? "";
+                              final tenantId =
+                                  data["tenantId"]?.toString() ?? "";
                               return tenantId.isNotEmpty;
                             }).length;
                             final availableRooms = totalRooms - occupiedRooms;
-                            final totalCollection = rooms.fold<double>(0, (total, room) {
+                            final totalCollection =
+                                rooms.fold<double>(0, (total, room) {
                               final data = room.data() as Map<String, dynamic>;
-                              return total + (data["amountPaid"] ?? 0).toDouble();
+                              return total +
+                                  (data["amountPaid"] ?? 0).toDouble();
                             });
 
                             int paidPayments = 0;
@@ -180,17 +197,19 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             for (final room in rooms) {
                               final data = room.data() as Map<String, dynamic>;
 
-                              final tenantId = data["tenantId"]?.toString() ?? "";
+                              final tenantId =
+                                  data["tenantId"]?.toString() ?? "";
 
                               // Huwag bilangin ang vacant room sa payment status.
                               if (tenantId.isEmpty) {
                                 continue;
                               }
 
-                              final status = (data["paymentStatus"] ?? "pending")
-                                  .toString()
-                                  .toLowerCase()
-                                  .trim();
+                              final status =
+                                  (data["paymentStatus"] ?? "pending")
+                                      .toString()
+                                      .toLowerCase()
+                                      .trim();
 
                               final isOverdue = data["isOverdue"] == true;
 
@@ -209,7 +228,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               padding: const EdgeInsets.fromLTRB(16, 28, 16, 3),
                               child: Column(
                                 children: [
-                                  _buildOwnerHeader(name, ownerCode, profileImageUrl),
+                                  _buildOwnerHeader(
+                                      name, ownerCode, profileImageUrl),
                                   const SizedBox(height: 20),
                                   _buildCollectionCard(
                                     totalCollection: totalCollection,
@@ -253,7 +273,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                     ),
             )
           : (_selectedIndex >= 1 && _selectedIndex <= 3 && user != null)
-              // Ang Rooms, Payments at Contracts ay may sariling AppBar, kaya
+              // Ang Rooms, Messages at Payment QR ay may sariling AppBar, kaya
               // inilalagay ang bell sa ibabaw nito, sa parehong pwesto ng bell
               // sa AppBar ng Home at More.
               ? Stack(
@@ -301,14 +321,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             label: "Rooms",
           ),
           NavigationDestination(
-            icon: Icon(Icons.payments_outlined),
-            selectedIcon: Icon(Icons.payments),
-            label: "Payments",
+            icon: MessengerIcon(filled: false),
+            selectedIcon: MessengerIcon(),
+            label: "Messages",
           ),
           NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description),
-            label: "Contracts",
+            icon: Icon(Icons.qr_code_2),
+            selectedIcon: Icon(Icons.qr_code_2),
+            label: "Payment QR",
           ),
           NavigationDestination(
             icon: Icon(Icons.more_horiz),
@@ -318,18 +338,50 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         ],
       ),
       floatingActionButton: _selectedIndex == 1 && user != null
-          ? SizedBox(
-              height: 36,
-              child: FloatingActionButton.extended(
-                heroTag: "createRoomFab",
-                onPressed: () => _showCreateRoomDialog(context, user.uid),
-                backgroundColor: const Color(0xE6FFFFFF),
-                foregroundColor: _textPrimary,
-                elevation: 1,
-                extendedPadding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                icon: const Icon(Icons.add_home, size: 15),
-                label: const Text("Create Room", style: TextStyle(fontSize: 11)),
+          ? Theme(
+              // Explicit override kasi may ThemeData.floatingActionButtonTheme
+              // posibleng nag-a-apply ng sarili nitong default background,
+              // kaya sinisiguro dito na itim talaga ito sa dark mode.
+              // Ang colorScheme.surfaceTint (hindi ang per-widget
+              // surfaceTintColor, na wala pa sa Flutter version na ito) ang
+              // ginagamit ng M3 para sa elevation tint overlay, kaya dito
+              // natin ito i-null out.
+              data: Theme.of(context).copyWith(
+                colorScheme: Theme.of(context).colorScheme.copyWith(
+                      surfaceTint: Colors.transparent,
+                    ),
+                floatingActionButtonTheme: FloatingActionButtonThemeData(
+                  backgroundColor:
+                      _isDark ? Colors.black : const Color(0xE6FFFFFF),
+                  foregroundColor: _isDark ? Colors.white : _textPrimary,
+                ),
+              ),
+              child: SizedBox(
+                height: 36,
+                child: FloatingActionButton.extended(
+                  heroTag: "createRoomFab",
+                  onPressed: () => _showCreateRoomDialog(context, user.uid),
+                  backgroundColor:
+                      _isDark ? Colors.black : const Color(0xE6FFFFFF),
+                  foregroundColor: _isDark ? Colors.white : _textPrimary,
+                  elevation: 1,
+                  extendedPadding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: _isDark
+                        ? const BorderSide(color: Color(0xFF46545B))
+                        : BorderSide.none,
+                  ),
+                  icon: Icon(Icons.add_home,
+                      size: 15, color: _isDark ? Colors.white : _textPrimary),
+                  label: Text(
+                    "Create Room",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _isDark ? Colors.white : _textPrimary,
+                    ),
+                  ),
+                ),
               ),
             )
           : null,
@@ -352,10 +404,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             onTap: () {
               themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
             },
-            child: Container(
+            child: SizedBox(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(color: _iconCircleBg, shape: BoxShape.circle),
               child: Icon(
                 isDark ? Icons.dark_mode : Icons.dark_mode_outlined,
                 color: _textPrimary,
@@ -384,9 +435,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       builder: (context, paymentsSnapshot) {
         final int pendingCount = paymentsSnapshot.data?.docs.where((payment) {
               final data = payment.data() as Map<String, dynamic>;
-              return (data["status"] ?? "pending")
-                      .toString()
-                      .toLowerCase() ==
+              return (data["status"] ?? "pending").toString().toLowerCase() ==
                   "pending";
             }).length ??
             0;
@@ -464,95 +513,127 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 signedContracts
                     .sort((a, b) => a["room"]!.compareTo(b["room"]!));
 
-                final int count = pendingCount +
-                    overdueRooms.length +
-                    waitingContracts.length +
-                    signedContracts.length;
+                // Mga bagong message mula sa tenants (hindi pa nababasa).
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection("chats")
+                      .where("ownerId", isEqualTo: ownerId)
+                      .snapshots(),
+                  builder: (context, chatsSnapshot) {
+                    final List<Map<String, dynamic>> messageChats = [];
 
-                // Ang bell ay kapareho ng dark mode button: ang InkWell ay nasa
-                // mismong 42x42 na bilog lang, kaya pareho ang laki ng pindot.
-                // Ang badge ay nasa labas ng InkWell at hindi humaharang sa tap.
-                return Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Center(
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            left: 0,
-                            bottom: 0,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: () {
-                                if (count > 0) {
-                                  _showNotificationPanel(
-                                    ownerId: ownerId,
-                                    pendingCount: pendingCount,
-                                    overdueRooms: overdueRooms,
-                                    waitingContracts: waitingContracts,
-                                    signedContracts: signedContracts,
-                                  );
-                                }
-                              },
-                              child: Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: _iconCircleBg,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.notifications,
-                                  color: _textPrimary,
-                                  size: 22,
+                    for (final doc in chatsSnapshot.data?.docs ?? []) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final int unread =
+                          (data["unreadOwner"] as num?)?.toInt() ?? 0;
+
+                      if (unread <= 0) continue;
+
+                      final lastAt = data["lastMessageAt"];
+
+                      messageChats.add({
+                        "tenantId": (data["tenantId"] ?? "").toString(),
+                        "unread": unread,
+                        "lastMessage": (data["lastMessage"] ?? "").toString(),
+                        "time": lastAt is Timestamp
+                            ? lastAt.millisecondsSinceEpoch
+                            : DateTime.now().millisecondsSinceEpoch,
+                      });
+                    }
+
+                    // Pinakabagong message muna
+                    messageChats.sort(
+                      (a, b) => (b["time"] as int).compareTo(a["time"] as int),
+                    );
+
+                    final int count = pendingCount +
+                        overdueRooms.length +
+                        waitingContracts.length +
+                        signedContracts.length +
+                        messageChats.length;
+
+                    // Ang bell ay kapareho ng dark mode button: ang InkWell ay nasa
+                    // mismong 42x42 na bilog lang, kaya pareho ang laki ng pindot.
+                    // Ang badge ay nasa labas ng InkWell at hindi humaharang sa tap.
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Center(
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                left: 0,
+                                bottom: 0,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(24),
+                                  onTap: () {
+                                    if (count > 0) {
+                                      _showNotificationPanel(
+                                        ownerId: ownerId,
+                                        pendingCount: pendingCount,
+                                        overdueRooms: overdueRooms,
+                                        waitingContracts: waitingContracts,
+                                        signedContracts: signedContracts,
+                                        messageChats: messageChats,
+                                      );
+                                    }
+                                  },
+                                  child: SizedBox(
+                                    width: 42,
+                                    height: 42,
+                                    child: Icon(
+                                      Icons.notifications,
+                                      color: _textPrimary,
+                                      size: 22,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              if (count > 0)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: IgnorePointer(
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 20,
+                                        minHeight: 20,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
+                                      ),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE93636),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        count > 99 ? "99+" : "$count",
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-
-                          if (count > 0)
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: IgnorePointer(
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 2,
-                                  ),
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE93636),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    count > 99 ? "99+" : "$count",
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      height: 1.0,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             );
@@ -563,16 +644,18 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 
   // Notification panel na lumalabas sa ilalim ng bell (hindi na sa ibaba ng screen).
-  // - Contract na napirmahan ng tenant -> Contracts tab (minamarkahang "seen")
-  // - Payment na hinihintay ang approval -> Payments tab
-  // - Overdue na room -> Contracts tab
-  // - Contract na hinihintay pirmahan ng tenant -> Contracts tab
+  // - Bagong message mula sa tenant -> bubukas ang chat nila
+  // - Contract na napirmahan ng tenant -> Contracts screen (mula sa More) (minamarkahang "seen")
+  // - Payment na hinihintay ang approval -> Payments screen (mula sa More)
+  // - Overdue na room -> Contracts screen (mula sa More)
+  // - Contract na hinihintay pirmahan ng tenant -> Contracts screen (mula sa More)
   void _showNotificationPanel({
     required String ownerId,
     required int pendingCount,
     required List<Map<String, String>> overdueRooms,
     required List<Map<String, String>> waitingContracts,
     required List<Map<String, String>> signedContracts,
+    required List<Map<String, dynamic>> messageChats,
   }) {
     final Stream<QuerySnapshot> tenantsStream =
         FirestoreService().getOwnerTenants(ownerId);
@@ -580,7 +663,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     final int total = pendingCount +
         overdueRooms.length +
         waitingContracts.length +
-        signedContracts.length;
+        signedContracts.length +
+        messageChats.length;
     final String paymentLabel = pendingCount == 1 ? 'payment' : 'payments';
 
     showGeneralDialog<void>(
@@ -692,6 +776,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             stream: tenantsStream,
                             builder: (context, tenantSnapshot) {
                               final Map<String, String> tenantNames = {};
+                              final Map<String, String> tenantImages = {};
+                              final Map<String, String> tenantRooms = {};
 
                               for (final tenant
                                   in tenantSnapshot.data?.docs ?? []) {
@@ -701,6 +787,31 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                     (tenantData["name"] ?? "")
                                         .toString()
                                         .trim();
+                                tenantImages[tenant.id] =
+                                    (tenantData["profileImageUrl"] ?? "")
+                                        .toString();
+                                tenantRooms[tenant.id] =
+                                    (tenantData["room"] ?? "").toString();
+                              }
+
+                              String messageSender(String tenantId) {
+                                final name = tenantNames[tenantId];
+                                return (name == null || name.isEmpty)
+                                    ? "your tenant"
+                                    : name;
+                              }
+
+                              String messagePreview(Map<String, dynamic> chat) {
+                                final int unread = chat["unread"] as int;
+                                final String last =
+                                    (chat["lastMessage"] ?? "").toString();
+
+                                if (unread > 1) return "$unread new messages";
+                                if (last.isEmpty) return "Tap to open the chat";
+
+                                return last.length > 60
+                                    ? "${last.substring(0, 60)}..."
+                                    : last;
                               }
 
                               String overdueSubtitle(String? tenantName) {
@@ -715,6 +826,37 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 padding:
                                     const EdgeInsets.fromLTRB(12, 0, 12, 14),
                                 children: [
+                                  // NEW MESSAGES (lila)
+                                  for (final chat in messageChats)
+                                    _buildNotificationTile(
+                                      icon: Icons.chat_bubble,
+                                      color: const Color(0xFF8B5CF6),
+                                      title:
+                                          "New message from ${messageSender(chat["tenantId"] as String)}",
+                                      subtitle: messagePreview(chat),
+                                      onTap: () {
+                                        final String tenantId =
+                                            chat["tenantId"] as String;
+                                        final navigator =
+                                            Navigator.of(this.context);
+                                        Navigator.pop(dialogContext);
+                                        navigator.push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                OwnerTenantChatScreen(
+                                              ownerId: ownerId,
+                                              tenantId: tenantId,
+                                              tenantName:
+                                                  tenantNames[tenantId] ?? "",
+                                              tenantImageUrl:
+                                                  tenantImages[tenantId],
+                                              room: tenantRooms[tenantId],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+
                                   // TENANT SIGNED (berde)
                                   for (final item in signedContracts)
                                     _buildNotificationTile(
@@ -725,10 +867,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                       subtitle:
                                           "${item["tenant"]} signed the contract",
                                       onTap: () async {
+                                        // Nasa More na ang Contracts, kaya
+                                        // bubuksan ang Contracts screen.
+                                        final navigator =
+                                            Navigator.of(this.context);
                                         Navigator.pop(dialogContext);
-                                        setState(() {
-                                          _selectedIndex = 3;
-                                        });
+                                        navigator.push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ContractListScreen(),
+                                          ),
+                                        );
 
                                         // Markahan bilang "seen" para mawala sa bell.
                                         try {
@@ -755,10 +904,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                           "$pendingCount $paymentLabel waiting for approval",
                                       subtitle: "Tap to review payments",
                                       onTap: () {
+                                        // Wala na ang Payments sa bottom nav,
+                                        // kaya bubuksan ang Payments screen.
+                                        final navigator =
+                                            Navigator.of(this.context);
                                         Navigator.pop(dialogContext);
-                                        setState(() {
-                                          _selectedIndex = 2;
-                                        });
+                                        navigator.push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const PaymentRequestsScreen(),
+                                          ),
+                                        );
                                       },
                                     ),
 
@@ -773,10 +929,15 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                         tenantNames[item["tenantId"]],
                                       ),
                                       onTap: () {
+                                        final navigator =
+                                            Navigator.of(this.context);
                                         Navigator.pop(dialogContext);
-                                        setState(() {
-                                          _selectedIndex = 3;
-                                        });
+                                        navigator.push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ContractListScreen(),
+                                          ),
+                                        );
                                       },
                                     ),
 
@@ -790,10 +951,15 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                       subtitle:
                                           "${item["tenant"]} has not signed the contract yet",
                                       onTap: () {
+                                        final navigator =
+                                            Navigator.of(this.context);
                                         Navigator.pop(dialogContext);
-                                        setState(() {
-                                          _selectedIndex = 3;
-                                        });
+                                        navigator.push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ContractListScreen(),
+                                          ),
+                                        );
                                       },
                                     ),
                                 ],
@@ -878,7 +1044,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
-  Widget _buildOwnerHeader(String name, String ownerCode, String? profileImageUrl) {
+  Widget _buildOwnerHeader(
+      String name, String ownerCode, String? profileImageUrl) {
     return Column(
       children: [
         GestureDetector(
@@ -918,11 +1085,20 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: _textPrimary,
+                    // Dark mode: itim ang fill (hindi ang light na
+                    // _textPrimary) para makita ang puting camera icon sa
+                    // itaas nito. Light mode: mananatili ang dating dark navy.
+                    color: _isDark ? Colors.black : _textPrimary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    // Border na tumutugma sa background ng screen sa halip
+                    // na laging puti, para blend ito sa dark mode.
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 2,
+                    ),
                   ),
-                  child: const Icon(Icons.camera_alt, size: 17, color: Colors.white),
+                  child: const Icon(Icons.camera_alt,
+                      size: 17, color: Colors.white),
                 ),
               ),
             ],
@@ -947,15 +1123,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           ),
         ),
         const SizedBox(height: 2),
-        Text("Owner Code", style: TextStyle(color: _textSecondary, fontSize: 11)),
+        Text("Owner Code",
+            style: TextStyle(color: _textSecondary, fontSize: 11)),
       ],
     );
   }
 
+  // Theme-aware bottom sheet for choosing a profile photo source.
   Future<void> _chooseOwnerImageSource() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _isDark ? const Color(0xFF1B2124) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -964,18 +1142,30 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Update profile photo",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _textPrimary,
+              ),
             ),
+            const SizedBox(height: 4),
+            Divider(color: _panelBorder, height: 1),
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text("Take a photo"),
+              leading: Icon(Icons.camera_alt_outlined, color: _textPrimary),
+              title: Text(
+                "Take a photo",
+                style: TextStyle(color: _textPrimary),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text("Choose from gallery"),
+              leading: Icon(Icons.photo_library_outlined, color: _textPrimary),
+              title: Text(
+                "Choose from gallery",
+                style: TextStyle(color: _textPrimary),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             const SizedBox(height: 8),
@@ -993,7 +1183,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final picked = await ImagePicker().pickImage(source: source, imageQuality: 78);
+    final picked =
+        await ImagePicker().pickImage(source: source, imageQuality: 78);
 
     if (picked == null || !mounted) return;
 
@@ -1004,7 +1195,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: 'Adjust Profile Photo',
-          toolbarColor: _textPrimary,
+          toolbarColor: Colors.black,
           toolbarWidgetColor: Colors.white,
           initAspectRatio: CropAspectRatioPreset.square,
           lockAspectRatio: true,
@@ -1036,7 +1227,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
       final versionedImageUrl =
           "$imageUrl?v=${DateTime.now().millisecondsSinceEpoch}";
-      await FirebaseFirestore.instance.collection("users").doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .update({
         "profileImageUrl": versionedImageUrl,
         "profileImageUpdatedAt": FieldValue.serverTimestamp(),
       });
@@ -1066,16 +1260,21 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       icon: Icons.home_work,
       child: Row(
         children: [
-          _buildOverviewMetric(Icons.home_work_outlined, totalRooms, "Total Rooms", const Color(0xFFE88916)),
-          _buildOverviewMetric(Icons.person, occupiedRooms, "Total Tenants", const Color(0xFF2BB98A)),
-          _buildOverviewMetric(Icons.person_pin, occupiedRooms, "Occupied", const Color(0xFF3E8BEA)),
-          _buildOverviewMetric(Icons.radio_button_unchecked, availableRooms, "Available", const Color(0xFF9EA7AA)),
+          _buildOverviewMetric(Icons.home_work_outlined, totalRooms,
+              "Total Rooms", const Color(0xFFE88916)),
+          _buildOverviewMetric(Icons.person, occupiedRooms, "Total Tenants",
+              const Color(0xFF2BB98A)),
+          _buildOverviewMetric(Icons.person_pin, occupiedRooms, "Occupied",
+              const Color(0xFF3E8BEA)),
+          _buildOverviewMetric(Icons.radio_button_unchecked, availableRooms,
+              "Available", const Color(0xFF9EA7AA)),
         ],
       ),
     );
   }
 
-  Widget _buildOverviewMetric(IconData icon, int value, String label, Color color) {
+  Widget _buildOverviewMetric(
+      IconData icon, int value, String label, Color color) {
     return Expanded(
       child: Column(
         children: [
@@ -1087,7 +1286,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           const SizedBox(height: 5),
           Text(
             "$value",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _textPrimary),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800, color: _textPrimary),
           ),
           Text(
             label,
@@ -1130,7 +1330,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             children: [
               const CircleAvatar(
                 radius: 18,
-                backgroundColor: Color(0xFFFFA02E),
+                backgroundColor: Color(0xFF111111),
                 child: Icon(
                   Icons.account_balance_wallet,
                   color: Colors.white,
@@ -1199,6 +1399,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
+  // =====================================================
+  // COLLECTION HISTORY
+  // Isang linya bawat na-verify na bayad, galing sa
+  // "payments" collection (hindi sa running total ng room),
+  // kaya kumpleto pa rin kahit nag-reset ang bill ng room.
+  // =====================================================
+  // =====================================================
+  // COLLECTION HISTORY
+  // Unang dialog: room list lang.
+  // Kapag pinindot ang room, saka ipapakita ang payment records.
+  // =====================================================
   void _showCollectionHistory(
     BuildContext context,
     String ownerId,
@@ -1207,6 +1418,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: _isDark ? const Color(0xFF1B2124) : null,
           title: Row(
             children: [
               Icon(
@@ -1214,10 +1426,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 color: _textPrimary,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   "Collection History",
-                  style: TextStyle(fontSize: 19),
+                  style: TextStyle(
+                    fontSize: 19,
+                    color: _textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -1227,7 +1442,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             height: 420,
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection("rooms")
+                  .collection("payments")
                   .where("ownerId", isEqualTo: ownerId)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -1243,137 +1458,137 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   );
                 }
 
-                final historyItems = <Map<String, dynamic>>[];
+                final Map<String, List<Map<String, dynamic>>> grouped = {};
 
-                for (final room in snapshot.data!.docs) {
-                  final roomData =
-                      room.data() as Map<String, dynamic>;
+                for (final doc in snapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
 
-                  final roomNumber =
-                      (roomData["roomNumber"] ?? "Unknown").toString();
+                  final status = (data["status"] ?? "pending")
+                      .toString()
+                      .toLowerCase()
+                      .trim();
 
-                  final history = roomData["history"];
+                  if (status != "verified") continue;
 
-                  if (history is! Map) continue;
+                  final room = (data["room"] ?? "?").toString();
 
-                  for (final entry in history.entries) {
-                    final month = entry.key.toString();
-                    final historyData = entry.value;
+                  final payment = <String, dynamic>{
+                    "room": room,
+                    "amount": (data["amount"] as num?)?.toDouble() ?? 0.0,
+                    "isPartial": data["isPartial"] == true,
+                    "submittedAt": data["date"] is Timestamp
+                        ? (data["date"] as Timestamp).toDate()
+                        : null,
+                    "verifiedAt": data["verifiedAt"] is Timestamp
+                        ? (data["verifiedAt"] as Timestamp).toDate()
+                        : null,
+                  };
 
-                    if (historyData is! Map) continue;
-
-                    historyItems.add({
-                      "roomNumber": roomNumber,
-                      "month": month,
-                      "totalBill": historyData["totalBill"] ?? 0,
-                      "amountPaid": historyData["amountPaid"] ?? 0,
-                      "paymentStatus":
-                          historyData["paymentStatus"] ?? "unpaid",
-                      "carriedOverBalance":
-                          historyData["carriedOverBalance"] ?? 0,
-                    });
-                  }
+                  grouped.putIfAbsent(room, () => []).add(payment);
                 }
 
-                historyItems.sort((a, b) {
-                  final monthA = a["month"].toString();
-                  final monthB = b["month"].toString();
-
-                  return monthB.compareTo(monthA);
-                });
-
-                if (historyItems.isEmpty) {
-                  return const Center(
-                    child: Text("No collection history yet"),
+                if (grouped.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No collection history yet",
+                      style: TextStyle(color: _textPrimary),
+                    ),
                   );
                 }
 
+                final rooms = grouped.keys.toList()
+                  ..sort((a, b) {
+                    final roomA = int.tryParse(
+                          RegExp(r'\d+').firstMatch(a)?.group(0) ?? "",
+                        ) ??
+                        0;
+                    final roomB = int.tryParse(
+                          RegExp(r'\d+').firstMatch(b)?.group(0) ?? "",
+                        ) ??
+                        0;
+
+                    final numberResult = roomA.compareTo(roomB);
+                    return numberResult != 0 ? numberResult : a.compareTo(b);
+                  });
+
                 return ListView.separated(
-                  itemCount: historyItems.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 16),
+                  itemCount: rooms.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: _panelBorder,
+                  ),
                   itemBuilder: (context, index) {
-                    final item = historyItems[index];
+                    final room = rooms[index];
+                    final roomPayments = grouped[room]!;
 
-                    final double totalBill =
-                        (item["totalBill"] as num).toDouble();
+                    final total = roomPayments.fold<double>(
+                      0.0,
+                      (sum, payment) {
+                        final amount = payment["amount"];
+                        final double paymentAmount = amount is num
+                            ? amount.toDouble()
+                            : double.tryParse(amount?.toString() ?? "0") ?? 0.0;
+                        return sum + paymentAmount;
+                      },
+                    );
 
-                    final double amountPaid =
-                        (item["amountPaid"] as num).toDouble();
-
-                    final double carriedOver =
-                        (item["carriedOverBalance"] as num)
-                            .toDouble();
-
-                    final String status =
-                        item["paymentStatus"].toString();
-
-                    Color statusColor;
-
-                    switch (status.toLowerCase()) {
-                      case "paid":
-                        statusColor = Colors.green;
-                        break;
-                      case "partial":
-                        statusColor = Colors.blue;
-                        break;
-                      case "overdue":
-                        statusColor = Colors.red;
-                        break;
-                      default:
-                        statusColor = Colors.orange;
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Room ${item["roomNumber"]}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              item["month"].toString(),
-                              style: TextStyle(
-                                color: _textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 3,
+                      ),
+                      leading: CircleAvatar(
+                        radius: 19,
+                        backgroundColor: _isDark
+                            ? const Color(0x33E88916)
+                            : const Color(0x1AE88916),
+                        child: Icon(
+                          Icons.meeting_room_rounded,
+                          color: const Color(0xFFE88916),
+                          size: 20,
                         ),
-
-                        const SizedBox(height: 6),
-
-                        Text(
-                          "Total Bill: ₱${totalBill.toStringAsFixed(2)}",
+                      ),
+                      title: Text(
+                        "Room $room",
+                        style: TextStyle(
+                          color: _textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
-
-                        Text(
-                          "Amount Paid: ₱${amountPaid.toStringAsFixed(2)}",
+                      ),
+                      subtitle: Text(
+                        "${roomPayments.length} payment record(s)",
+                        style: TextStyle(
+                          color: _textSecondary,
+                          fontSize: 12,
                         ),
-
-                        if (carriedOver > 0)
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
                           Text(
-                            "Carried Over: ₱${carriedOver.toStringAsFixed(2)}",
+                            "₱${total.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          status.toUpperCase(),
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                          Icon(
+                            Icons.chevron_right,
+                            color: _textSecondary,
+                            size: 20,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      onTap: () {
+                        _showRoomCollectionHistory(
+                          context,
+                          room,
+                          roomPayments,
+                        );
+                      },
                     );
                   },
                 );
@@ -1383,7 +1598,168 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Close"),
+              child: Text(
+                "Close",
+                style: TextStyle(color: _textPrimary),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showRoomCollectionHistory(
+    BuildContext context,
+    String room,
+    List<Map<String, dynamic>> payments,
+  ) {
+    final dateFormat = DateFormat('MMM d, yyyy  h:mm a');
+
+    payments.sort((a, b) {
+      final DateTime? dateA =
+          (a["verifiedAt"] ?? a["submittedAt"]) as DateTime?;
+      final DateTime? dateB =
+          (b["verifiedAt"] ?? b["submittedAt"]) as DateTime?;
+
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      return dateB.compareTo(dateA);
+    });
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _isDark ? const Color(0xFF1B2124) : null,
+          title: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: _textPrimary,
+                ),
+                tooltip: "Back to Collection History",
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.meeting_room_rounded,
+                color: _textPrimary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Room $room History",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: _textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 420,
+            child: ListView.separated(
+              itemCount: payments.length,
+              separatorBuilder: (_, __) => Divider(
+                height: 16,
+                color: _panelBorder,
+              ),
+              itemBuilder: (context, index) {
+                final payment = payments[index];
+
+                final rawAmount = payment["amount"];
+                final double amount = rawAmount is num
+                    ? rawAmount.toDouble()
+                    : double.tryParse(rawAmount?.toString() ?? "0") ?? 0.0;
+
+                final bool isPartial = payment["isPartial"] == true;
+                final DateTime? submittedAt =
+                    payment["submittedAt"] as DateTime?;
+                final DateTime? verifiedAt = payment["verifiedAt"] as DateTime?;
+
+                final badgeColor = isPartial ? Colors.blue : Colors.green;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Payment ${index + 1}",
+                            style: TextStyle(
+                              color: _textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          "₱${amount.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isPartial ? "PARTIAL" : "PAID",
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (verifiedAt != null)
+                      Text(
+                        "Approved: ${dateFormat.format(verifiedAt)}",
+                        style: TextStyle(
+                          color: _textPrimary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    if (submittedAt != null)
+                      Text(
+                        "Submitted: ${dateFormat.format(submittedAt)}",
+                        style: TextStyle(
+                          color: _textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                "Close",
+                style: TextStyle(color: _textPrimary),
+              ),
             ),
           ],
         );
@@ -1502,13 +1878,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               height: 56,
               color: Colors.white,
               padding: const EdgeInsets.all(3),
-              child: Image.asset(
-                "assets/images/juggernaut_logo.png",
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.security, color: _textPrimary, size: 28);
-                },
-              ),
+              child: Image.asset('assets/images/juggernaut_logo.png',
+                  fit: BoxFit.contain),
             ),
           ),
           const SizedBox(width: 11),
@@ -1519,12 +1890,18 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               children: [
                 Text(
                   "Juggernaut",
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _textPrimary),
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: _textPrimary),
                 ),
                 SizedBox(height: 1),
                 Text(
                   "AI Receipt Slasher",
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _textSecondary),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: _textSecondary),
                 ),
               ],
             ),
@@ -1567,13 +1944,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: const Color(0xFFFFA02E),
+                    backgroundColor: const Color(0xFF111111),
                     child: Icon(icon, color: Colors.white, size: 21),
                   ),
                   const SizedBox(width: 9),
                   Text(
                     title,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textPrimary),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary),
                   ),
                 ],
               ),
@@ -1595,9 +1975,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       case 1:
         return OwnerRoomsScreen(ownerId: user.uid);
       case 2:
-        return const PaymentRequestsScreen();
+        return const MessagesScreen();
       case 3:
-        return ContractListScreen();
+        return const UploadQrScreen();
       case 4:
         return _buildMoreTab(user.uid);
       default:
@@ -1614,28 +1994,96 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Owner tools", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                  "Owner tools",
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _textPrimary),
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.verified_user_outlined),
-                  title: const Text("Tenant Verification"),
-                  subtitle: const Text("Review uploaded tenant IDs"),
-                  trailing: const Icon(Icons.chevron_right),
+                  leading: Icon(Icons.payments_outlined, color: _textPrimary),
+                  title:
+                      Text("Payments", style: TextStyle(color: _textPrimary)),
+                  subtitle: Text("Review payment requests",
+                      style: TextStyle(color: _textSecondary)),
+                  trailing: Icon(Icons.chevron_right, color: _textSecondary),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PaymentRequestsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading:
+                      Icon(Icons.description_outlined, color: _textPrimary),
+                  title:
+                      Text("Contracts", style: TextStyle(color: _textPrimary)),
+                  subtitle: Text("Manage tenant contracts",
+                      style: TextStyle(color: _textSecondary)),
+                  trailing: Icon(Icons.chevron_right, color: _textSecondary),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ContractListScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading:
+                      Icon(Icons.verified_user_outlined, color: _textPrimary),
+                  title: Text("Tenant Verification",
+                      style: TextStyle(color: _textPrimary)),
+                  subtitle: Text("Review uploaded tenant IDs",
+                      style: TextStyle(color: _textSecondary)),
+                  trailing: Icon(Icons.chevron_right, color: _textSecondary),
                   onTap: () => _showTenantsDialog(context, ownerId),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.qr_code_2),
-                  title: const Text("Payment QR"),
-                  subtitle: const Text("Manage GCash and Maya QR codes"),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const UploadQrScreen()),
-                    );
-                  },
+                  leading: Icon(Icons.dark_mode_outlined, color: _textPrimary),
+                  title: Text(
+                    "Dark Mode",
+                    style: TextStyle(color: _textPrimary),
+                  ),
+                  subtitle: ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentMode, _) {
+                      return Text(
+                        currentMode == ThemeMode.dark
+                            ? "Currently enabled"
+                            : "Currently disabled",
+                        style: TextStyle(color: _textSecondary),
+                      );
+                    },
+                  ),
+                  trailing: ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentMode, _) {
+                      final isDark = currentMode == ThemeMode.dark;
+
+                      return Switch(
+                        value: isDark,
+                        activeColor: Colors.white,
+                        activeTrackColor: Colors.grey,
+                        inactiveThumbColor: Colors.black,
+                        inactiveTrackColor: Colors.grey,
+                        onChanged: (value) {
+                          themeNotifier.value =
+                              value ? ThemeMode.dark : ThemeMode.light;
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -1644,18 +2092,21 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           Align(
             alignment: Alignment.center,
             child: OutlinedButton.icon(
-              icon: const Icon(Icons.logout),
-              label: const Text("Log out"),
+              icon: Icon(Icons.logout, color: _textPrimary),
+              label: Text("Log out", style: TextStyle(color: _textPrimary)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _textPrimary,
-                side: const BorderSide(color: Color(0x33123E5A)),
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: BorderSide(color: _panelBorder),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
                 if (!mounted) return;
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (route) => false);
               },
             ),
           ),
@@ -1669,6 +2120,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       context: context,
       builder: (_) {
         return AlertDialog(
+          backgroundColor: _isDark ? const Color(0xFF1B2124) : null,
           title: Center(
             child: Text(
               "Rentpay",
@@ -1727,9 +2179,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                     final String image = data["workIdUrl"] ?? "";
 
                     return Card(
+                      color: _isDark ? const Color(0xFF232A2E) : null,
                       margin: const EdgeInsets.only(bottom: 8),
                       elevation: 1,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: _panelBorder),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(8),
                         child: Column(
@@ -1746,8 +2202,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                         child: Image.network(
                                           image,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) => const Center(
-                                            child: Text("Unable to load Work ID image"),
+                                          errorBuilder: (_, __, ___) =>
+                                              const Center(
+                                            child: Text(
+                                                "Unable to load Work ID image"),
                                           ),
                                         ),
                                       ),
@@ -1760,25 +2218,38 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 height: 120,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(9),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(color: _panelBorder),
                                   image: image.isNotEmpty
-                                      ? DecorationImage(image: NetworkImage(image), fit: BoxFit.cover)
+                                      ? DecorationImage(
+                                          image: NetworkImage(image),
+                                          fit: BoxFit.cover)
                                       : null,
                                 ),
                                 child: image.isEmpty
-                                    ? const Center(child: Icon(Icons.image, size: 38, color: Colors.grey))
+                                    ? Center(
+                                        child: Icon(Icons.image,
+                                            size: 38, color: _textSecondary))
                                     : null,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               name,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xff1D1D1F)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: _textPrimary),
                             ),
                             const SizedBox(height: 4),
-                            Text("Job: $job", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text("Phone: $phone", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text("Room: $room", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text("Job: $job",
+                                style: TextStyle(
+                                    fontSize: 12, color: _textSecondary)),
+                            Text("Phone: $phone",
+                                style: TextStyle(
+                                    fontSize: 12, color: _textSecondary)),
+                            Text("Room: $room",
+                                style: TextStyle(
+                                    fontSize: 12, color: _textSecondary)),
                           ],
                         ),
                       ),
@@ -1793,7 +2264,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text("Close", style: TextStyle(fontSize: 12)),
+              child: Text("Close",
+                  style: TextStyle(fontSize: 12, color: _textPrimary)),
             ),
           ],
         );
@@ -1827,6 +2299,20 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
+  // Theme-aware InputDecoration used by the Create Room dialog fields.
+  InputDecoration _themedInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: _textSecondary),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _inputBorder),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _textPrimary, width: 1.6),
+      ),
+    );
+  }
+
   void _showCreateRoomDialog(BuildContext context, String ownerId) {
     final roomController = TextEditingController();
     final rentController = TextEditingController();
@@ -1836,35 +2322,56 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Create Room"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: roomController,
-              decoration: const InputDecoration(labelText: "Room Number"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: rentController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Monthly Rent"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: electricRateController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Electric Rate per kWh"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: waterRateController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Water Rate per m³"),
-            ),
-          ],
+        backgroundColor: _isDark ? Colors.black : null,
+        title: Text(
+          "Create Room",
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: roomController,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _textPrimary,
+                decoration: _themedInputDecoration("Room Number"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: rentController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _textPrimary,
+                decoration: _themedInputDecoration("Monthly Rent"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: electricRateController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _textPrimary,
+                decoration: _themedInputDecoration("Electric Rate per kWh"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: waterRateController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _textPrimary,
+                decoration: _themedInputDecoration("Water Rate per m³"),
+              ),
+            ],
+          ),
         ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel", style: TextStyle(color: _textSecondary)),
+          ),
           TextButton(
             onPressed: () async {
               if (roomController.text.isEmpty ||
@@ -1879,20 +2386,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 "roomNumber": roomController.text.trim(),
                 "ownerId": ownerId,
                 "tenantId": null,
-
-                "monthlyRent":
-                    double.tryParse(rentController.text.trim()) ?? 0,
-
+                "monthlyRent": double.tryParse(rentController.text.trim()) ?? 0,
                 "electricRate":
                     double.tryParse(electricRateController.text.trim()) ?? 0,
-
                 "waterRate":
                     double.tryParse(waterRateController.text.trim()) ?? 0,
-
                 "paymentStatus": "pending",
                 "amountPaid": 0.0,
                 "isOverdue": false,
-
                 "createdAt": Timestamp.now(),
               });
 
@@ -1901,7 +2402,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
               showAppSuccessBanner(context, "Room created successfully");
             },
-            child: const Text("Create"),
+            child: Text("Create",
+                style: TextStyle(
+                    color: _textPrimary, fontWeight: FontWeight.w700)),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../theme/app_colors.dart';
 import 'rentpay_backdrop.dart';
 
 class _ChatMessage {
@@ -155,9 +156,7 @@ class _ChatStore {
 
         if (url is String && url.isNotEmpty) {
           try {
-            await FirebaseStorage.instance
-                .refFromURL(url)
-                .delete();
+            await FirebaseStorage.instance.refFromURL(url).delete();
           } catch (error) {
             debugPrint('Juggernaut image delete error: $error');
           }
@@ -175,12 +174,11 @@ class JuggernautChatScreen extends StatefulWidget {
   const JuggernautChatScreen({super.key});
 
   @override
-  State<JuggernautChatScreen> createState() =>
-      _JuggernautChatScreenState();
+  State<JuggernautChatScreen> createState() => _JuggernautChatScreenState();
 }
 
-class _JuggernautChatScreenState
-    extends State<JuggernautChatScreen> {
+class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
+  // Para sa fallback icon lang (puti ang background ng avatar sa dalawang mode)
   static const Color _navy = Color(0xFF164563);
 
   // Mga uri ng larawang tinatanggap ng function
@@ -195,8 +193,7 @@ class _JuggernautChatScreenState
 
   // Greeting ni Juggernaut, laging nasa taas ng chat (hindi sine-save)
   static const _ChatMessage _greeting = _ChatMessage(
-    text:
-        'Hello, I’m Juggernaut, your RentPay AI assistant. '
+    text: 'Hello, I’m Juggernaut, your RentPay AI assistant. '
         'Attach a tenant’s payment receipt and I’ll screen it '
         'for signs of editing or AI generation.',
     isOwner: false,
@@ -204,8 +201,7 @@ class _JuggernautChatScreenState
 
   // Cache ng mga larawang kaka-send lang, para agad makita habang
   // ina-upload pa sa Firebase Storage (mabilis din pag bumalik sa chat).
-  static final Map<String, Uint8List> _imageCache =
-      <String, Uint8List>{};
+  static final Map<String, Uint8List> _imageCache = <String, Uint8List>{};
   static const int _maxCachedImages = 10;
 
   static void _cacheImage(String id, Uint8List bytes) {
@@ -216,11 +212,9 @@ class _JuggernautChatScreenState
     }
   }
 
-  final TextEditingController _messageController =
-      TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
 
-  final ScrollController _scrollController =
-      ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   final ImagePicker _picker = ImagePicker();
 
@@ -268,17 +262,8 @@ class _JuggernautChatScreenState
         height: size,
         color: Colors.white,
         padding: EdgeInsets.all(size * 0.06),
-        child: Image.asset(
-          'assets/images/juggernaut_logo.png',
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Icon(
-              Icons.security,
-              color: _navy,
-              size: size * 0.6,
-            );
-          },
-        ),
+        child: Image.asset('assets/images/juggernaut_logo.png',
+            fit: BoxFit.contain),
       ),
     );
   }
@@ -287,8 +272,7 @@ class _JuggernautChatScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
 
-      final target =
-          _scrollController.position.maxScrollExtent;
+      final target = _scrollController.position.maxScrollExtent;
 
       if (jump) {
         _scrollController.jumpTo(target);
@@ -458,8 +442,7 @@ class _JuggernautChatScreenState
       return;
     }
 
-    final displayText =
-        text.isEmpty ? 'Please check this receipt.' : text;
+    final displayText = text.isEmpty ? 'Please check this receipt.' : text;
 
     final messageId = store.newId();
 
@@ -569,6 +552,9 @@ class _JuggernautChatScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        // Mas maliwanag na pula sa dark mode para mabasa
+        final isDark = AppColors.of(dialogContext).isDark;
+
         return AlertDialog(
           title: const Text('Clear chat?'),
           content: const Text(
@@ -577,16 +563,18 @@ class _JuggernautChatScreenState
           ),
           actions: [
             TextButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, true),
-              child: const Text(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(
                 'Clear',
-                style: TextStyle(color: Color(0xFFC62828)),
+                style: TextStyle(
+                  color: isDark
+                      ? const Color(0xFFEF5350)
+                      : const Color(0xFFC62828),
+                ),
               ),
             ),
           ],
@@ -638,14 +626,16 @@ class _JuggernautChatScreenState
   }
 
   Widget _buildVerdictBadge(String verdict) {
+    final isDark = AppColors.of(context).isDark;
+
     final Color color;
 
     if (verdict.contains('FAKE')) {
-      color = const Color(0xFFC62828);
+      color = isDark ? const Color(0xFFEF5350) : const Color(0xFFC62828);
     } else if (verdict.contains('SUSPICIOUS')) {
-      color = const Color(0xFFEF6C00);
+      color = isDark ? const Color(0xFFFFA726) : const Color(0xFFEF6C00);
     } else if (verdict.contains('GENUINE')) {
-      color = const Color(0xFF2E7D32);
+      color = isDark ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32);
     } else {
       color = Colors.blueGrey;
     }
@@ -678,11 +668,13 @@ class _JuggernautChatScreenState
     _ChatMessage message,
     double maxBubbleWidth,
   ) {
+    // Mga kulay na sumusunod sa light/dark mode
+    final c = AppColors.of(context);
+
     final isOwner = message.isOwner;
 
     // Verdict badge para sa sagot ng receipt check
-    final verdict =
-        isOwner ? null : _extractVerdict(message.text);
+    final verdict = isOwner ? null : _extractVerdict(message.text);
 
     String displayText = message.text;
 
@@ -707,9 +699,8 @@ class _JuggernautChatScreenState
         bottom: 12,
       ),
       child: Row(
-        mainAxisAlignment: isOwner
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isOwner ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isOwner) ...[
@@ -726,25 +717,21 @@ class _JuggernautChatScreenState
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: isOwner ? _navy : Colors.white,
+                color: isOwner ? c.bubbleOwner : c.card,
                 borderRadius: BorderRadius.circular(18),
                 border: isOwner
                     ? null
                     : Border.all(
-                        color: const Color(
-                          0xFFDCEBF0,
-                        ),
+                        color: c.cardBorder,
                       ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (imageBytes != null) ...[
                     ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.memory(
                         imageBytes,
                         width: 180,
@@ -756,30 +743,26 @@ class _JuggernautChatScreenState
                     ),
                   ] else if (message.imageUrl != null) ...[
                     ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.network(
                         message.imageUrl!,
                         width: 180,
                         fit: BoxFit.cover,
-                        loadingBuilder:
-                            (context, child, progress) {
+                        loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
 
                           return const SizedBox(
                             width: 180,
                             height: 120,
                             child: Center(
-                              child:
-                                  CircularProgressIndicator(
+                              child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: Colors.white,
                               ),
                             ),
                           );
                         },
-                        errorBuilder:
-                            (context, error, stackTrace) {
+                        errorBuilder: (context, error, stackTrace) {
                           return const SizedBox(
                             width: 180,
                             height: 60,
@@ -807,15 +790,13 @@ class _JuggernautChatScreenState
                         Icon(
                           Icons.receipt_long_rounded,
                           size: 16,
-                          color: Colors.white
-                              .withAlpha(200),
+                          color: Colors.white.withAlpha(200),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Receipt image',
                           style: TextStyle(
-                            color: Colors.white
-                                .withAlpha(200),
+                            color: Colors.white.withAlpha(200),
                             fontSize: 12,
                           ),
                         ),
@@ -836,9 +817,7 @@ class _JuggernautChatScreenState
                   Text(
                     displayText,
                     style: TextStyle(
-                      color: isOwner
-                          ? Colors.white
-                          : _navy,
+                      color: isOwner ? Colors.white : c.text,
                       fontSize: 14,
                     ),
                   ),
@@ -853,36 +832,39 @@ class _JuggernautChatScreenState
 
   @override
   Widget build(BuildContext context) {
-    final maxBubbleWidth =
-        MediaQuery.of(context).size.width * 0.72;
+    // Mga kulay na sumusunod sa light/dark mode
+    final c = AppColors.of(context);
+
+    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.72;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3FAFC),
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE4F3F7),
+        backgroundColor: c.appBar,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: _navy,
+        foregroundColor: c.text,
         titleSpacing: 0,
         title: Row(
           children: [
             _buildJuggernautAvatar(42),
             const SizedBox(width: 10),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Juggernaut',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
+                    color: c.text,
                   ),
                 ),
                 Text(
                   'AI Receipt Slasher',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey,
+                    color: c.textMuted,
                   ),
                 ),
               ],
@@ -891,6 +873,7 @@ class _JuggernautChatScreenState
         ),
         actions: [
           PopupMenuButton<String>(
+            iconColor: c.text,
             onSelected: (value) {
               if (value == 'clear') {
                 _confirmClearChat();
@@ -919,16 +902,14 @@ class _JuggernautChatScreenState
                     );
                   }
 
-                  final stored = snapshot.data ??
-                      const <_ChatMessage>[];
+                  final stored = snapshot.data ?? const <_ChatMessage>[];
 
                   final messages = <_ChatMessage>[
                     _greeting,
                     ...stored,
                     if (snapshot.hasError)
                       _ChatMessage(
-                        text:
-                            'I could not load your chat history '
+                        text: 'I could not load your chat history '
                             '(${_errorCode(snapshot.error)}). '
                             'Please try again later.',
                         isOwner: false,
@@ -967,8 +948,8 @@ class _JuggernautChatScreenState
                     const SizedBox(width: 8),
                     Text(
                       _loadingLabel,
-                      style: const TextStyle(
-                        color: _navy,
+                      style: TextStyle(
+                        color: c.text,
                         fontSize: 12,
                       ),
                     ),
@@ -977,7 +958,7 @@ class _JuggernautChatScreenState
               ),
             if (_pendingImageBytes != null)
               Container(
-                color: const Color(0xEBFFFFFF),
+                color: c.bar,
                 padding: const EdgeInsets.fromLTRB(
                   16,
                   8,
@@ -987,8 +968,7 @@ class _JuggernautChatScreenState
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.memory(
                         _pendingImageBytes!,
                         width: 64,
@@ -997,30 +977,28 @@ class _JuggernautChatScreenState
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Receipt attached. Add a note '
                         '(optional) and send.',
                         style: TextStyle(
-                          color: _navy,
+                          color: c.text,
                           fontSize: 12,
                         ),
                       ),
                     ),
                     IconButton(
-                      onPressed: _isLoading
-                          ? null
-                          : _removePendingImage,
-                      icon: const Icon(
+                      onPressed: _isLoading ? null : _removePendingImage,
+                      icon: Icon(
                         Icons.close_rounded,
-                        color: _navy,
+                        color: c.text,
                       ),
                     ),
                   ],
                 ),
               ),
             Container(
-              color: const Color(0xEBFFFFFF),
+              color: c.bar,
               child: SafeArea(
                 top: false,
                 child: Padding(
@@ -1033,36 +1011,33 @@ class _JuggernautChatScreenState
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed:
-                            _isLoading ? null : _pickReceipt,
-                        icon: const Icon(
+                        onPressed: _isLoading ? null : _pickReceipt,
+                        icon: Icon(
                           Icons.attach_file_rounded,
-                          color: _navy,
+                          color: c.text,
                         ),
                       ),
                       Expanded(
                         child: TextField(
                           controller: _messageController,
-                          textInputAction:
-                              TextInputAction.send,
+                          textInputAction: TextInputAction.send,
                           enabled: !_isLoading,
-                          onSubmitted: (_) =>
-                              _sendMessage(),
+                          onSubmitted: (_) => _sendMessage(),
+                          style: TextStyle(color: c.text),
                           decoration: InputDecoration(
-                            hintText:
-                                _pendingImageBytes != null
-                                    ? 'Add a note (optional)...'
-                                    : 'Message Juggernaut...',
+                            hintText: _pendingImageBytes != null
+                                ? 'Add a note (optional)...'
+                                : 'Message Juggernaut...',
+                            hintStyle: TextStyle(
+                              color: c.textMuted,
+                            ),
                             filled: true,
-                            fillColor:
-                                const Color(0xFFF3F6F8),
+                            fillColor: c.inputFill,
                             border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding:
-                                const EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 12,
                             ),
@@ -1071,13 +1046,10 @@ class _JuggernautChatScreenState
                       ),
                       const SizedBox(width: 6),
                       CircleAvatar(
-                        backgroundColor: _isLoading
-                            ? Colors.grey
-                            : _navy,
+                        backgroundColor:
+                            _isLoading ? Colors.grey : c.sendButton,
                         child: IconButton(
-                          onPressed: _isLoading
-                              ? null
-                              : _sendMessage,
+                          onPressed: _isLoading ? null : _sendMessage,
                           icon: const Icon(
                             Icons.send_rounded,
                             color: Colors.white,

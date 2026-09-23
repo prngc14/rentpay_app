@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../widgets/app_warning_banner.dart';
+import '../../widgets/rentpay_backdrop.dart';
+import '../../widgets/rentpay_glass_panel.dart';
 import 'tenant_dashboard.dart';
 
 class TenantConnectScreen extends StatefulWidget {
@@ -22,9 +24,23 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
   String? selectedRoom;
   String? ownerId;
 
-  
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _textPrimary =>
+      _isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
+
+  Color get _textSecondary =>
+      _isDark ? const Color(0xFFA9B4B8) : const Color(0xFF587287);
+
+  Color get _fieldFill =>
+      _isDark ? Colors.white.withOpacity(0.06) : Colors.white;
+
+  Color get _fieldBorder =>
+      _isDark ? Colors.white.withOpacity(0.10) : const Color(0xFFDCE6EA);
+
+  // -------------------------------------------------
   // CONNECT OWNER
- 
+  // -------------------------------------------------
   Future<void> connectToOwner() async {
     String code = codeController.text.trim();
 
@@ -52,17 +68,13 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
 
       ownerId = ownerDoc.id;
 
-     
       // GET ROOMS
-      
       final roomQuery = await FirebaseFirestore.instance
           .collection("rooms")
           .where("ownerId", isEqualTo: ownerId)
           .get();
 
-      
       // FILTER AVAILABLE ROOMS ONLY
-     
       availableRooms = roomQuery.docs.where((roomDoc) {
         final data = roomDoc.data();
 
@@ -85,7 +97,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
 
       setState(() {});
     } catch (e) {
-      print("CONNECT ERROR: $e");
+      debugPrint("CONNECT ERROR: $e");
 
       if (!mounted) return;
       showAppWarningBanner(context, friendlyAuthError(e));
@@ -94,8 +106,9 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
     setState(() => loading = false);
   }
 
-
+  // -------------------------------------------------
   // ASSIGN ROOM
+  // -------------------------------------------------
   Future<void> assignRoom() async {
     if (selectedRoom == null) {
       showAppWarningBanner(context, "Select a room");
@@ -146,7 +159,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
         ),
       );
     } catch (e) {
-      print("ROOM ASSIGN ERROR: $e");
+      debugPrint("ROOM ASSIGN ERROR: $e");
 
       if (!mounted) return;
       showAppWarningBanner(context, friendlyAuthError(e));
@@ -156,139 +169,265 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Connect to Owner"),
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: _textPrimary),
+        title: Text(
+          "Connect to Owner",
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
-      body: Container(
-        color: const Color(0xFFFFF8FC),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // OWNER CODE
-            TextField(
-                controller: codeController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Owner Code",
-                  hintText: "Enter 6-digit owner code",
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Colors.deepOrange,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 20),
-
-            // FIND ROOMS BUTTON
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: loading ? null : connectToOwner,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Find Rooms"),
-              ),
+      body: RentPayBackdrop(
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              MediaQuery.of(context).padding.top > 0 ? 8 : 16,
+              16,
+              16,
             ),
+            child: Column(
+              children: [
+                const SizedBox(height: 28),
 
-            const SizedBox(height: 30),
-
-            // AVAILABLE ROOMS
-            if (availableRooms.isNotEmpty)
-              Expanded(
-                child: Column(
-                  children: [
-                    const Text(
-                      "Available Rooms",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                // OWNER CODE PANEL
+                RentpayGlassPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const RentpayPanelHeader(
+                        icon: Icons.key_rounded,
+                        title: "Owner Code",
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: availableRooms.length,
-                        itemBuilder: (context, index) {
-                          final room = availableRooms[index].data()
-                              as Map<String, dynamic>;
-
-                          final bool occupied = room["tenantId"] != null &&
-                              room["tenantId"].toString().isNotEmpty;
-
-                          return Card(
-                            elevation: 1,
-                            color: Colors.white,
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: codeController,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(color: _textPrimary),
+                        decoration: InputDecoration(
+                          hintText: "Enter 6-digit owner code",
+                          hintStyle: TextStyle(color: _textSecondary),
+                          filled: true,
+                          fillColor: _fieldFill,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _fieldBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _fieldBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF111111),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: loading ? null : connectToOwner,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF111111),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: RadioListTile(
-                              value: availableRooms[index].id,
-                              groupValue: selectedRoom,
-                              onChanged: occupied
-                                  ? null
-                                  : (value) {
-                                      setState(() {
-                                        selectedRoom = value.toString();
-                                      });
-                                    },
-                              title: Text(
-                                "Room ${room["roomNumber"]}",
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Rent: ₱${room["monthlyRent"]}",
+                            elevation: 0,
+                          ),
+                          child: loading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.4,
                                   ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    occupied ? "Occupied" : "Available",
-                                    style: TextStyle(
-                                      color:
-                                          occupied ? Colors.red : Colors.green,
-                                      fontWeight: FontWeight.bold,
+                                )
+                              : const Text(
+                                  "Find Rooms",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // AVAILABLE ROOMS
+                if (availableRooms.isNotEmpty)
+                  Expanded(
+                    child: RentpayGlassPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const RentpayPanelHeader(
+                            icon: Icons.meeting_room_rounded,
+                            title: "Available Rooms",
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: ListView.separated(
+                              itemCount: availableRooms.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final room = availableRooms[index].data()
+                                    as Map<String, dynamic>;
+
+                                final bool occupied =
+                                    room["tenantId"] != null &&
+                                        room["tenantId"].toString().isNotEmpty;
+
+                                final bool isSelected =
+                                    selectedRoom == availableRooms[index].id;
+
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: occupied
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            selectedRoom =
+                                                availableRooms[index].id;
+                                          });
+                                        },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF111111).withOpacity(
+                                              _isDark ? 0.18 : 0.10)
+                                          : (_isDark
+                                              ? Colors.white.withOpacity(0.04)
+                                              : Colors.white),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF111111)
+                                            : _fieldBorder,
+                                        width: isSelected ? 1.6 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isSelected
+                                              ? Icons
+                                                  .radio_button_checked_rounded
+                                              : Icons
+                                                  .radio_button_unchecked_rounded,
+                                          color: isSelected
+                                              ? const Color(0xFF111111)
+                                              : _textSecondary,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Room ${room["roomNumber"]}",
+                                                style: TextStyle(
+                                                  color: _textPrimary,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                "Rent: ₱${room["monthlyRent"]}",
+                                                style: TextStyle(
+                                                  color: _textSecondary,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 9,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: occupied
+                                                ? const Color(0xFFE93636)
+                                                    .withOpacity(0.14)
+                                                : const Color(0xFF22C55E)
+                                                    .withOpacity(0.14),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            occupied ? "Occupied" : "Available",
+                                            style: TextStyle(
+                                              color: occupied
+                                                  ? const Color(0xFFE93636)
+                                                  : const Color(0xFF22C55E),
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 11.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: assignRoom,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF111111),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Connect Room",
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: assignRoom,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrange,
-                        ),
-                        child: const Text(
-                          "Connect Room",
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

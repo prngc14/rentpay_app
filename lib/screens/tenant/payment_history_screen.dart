@@ -318,8 +318,7 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           icon: const Icon(Icons.delete),
                           label: const Text("Delete Payment"),

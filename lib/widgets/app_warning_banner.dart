@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
 enum BannerType { warning, success }
 
 class _BannerStyle {
@@ -28,8 +26,6 @@ const Map<BannerType, _BannerStyle> _bannerStyles = {
     icon: Icons.check_circle_rounded,
   ),
 };
-
-
 
 class AppBanner extends StatelessWidget {
   final String message;
@@ -91,7 +87,6 @@ class AppBanner extends StatelessWidget {
 /// lumang pangalan na `AppWarningBanner`).
 typedef AppWarningBanner = AppBanner;
 
-
 /// _showBanner (internal)
 /// Common logic para sa warning at success banners: nilalagay sa top
 /// ng screen gamit ang Overlay, auto-dismiss after 2 seconds, at
@@ -136,8 +131,6 @@ void _showBanner(BuildContext context, String message, BannerType type) {
   });
 }
 
-
-
 void showAppWarningBanner(BuildContext context, String message) {
   _showBanner(context, message, BannerType.warning);
 }
@@ -145,7 +138,6 @@ void showAppWarningBanner(BuildContext context, String message) {
 void showAppSuccessBanner(BuildContext context, String message) {
   _showBanner(context, message, BannerType.success);
 }
-
 
 String friendlyAuthError(Object error) {
   final msg = error.toString().toLowerCase();

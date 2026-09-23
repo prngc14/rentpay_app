@@ -73,8 +73,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
         isLoading = true;
       });
 
-      final File? selectedFile =
-          type == "gcash" ? gcashImage : mayaImage;
+      final File? selectedFile = type == "gcash" ? gcashImage : mayaImage;
 
       if (selectedFile == null) {
         if (mounted) {
@@ -129,9 +128,11 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
     required VoidCallback onPick,
     required VoidCallback onUpload,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final bool hasImage =
-        localFile != null ||
-        (networkUrl != null && networkUrl.isNotEmpty);
+        localFile != null || (networkUrl != null && networkUrl.isNotEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -144,10 +145,10 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
           child: Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF123E5A),
+              color: theme.textTheme.titleLarge?.color,
             ),
           ),
         ),
@@ -166,7 +167,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
               context: context,
               builder: (_) {
                 return Dialog(
-                  backgroundColor: Colors.white,
+                  backgroundColor: theme.cardColor,
                   insetPadding: const EdgeInsets.all(20),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
@@ -188,12 +189,16 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                                     error,
                                     stackTrace,
                                   ) {
-                                    return const Padding(
-                                      padding: EdgeInsets.all(30),
+                                    return Padding(
+                                      padding: const EdgeInsets.all(30),
                                       child: Center(
                                         child: Text(
                                           "Failed to load QR image",
                                           textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: theme
+                                                .textTheme.bodyMedium?.color,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -207,10 +212,10 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
                               size: 22,
-                              color: Color(0xFF123E5A),
+                              color: theme.iconTheme.color,
                             ),
                           ),
                         ),
@@ -225,7 +230,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
             width: 220,
             height: 220,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(12),
             ),
             clipBehavior: Clip.antiAlias,
@@ -243,24 +248,24 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                           error,
                           stackTrace,
                         ) {
-                          return const Center(
+                          return Center(
                             child: Text(
                               "Failed to load QR image",
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.grey,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 11,
                               ),
                             ),
                           );
                         },
                       )
-                    : const Center(
+                    : Center(
                         child: Text(
                           "No QR uploaded yet",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: theme.textTheme.bodySmall?.color,
                             fontSize: 12,
                           ),
                         ),
@@ -286,7 +291,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: [
                     BoxShadow(
@@ -296,12 +301,12 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                     ),
                   ],
                 ),
-                child: const Text(
+                child: Text(
                   "Select Image",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF123E5A),
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
@@ -318,7 +323,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: [
                     BoxShadow(
@@ -328,12 +333,12 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                     ),
                   ],
                 ),
-                child: const Text(
+                child: Text(
                   "Upload QR",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF123E5A),
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
@@ -346,26 +351,29 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FA),
+      backgroundColor: theme.scaffoldBackgroundColor,
 
       // =====================================================
       // APP BAR
       // =====================================================
 
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Rentpay",
           style: TextStyle(
             fontFamily: 'RentpayScript',
             fontSize: 32,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF123E5A),
+            color: theme.textTheme.titleLarge?.color,
             letterSpacing: 0.5,
           ),
         ),
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF123E5A),
+        foregroundColor: theme.iconTheme.color,
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -376,8 +384,10 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
       // =====================================================
 
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: colorScheme.primary,
+              ),
             )
           : SafeArea(
               child: SingleChildScrollView(
@@ -401,7 +411,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                       onUpload: () => uploadQr("gcash"),
                     ),
 
-                    // Mas malaking spacing bago ang PayMaya
                     const SizedBox(height: 75),
 
                     // =================================================
