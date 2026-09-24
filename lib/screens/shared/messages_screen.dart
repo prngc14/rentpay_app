@@ -243,9 +243,7 @@ class MessagesScreen extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------
-// TENANT: direktang chat sa owner
-// -------------------------------------------------
+
 class _TenantChat extends StatelessWidget {
   const _TenantChat({
     required this.tenantId,
@@ -283,9 +281,7 @@ class _TenantChat extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------
-// OWNER: listahan ng mga tenant
-// -------------------------------------------------
+
 class _TenantEntry {
   _TenantEntry({
     required this.id,
@@ -412,7 +408,7 @@ class _OwnerMessagesList extends StatelessWidget {
                   );
                 }
 
-                // May usapan muna (pinakabago sa taas), sunod ang wala pa
+              
                 tenants.sort((a, b) {
                   final aTime = a.lastMessageAt;
                   final bTime = b.lastMessageAt;
@@ -582,10 +578,7 @@ class _OwnerMessagesList extends StatelessWidget {
   }
 }
 
-// =====================================================
-// Bubuksan ang chat ng owner sa isang tenant, halimbawa
-// mula sa notification bell.
-// =====================================================
+
 class OwnerTenantChatScreen extends StatelessWidget {
   const OwnerTenantChatScreen({
     super.key,
@@ -618,9 +611,7 @@ class OwnerTenantChatScreen extends StatelessWidget {
   }
 }
 
-// =====================================================
-// CHAT SCREEN (isang usapan ng owner at tenant)
-// =====================================================
+
 class _ChatScreen extends StatefulWidget {
   const _ChatScreen({
     super.key,
@@ -655,7 +646,7 @@ class _ChatScreenState extends State<_ChatScreen> {
   final ImagePicker _picker = ImagePicker();
 
   late final DocumentReference<Map<String, dynamic>> _chatRef;
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _messagesStream;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _messagesStream;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _chatSub;
 
   // Larawang naka-attach pero hindi pa naipapadala
@@ -663,6 +654,7 @@ class _ChatScreenState extends State<_ChatScreen> {
   String? _pendingImagePath;
 
   bool _isSending = false;
+  bool _chatReady = false;
 
   bool get _isOwner => widget.myRole == 'owner';
 
@@ -677,12 +669,36 @@ class _ChatScreenState extends State<_ChatScreen> {
 
     _chatRef = FirebaseFirestore.instance.collection('chats').doc(_chatId);
 
-    // Pinakabago muna (descending), kasi naka-reverse ang listahan
-    _messagesStream = _chatRef
-        .collection('messages')
-        .orderBy('createdAt', descending: true)
-        .limit(200)
-        .snapshots();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // Gawin muna ang chat document bago mag-subscribe, para hindi
+    // ma-deny ang unang basa ng bagong usapan.
+    try {
+      await _chatRef.set(
+        {
+          'ownerId': widget.ownerId,
+          'tenantId': widget.tenantId,
+        },
+        SetOptions(merge: true),
+      ).timeout(const Duration(seconds: 8));
+
+      _chatReady = true;
+    } catch (error) {
+      debugPrint('Chat ensure error: $error');
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      // Pinakabago muna (descending), kasi naka-reverse ang listahan
+      _messagesStream = _chatRef
+          .collection('messages')
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .snapshots();
+    });
 
     // Habang bukas ang chat, i-reset ang unread count ko
     _chatSub = _chatRef.snapshots().listen(
@@ -712,9 +728,7 @@ class _ChatScreenState extends State<_ChatScreen> {
     super.dispose();
   }
 
-  // -------------------------------------------------
-  // IMAGE
-  // -------------------------------------------------
+
   Future<void> _pickImage() async {
     if (_isSending) return;
 
@@ -776,9 +790,7 @@ class _ChatScreenState extends State<_ChatScreen> {
     );
   }
 
-  // -------------------------------------------------
-  // SEND
-  // -------------------------------------------------
+
   Future<void> _send() async {
     debugPrint('========== CHAT DEBUG ==========');
     debugPrint('AUTH UID: ');
@@ -796,6 +808,19 @@ class _ChatScreenState extends State<_ChatScreen> {
     setState(() {
       _isSending = true;
     });
+
+    // Tiyakin munang may chat document (unang message ng bagong usapan)
+    if (!_chatReady) {
+      try {
+        await _chatRef.set({
+          'ownerId': widget.ownerId,
+          'tenantId': widget.tenantId,
+        }, SetOptions(merge: true)).timeout(const Duration(seconds: 8));
+        _chatReady = true;
+      } catch (error) {
+        debugPrint('Chat ensure error: $error');
+      }
+    }
 
     final messageRef = _chatRef.collection('messages').doc();
     String? imageUrl;
@@ -849,8 +874,7 @@ class _ChatScreenState extends State<_ChatScreen> {
       SetOptions(merge: true),
     );
 
-    // Hindi hinihintay ang server para lumabas agad sa chat
-    // (may local cache), at hindi mag-hang kapag offline.
+
     unawaited(
       batch.commit().catchError((Object error) {
         debugPrint('Chat send error: $error');
@@ -875,9 +899,7 @@ class _ChatScreenState extends State<_ChatScreen> {
     });
   }
 
-  // -------------------------------------------------
-  // UI
-  // -------------------------------------------------
+
   String _formatTime(dynamic value) {
     if (value is! Timestamp) return 'Sending...';
 

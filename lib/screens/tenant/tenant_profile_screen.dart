@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../services/firestore_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../widgets/app_warning_banner.dart';
 import '../../widgets/rentpay_backdrop.dart';
@@ -30,7 +29,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
 
   String? workIdUrl;
 
-  // ===== THEME-AWARE COLORS (kapareho ng Home at Payments) =====
+
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get _primaryText =>
@@ -48,9 +47,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     loadProfile();
   }
 
-  // =====================================================
-  // LOAD PROFILE
-  // =====================================================
 
   Future<void> loadProfile() async {
     try {
@@ -90,9 +86,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     });
   }
 
-  // =====================================================
-  // PICK WORK ID IMAGE
-  // =====================================================
 
   Future<void> pickWorkIdImage() async {
     final picked = await ImagePicker().pickImage(
@@ -107,13 +100,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     });
   }
 
-  // =====================================================
-  // SAVE PROFILE
-  //
-  // Hindi na isinasama ang profileImageUrl dito: ang profile
-  // photo ay ina-upload na sa Home (pindutin ang bilog), kaya
-  // hindi na ito mao-overwrite ng lumang URL kapag nag-save dito.
-  // =====================================================
 
   Future<void> saveProfile() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -145,7 +131,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
         );
       }
 
-      // SAVE TO FIRESTORE
+    
 
       await FirebaseFirestore.instance
           .collection("users")
@@ -182,9 +168,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     }
   }
 
-  // =====================================================
-  // INPUT FIELD
-  // =====================================================
+
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -237,9 +221,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     );
   }
 
-  // =====================================================
-  // WORK ID CARD (mas malaki na)
-  // =====================================================
+
 
   Widget _buildWorkIdCard({double? height}) {
     ImageProvider? imageProvider;
@@ -307,9 +289,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     );
   }
 
-  // =====================================================
-  // PANELS
-  // =====================================================
+
 
   Widget _buildPersonalInfoPanel() {
     return RentpayGlassPanel(
@@ -419,9 +399,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     );
   }
 
-  // =====================================================
-  // UI
-  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -439,8 +416,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
           builder: (context, constraints) {
             const EdgeInsets padding = EdgeInsets.fromLTRB(16, 8, 16, 8);
 
-            // Kapag kulang ang espasyo (halimbawa, bukas ang keyboard),
-            // saka lang mag-scroll at fixed ang taas ng Work ID.
+
             final bool scrollMode = constraints.maxHeight < 520;
 
             if (scrollMode) {
@@ -458,8 +434,7 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
               );
             }
 
-            // Ang Work ID ang pumupuno sa natirang espasyo, kaya maliit na
-            // lang ang layo ng Save Profile sa bottom nav.
+
             return Padding(
               padding: padding,
               child: Column(

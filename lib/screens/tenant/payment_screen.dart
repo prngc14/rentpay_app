@@ -89,9 +89,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
-  // =====================================================
-  // LOAD TENANT DATA
-  // =====================================================
 
   Future<void> loadTenantData() async {
     try {
@@ -276,7 +273,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final text = partialAmountController.text.trim();
 
     if (text.isEmpty) {
-      return "Ilagay ang halagang babayaran";
+      return "Amount Due";
     }
 
     final value = double.tryParse(text);
@@ -296,9 +293,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return null;
   }
 
-  // =====================================================
-  // IMAGE VALIDATION
-  // =====================================================
 
   Future<bool> isImageBlurred(File file) async {
     try {
@@ -323,9 +317,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // =====================================================
-  // FULL IMAGE VIEWER
-  // =====================================================
+
 
   void showFullImage(String url) {
     showDialog(
@@ -382,9 +374,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // UPLOAD PAYMENT
-  // =====================================================
+
 
   Future<void> uploadAndSubmitPayment(
     double amount,
@@ -497,14 +487,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
 
           // CENTERED TITLE
-          title: const Center(
+          title: Center(
             child: Text(
               "Confirm Payment",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFE8EEF0),
+                color: _textPrimary,
               ),
             ),
           ),
@@ -665,9 +655,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // HISTORY BUTTON
-  // =====================================================
 
   Widget _buildHistoryButton() {
     return Padding(
@@ -706,9 +693,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // NO ROOM
-  // =====================================================
 
   Widget _buildNoRoom() {
     return Center(
@@ -755,9 +739,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // PAYMENT CONTENT
-  // =====================================================
+
 
   Widget _buildPaymentContent() {
     return Column(
@@ -776,9 +758,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // STATUS PILL
-  // =====================================================
+
 
   Widget? _buildStatusPill() {
     if (totalBill <= 0) {
@@ -829,9 +809,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // ROOM PANEL
-  // =====================================================
 
   Widget _buildRoomPanel() {
     const double indent = 35;
@@ -976,9 +953,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // PAYMENT OPTION
-  // =====================================================
+
 
   Widget _buildPaymentOptionPanel() {
     return RentpayGlassPanel(
@@ -1048,7 +1023,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             decoration: InputDecoration(
               isDense: true,
-              labelText: "Halagang Babayaran",
+              labelText: "Amount Due",
               labelStyle: TextStyle(
                 color: _textSecondary,
                 fontSize: 12,
@@ -1135,9 +1110,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // QR AREA
-  // =====================================================
+
 
   Widget _buildQrArea(double qrSize) {
     final List<Widget> blocks = [
@@ -1291,10 +1264,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // =====================================================
-  // UPLOAD BUTTON
-  // PLAIN / TRANSPARENT / WALANG CONTAINER
-  // =====================================================
+
 
   Widget _buildUploadButton() {
     return Center(
@@ -1341,3 +1311,5 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 }
+
+

@@ -269,16 +269,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
               final bool isOverdue = roomData["isOverdue"] ?? false;
 
-              final Timestamp? dueTimestamp = roomData["dueDate"];
-
               final Timestamp? paidAt = roomData["paidAt"];
-
-              String dueDate = "No due date";
-
-              if (dueTimestamp != null) {
-                dueDate =
-                    DateFormat("MMMM dd, yyyy").format(dueTimestamp.toDate());
-              }
 
               String paidDate = "Not paid yet";
 
@@ -297,7 +288,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                 content: _buildStatusPanel(
                   paymentStatus: paymentStatus,
                   isOverdue: isOverdue,
-                  dueDate: dueDate,
+                  tenantId: user.uid,
                   paidDate: paidDate,
                   remainingBalance: remainingBalance,
                 ),
@@ -731,7 +722,43 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     );
   }
 
+  DateTime? _lastContractDue;
+
+  // Due date ay galing lang sa contract ng tenant. Kapag walang contract,
+  // "No due date" ang lalabas (at hindi rin lalabas ang OVERDUE).
   Widget _buildStatusPanel({
+    required String tenantId,
+    required String paymentStatus,
+    required bool isOverdue,
+    required String paidDate,
+    required double remainingBalance,
+  }) {
+    return FutureBuilder<DateTime?>(
+      future: _tenantFirestoreService.getNextContractDueDateForTenant(tenantId),
+      initialData: _lastContractDue,
+      builder: (context, snapshot) {
+        final DateTime? contractDue = snapshot.data;
+
+        if (snapshot.connectionState == ConnectionState.done) {
+          _lastContractDue = contractDue;
+        }
+
+        final String dueDateText = contractDue != null
+            ? DateFormat("MMMM dd, yyyy").format(contractDue)
+            : "No due date";
+
+        return _buildStatusPanelBody(
+          paymentStatus: paymentStatus,
+          isOverdue: isOverdue && contractDue != null,
+          dueDate: dueDateText,
+          paidDate: paidDate,
+          remainingBalance: remainingBalance,
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusPanelBody({
     required String paymentStatus,
     required bool isOverdue,
     required String dueDate,

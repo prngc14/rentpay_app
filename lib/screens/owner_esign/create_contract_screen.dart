@@ -1138,7 +1138,7 @@ class _ContractSignaturePainter extends CustomPainter {
     for (final point in points) {
       if (point == null) {
         if (path != null && hasPointInCurrentStroke) {
-          canvas.drawPath(path!, paint);
+          canvas.drawPath(path, paint);
         }
 
         path = null;
@@ -1156,7 +1156,7 @@ class _ContractSignaturePainter extends CustomPainter {
     }
 
     if (path != null && hasPointInCurrentStroke) {
-      canvas.drawPath(path!, paint);
+      canvas.drawPath(path, paint);
     }
   }
 
@@ -1168,3 +1168,4 @@ class _ContractSignaturePainter extends CustomPainter {
         oldDelegate.pointsNotifier != pointsNotifier;
   }
 }
+

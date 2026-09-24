@@ -129,7 +129,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
     required VoidCallback onUpload,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     final bool hasImage =
         localFile != null || (networkUrl != null && networkUrl.isNotEmpty);

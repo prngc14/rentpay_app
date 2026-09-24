@@ -524,7 +524,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 5),
 
-                    // CREATE ACCOUNT
                     TextButton(
                       onPressed: () {
                         Navigator.push(

@@ -93,6 +93,12 @@ void main() async {
   await _loadThemeForUid(FirebaseAuth.instance.currentUser?.uid);
   _saveThemeWhenChanged();
 
+  FirebaseAuth.instance.authStateChanges().listen((user) {
+    if (_themeLoadedForUid != user?.uid) {
+      _loadThemeForUid(user?.uid);
+    }
+  });
+
   runApp(const MyApp());
 }
 

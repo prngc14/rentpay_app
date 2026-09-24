@@ -179,7 +179,6 @@ class JuggernautChatScreen extends StatefulWidget {
 
 class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
   // Para sa fallback icon lang (puti ang background ng avatar sa dalawang mode)
-  static const Color _navy = Color(0xFF164563);
 
   // Mga uri ng larawang tinatanggap ng function
   static const List<String> _allowedMimeTypes = [

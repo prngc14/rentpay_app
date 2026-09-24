@@ -33,7 +33,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   int _selectedIndex = 0;
   String? _profileImageOverride;
 
-  // ===== THEME-AWARE COLORS (dark mode support) =====
+
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _textPrimary =>
       _isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
@@ -61,7 +61,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     _refreshOverdue();
   }
 
-  // Sinusuri kung aling rooms ang overdue at ina-update ang isOverdue field.
   Future<void> _refreshOverdue() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -200,7 +199,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                               final tenantId =
                                   data["tenantId"]?.toString() ?? "";
 
-                              // Huwag bilangin ang vacant room sa payment status.
+                              
                               if (tenantId.isEmpty) {
                                 continue;
                               }
@@ -273,9 +272,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                     ),
             )
           : (_selectedIndex >= 1 && _selectedIndex <= 3 && user != null)
-              // Ang Rooms, Messages at Payment QR ay may sariling AppBar, kaya
-              // inilalagay ang bell sa ibabaw nito, sa parehong pwesto ng bell
-              // sa AppBar ng Home at More.
+
               ? Stack(
                   fit: StackFit.expand,
                   children: [
@@ -385,37 +382,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               ),
             )
           : null,
-    );
-  }
-
-  // =====================================================
-  // DARK MODE TOGGLE BUTTON
-  // =====================================================
-
-  Widget _buildDarkModeButton() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: ValueListenableBuilder<ThemeMode>(
-        valueListenable: themeNotifier,
-        builder: (context, currentMode, _) {
-          final isDark = currentMode == ThemeMode.dark;
-          return InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () {
-              themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
-            },
-            child: SizedBox(
-              width: 42,
-              height: 42,
-              child: Icon(
-                isDark ? Icons.dark_mode : Icons.dark_mode_outlined,
-                color: _textPrimary,
-                size: 22,
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
@@ -1523,12 +1489,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
                     final total = roomPayments.fold<double>(
                       0.0,
-                      (sum, payment) {
+                      (runningTotal, payment) {
                         final amount = payment["amount"];
                         final double paymentAmount = amount is num
                             ? amount.toDouble()
                             : double.tryParse(amount?.toString() ?? "0") ?? 0.0;
-                        return sum + paymentAmount;
+                        return runningTotal + paymentAmount;
                       },
                     );
 
