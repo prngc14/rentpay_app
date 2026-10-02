@@ -110,6 +110,7 @@ service cloud.firestore {
     getAfter(/databases/$(database)/documents/chats/$(chatId)).data.ownerId == request.auth.uid
     || getAfter(/databases/$(database)/documents/chats/$(chatId)).data.tenantId == request.auth.uid
   );
+
       }
     }
 

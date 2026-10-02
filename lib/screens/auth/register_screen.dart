@@ -63,9 +63,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  // ============================================================
-  // REGISTER USER
-  // ============================================================
 
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
@@ -215,9 +212,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ============================================================
-  // BUILD UI
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {

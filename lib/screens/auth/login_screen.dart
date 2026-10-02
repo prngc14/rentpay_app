@@ -38,9 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return '$sanitized@rentpay.local';
   }
 
-  // ============================================================
-  // EMAIL LOGIN
-  // ============================================================
 
   Future<void> loginUser() async {
     if (emailController.text.trim().isEmpty ||
@@ -136,9 +133,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ============================================================
-  // GOOGLE LOGIN
-  // ============================================================
 
   Future<void> googleLogin() async {
     setState(() => isLoading = true);
@@ -218,9 +212,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ============================================================
-  // INPUT STYLE
-  // ============================================================
 
   InputDecoration inputStyle(
     String label,
@@ -269,9 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ============================================================
-  // FRIENDLY AUTH ERROR
-  // ============================================================
 
   String friendlyAuthError(Object e) {
     if (e is FirebaseAuthException) {
@@ -315,9 +303,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ============================================================
-  // BUILD UI
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -512,7 +497,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 15),
 
-                    // "or" DIVIDER between Google button and Create Account
+                  
                     const Text(
                       "or",
                       style: TextStyle(

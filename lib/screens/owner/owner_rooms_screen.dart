@@ -6,8 +6,6 @@ import '../../theme/app_colors.dart';
 import '../../widgets/app_warning_banner.dart';
 import 'room_details_screen.dart';
 
-// Clean, simple fade-only transition -- walang slide/position shift,
-// para hindi na gamitin ang default Android "shared axis" transition.
 Route<T> _fadeRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -36,15 +34,11 @@ class OwnerRoomsScreen extends StatefulWidget {
 class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
   final firestore = FirestoreService();
 
-  // =====================================================
-  // SHOW BILLING DIALOG
-  // =====================================================
 
   void showBillingDialog(
     String roomId,
     Map<String, dynamic> room,
   ) {
-    // Mga kulay na sumusunod sa light/dark mode
     final c = AppColors.of(context);
 
     final rentController = TextEditingController(
@@ -155,9 +149,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
           ),
         ),
 
-        // =================================================
-        // ACTION BUTTONS
-        // =================================================
 
         actions: [
           // CANCEL
@@ -233,9 +224,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     );
   }
 
-  // =====================================================
-  // BUILD
-  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -263,8 +251,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
       body: StreamBuilder<QuerySnapshot>(
         stream: firestore.getOwnerRooms(widget.ownerId),
         builder: (context, snapshot) {
-          // Ipakita ang aktwal na error sa halip na
-          // infinite loading kung mag-error ang stream.
           if (snapshot.hasError) {
             return Center(
               child: Padding(
@@ -285,9 +271,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             );
           }
 
-          // =================================================
-          // GET ROOMS
-          // =================================================
+
 
           final rooms = snapshot.data!.docs.toList();
 
@@ -300,21 +284,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             );
           }
 
-          // =================================================
-          // SORT ROOMS NUMERICALLY
-          // =================================================
-          //
-          // Example:
-          // Room 1
-          // Room 2
-          // Room 3
-          // ...
-          // Room 9
-          // Room 10
-          //
-          // Hindi naka-base sa Occupied/Available.
-          // Hindi rin naka-base sa Firebase creation order.
-          // =================================================
+
 
           rooms.sort((a, b) {
             final roomA = (a.data() as Map<String, dynamic>)["roomNumber"];
@@ -328,9 +298,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             return numberA.compareTo(numberB);
           });
 
-          // =================================================
-          // ROOM LIST
-          // =================================================
 
           return ListView.builder(
             itemCount: rooms.length,
@@ -351,9 +318,6 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
     );
   }
 
-  // =====================================================
-  // ROOM CARD
-  // =====================================================
 
   Widget _buildCompactRoomCard(
     BuildContext context,
@@ -429,10 +393,7 @@ class _OwnerRoomsScreenState extends State<OwnerRoomsScreen> {
             context,
             _fadeRoute(
               RoomDetailsScreen(
-                // Kailangan ng RoomDetailsScreen ang roomId bilang
-                // hiwalay na parameter (hindi lang sa loob ng Map)
-                // para makapag-listen ito ng LIVE data sa Firestore
-                // at agad na mag-reflect ang updateRoomBilling().
+
                 roomId: roomId,
 
                 roomData: {

@@ -11,7 +11,6 @@ class FirestoreService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // CREATE USER
   Future<void> createUser(
     UserModel user,
   ) async {
@@ -29,8 +28,6 @@ class FirestoreService {
       "activePaymentId": null,
     });
   }
-
-  // GET OWNER BY CODE
   Future<QueryDocumentSnapshot?> getOwnerByCode(
     String code,
   ) async {
@@ -45,8 +42,6 @@ class FirestoreService {
 
     return query.docs.first;
   }
-
-  // CONNECT TENANT USING OWNER CODE
   Future<void> connectTenantByCode(
     String code,
   ) async {
@@ -77,8 +72,6 @@ class FirestoreService {
       "approved": false,
     });
   }
-
-  // GET OWNER QR
   Future<Map<String, dynamic>?> getOwnerQR(
     String ownerId,
   ) async {
@@ -88,8 +81,6 @@ class FirestoreService {
 
     return doc.data();
   }
-
-  // SAVE OWNER QR
   Future<void> saveOwnerQR(
     String ownerId,
     String? gcashUrl,
@@ -100,8 +91,6 @@ class FirestoreService {
       "paymayaQr": mayaUrl,
     });
   }
-
-  // GET CURRENT OWNER QR DATA
   Future<Map<String, dynamic>?> getOwnerQrData() async {
     final user = _auth.currentUser;
 
@@ -114,7 +103,6 @@ class FirestoreService {
     return doc.data();
   }
 
-  // UPLOAD OWNER QR IMAGE
   Future<void> uploadOwnerQr({
     required File file,
     required String type,
@@ -142,7 +130,6 @@ class FirestoreService {
     }
   }
 
-  // CREATE ROOM
   Future<void> createRoom(
     String roomNumber,
     String ownerId,
@@ -180,20 +167,6 @@ class FirestoreService {
       "createdAt": Timestamp.now(),
     });
   }
-
-  // UPDATE ROOM BILLING WITH MONTHLY HISTORY
-  //
-  // Bawat update ng owner ay BAGONG BILL: ang babayaran ng tenant ay ang
-  // bagong total na inilagay ng owner, at nagre-reset sa 0 ang amountPaid.
-  // Hindi dinededuct sa bagong bill ang mga nakaraang bayad. (Nasa
-  // "payments" collection pa rin ang lahat ng nakaraang bayad ng tenant,
-  // kaya hindi nawawala ang record.)
-  //
-  // Bagong buwan   -> ini-archive ang nakaraang buwan sa history, at ang
-  //                   hindi pa nababayaran ay nagiging carriedOverBalance.
-  // Parehong buwan -> hindi nadodoble ang carriedOverBalance: kapag "paid"
-  //                   na ang huling bill, 0 na ito (bayad na); kung hindi,
-  //                   nananatili ang dating carriedOverBalance.
   Future<void> updateRoomBilling({
     required String roomId,
     required double monthlyRent,
@@ -244,11 +217,8 @@ class FirestoreService {
     double carriedOverBalance;
 
     if (isSameMonth) {
-      // Same-month edit: kung bayad na ang huling bill, bayad na rin ang
-      // carry-over nito, kaya hindi na ito isasama ulit.
       carriedOverBalance = previousStatus == "paid" ? 0 : previousCarriedOver;
     } else {
-      // New month: unpaid balance moves forward.
       carriedOverBalance =
           previousStatus == "paid" ? 0 : previousTotalBill - previousAmountPaid;
     }
@@ -259,8 +229,6 @@ class FirestoreService {
 
     final double totalBill =
         monthlyRent + electricBill + waterBill + carriedOverBalance;
-
-    // BAGONG BILL: walang ibinabawas na nakaraang bayad.
     const double amountPaid = 0.0;
     final double remainingBalance = totalBill;
     const String paymentStatus = "unpaid";
@@ -287,7 +255,6 @@ class FirestoreService {
       "billUpdated": true,
       "billingMonth": currentMonthKey,
 
-      // Save the current billing history
       "history.$currentMonthKey": {
         "month": currentMonthKey,
         "monthlyRent": monthlyRent,
@@ -304,8 +271,6 @@ class FirestoreService {
         "updatedAt": Timestamp.now(),
       },
     };
-
-    // Save previous month before moving to a new month
     if (previousBillingMonth.isNotEmpty && !isSameMonth) {
       updates["history.$previousBillingMonth"] = {
         "month": previousBillingMonth,
@@ -325,8 +290,6 @@ class FirestoreService {
     }
 
     await roomRef.update(updates);
-
-    // Isabay ang status ng tenant (users doc) sa bagong bill.
     final String tenantId = (data["tenantId"] ?? "").toString();
 
     if (tenantId.isNotEmpty) {
@@ -340,7 +303,6 @@ class FirestoreService {
     }
   }
 
-  // GET OWNER ROOMS
   Stream<QuerySnapshot> getOwnerRooms(
     String ownerId,
   ) {
@@ -350,7 +312,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // CONNECT TENANT TO ROOM
   Future<void> connectTenantToRoom(
     String roomNumber,
     String tenantId,
@@ -516,17 +477,6 @@ class FirestoreService {
     return paymentRef.id;
   }
 
-  // APPROVE PAYMENT
-  // Hindi ini-clear ang activePaymentId dito, kahit "partial" na ang
-  // bagong status. Ang PendingPaymentScreen ang bahala magpakita ng
-  // tamang mensahe (buo o partial, gamit ang isPartial field ng
-  // payment doc), at ang tenant mismo ang mag-tap ng "Continue/Go to
-  // Dashboard" bago ma-clear ang lock -- consistent ang behavior para
-  // sa buo at partial na bayad.
-  //
-  // Lahat ng updates (payment, room, tenant) ay nasa iisang batch, kaya
-  // either sabay-sabay silang mag-succeed o wala. Kapag may error,
-  // nire-rethrow para makita ng caller.
   Future<void> approvePayment(
     String paymentId,
     String tenantId,
@@ -595,16 +545,12 @@ class FirestoreService {
       final String newStatus = isFullPayment ? "paid" : "partial";
 
       final batch = _db.batch();
-
-      // UPDATE PAYMENT STATUS
       batch.update(paymentRef, {
         "status": "verified",
         "verifiedAt": approvedTime,
         "resultType": isFullPayment ? "approved_full" : "approved_partial",
         "tenantSeen": false,
       });
-
-      // UPDATE ROOM PAYMENT STATUS
       final Map<String, dynamic> roomUpdates = {
         "amountPaid": newAmountPaid,
         "remainingBalance": newRemainingBalance,
@@ -623,8 +569,6 @@ class FirestoreService {
       }
 
       batch.update(roomRef, roomUpdates);
-
-      // UPDATE TENANT STATUS
       final tenantRef = _db.collection("users").doc(tenantId);
 
       batch.update(tenantRef, {
@@ -633,7 +577,6 @@ class FirestoreService {
         "lastPaymentDate": approvedTime,
       });
 
-      // APPLY ALL UPDATES TOGETHER
       await batch.commit();
 
       print(
@@ -645,12 +588,6 @@ class FirestoreService {
     }
   }
 
-  // REJECT PAYMENT
-  // Isang parameter lang (paymentId). Hindi natin ini-clear ang
-  // activePaymentId dito -- dapat manatiling naka-lock ang tenant
-  // sa PendingPaymentScreen (para makita muna ang "Payment
-  // Rejected" na screen) hanggang pindutin niya ang "Submit New
-  // Payment", na siyang tumatawag sa clearActivePayment().
   Future<void> rejectPayment(
     String paymentId,
   ) async {
@@ -665,7 +602,6 @@ class FirestoreService {
     }
   }
 
-  // CLEAR ACTIVE PAYMENT (unlock dashboard)
   Future<void> clearActivePayment(
     String tenantId,
   ) async {
@@ -674,7 +610,6 @@ class FirestoreService {
     });
   }
 
-  // DELETE PAYMENT
   Future<void> deletePayment(
     String paymentId,
   ) async {
@@ -685,23 +620,12 @@ class FirestoreService {
     }
   }
 
-  // CHECK OVERDUE
-  //
-  // Kapag may ownerId: ang rooms ng owner na iyon lang ang sinusuri, at ang
-  // due date ay kinukuha sa contract ng tenant (parehong logic sa notification
-  // na natatanggap ng tenant). Kapag walang contract ang tenant, ang dueDate
-  // field ng room ang gamit.
-  //
-  // Ang vacant room at ang room na "paid" na ay hindi kailanman overdue.
-  // Nagsusulat lang sa Firestore kapag nagbago ang value ng isOverdue.
   Future<void> checkOverdueRooms({String? ownerId}) async {
     final Query<Map<String, dynamic>> roomsQuery = ownerId == null
         ? _db.collection("rooms")
         : _db.collection("rooms").where("ownerId", isEqualTo: ownerId);
 
     final rooms = await roomsQuery.get();
-
-    // Pinakabagong active contract (start date) ng bawat tenant.
     final Map<String, DateTime> contractStartByTenant = {};
 
     if (ownerId != null) {
@@ -747,12 +671,10 @@ class FirestoreService {
         final DateTime? contractStart = contractStartByTenant[tenantId];
 
         if (contractStart != null) {
-          // May contract: hindi pa overdue kung hindi pa nagsisimula.
           if (!now.isBefore(contractStart)) {
             dueDate = _computeContractDueDate(contractStart, now);
           }
         } else {
-          // Walang contract: gamitin ang dueDate ng room (kung meron).
           final Timestamp? dueTimestamp = data["dueDate"] as Timestamp?;
           dueDate = dueTimestamp?.toDate();
         }
@@ -865,7 +787,6 @@ class FirestoreService {
     return !now.isBefore(contractDueDate);
   }
 
-  // GET TENANT PAYMENTS (tenant mismo ang tumitingin)
   Stream<QuerySnapshot> getTenantPayments(
     String tenantId,
   ) {
@@ -875,7 +796,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // GET TENANT PAYMENTS (FOR OWNER VIEW)
   Stream<QuerySnapshot> getTenantPaymentsForOwner(
     String ownerId,
     String tenantId,
@@ -887,8 +807,6 @@ class FirestoreService {
         .orderBy("date", descending: true)
         .snapshots();
   }
-
-  // GET OWNER PAYMENTS
   Stream<QuerySnapshot> getOwnerPayments(
     String ownerId,
   ) {
@@ -898,8 +816,6 @@ class FirestoreService {
         .orderBy("date", descending: true)
         .snapshots();
   }
-
-  // GET OWNER TENANTS
   Stream<QuerySnapshot> getOwnerTenants(
     String ownerId,
   ) {
@@ -910,7 +826,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // GET CURRENT USER DATA
   Stream<DocumentSnapshot> getCurrentUserData() {
     final user = _auth.currentUser;
 

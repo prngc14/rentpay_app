@@ -2,11 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-// =====================================================
-// RENTPAY GLASS PANEL
-// Parehong itsura ng glass panels sa owner dashboard at
-// tenant Home: blur, tint, border at shadow.
-// =====================================================
 class RentpayGlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -51,20 +46,12 @@ class RentpayGlassPanel extends StatelessWidget {
   }
 }
 
-// =====================================================
-// PANEL HEADER
-// Orange na bilog na icon + title (kapareho ng
-// "Payment Status" / "Monthly Billing" sa Home).
-// May optional na `trailing` (halimbawa, status badge)
-// sa dulong kanan.
-// =====================================================
 class RentpayPanelHeader extends StatelessWidget {
   final IconData icon;
   final String title;
   final Widget? trailing;
   final bool compact;
 
-  // dense = mas maliit pa kaysa compact (para sa maliliit na panel).
   final bool dense;
 
   const RentpayPanelHeader({

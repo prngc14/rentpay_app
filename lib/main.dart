@@ -11,21 +11,16 @@ import 'screens/tenant/tenant_dashboard.dart';
 import 'screens/owner/boarding_screen.dart';
 import 'theme/splash_screen.dart';
 
-// Global navigator key
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Global dark mode controller
+
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
-// Theme storage key prefix — per-user, not global
 const String _kIsDarkKeyPrefix = 'theme_is_dark_';
 
-// Track whose theme is currently loaded into themeNotifier,
-// so we know when we need to reload (i.e. user switched accounts)
 String? _themeLoadedForUid;
 
-// Build the per-user key. Falls back to a "guest" bucket
-// when there's no logged-in user yet (e.g. login screen).
 String _themeKeyForUid(String? uid) => '$_kIsDarkKeyPrefix${uid ?? "guest"}';
 
 // Load the saved theme for a specific user
@@ -43,7 +38,6 @@ Future<void> _loadThemeForUid(String? uid) async {
   }
 }
 
-// Save theme changes under the CURRENT user's key
 void _saveThemeWhenChanged() {
   themeNotifier.addListener(() async {
     try {
@@ -88,8 +82,6 @@ void main() async {
     debugPrint('Firebase initialization error: $e');
   }
 
-  // Load theme for whoever is currently signed in (or "guest"
-  // if nobody is signed in yet — e.g. app just opened to login screen)
   await _loadThemeForUid(FirebaseAuth.instance.currentUser?.uid);
   _saveThemeWhenChanged();
 
@@ -102,9 +94,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-// =====================================================
-// MY APP
-// =====================================================
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -151,10 +140,6 @@ class _MyAppState extends State<MyApp> {
       title: 'RentPay',
 
       themeMode: _currentMode,
-
-      // =====================================================
-      // LIGHT THEME
-      // =====================================================
 
       theme: ThemeData(
         useMaterial3: true,
@@ -232,10 +217,6 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
       ),
-
-      // =====================================================
-      // DARK THEME
-      // =====================================================
 
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -396,9 +377,6 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
 
-      // =====================================================
-      // ROUTES
-      // =====================================================
 
       routes: {
         '/login': (context) => const LoginScreen(),
@@ -412,9 +390,6 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-// =====================================================
-// AUTH GATE
-// =====================================================
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -434,9 +409,6 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         final user = authSnapshot.data;
-
-        // No logged-in user — make sure theme resets to the
-        // "guest" bucket so the next login starts clean
         if (user == null) {
           if (_themeLoadedForUid != null) {
             _loadThemeForUid(null);
@@ -444,10 +416,6 @@ class _AuthGateState extends State<AuthGate> {
 
           return const LoginScreen();
         }
-
-        // A user is logged in — if it's a DIFFERENT user than
-        // whoever's theme is currently loaded, reload the theme
-        // for THIS user before showing their dashboard
         if (_themeLoadedForUid != user.uid) {
           return FutureBuilder<void>(
             future: _loadThemeForUid(user.uid),
@@ -466,9 +434,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-// =====================================================
-// ROLE ROUTER — decides Owner vs Tenant dashboard
-// =====================================================
 
 class _RoleRouter extends StatelessWidget {
   final String uid;
@@ -503,9 +468,6 @@ class _RoleRouter extends StatelessWidget {
   }
 }
 
-// =====================================================
-// AUTH LOADING SCREEN
-// =====================================================
 
 class _AuthLoadingScreen extends StatelessWidget {
   const _AuthLoadingScreen();

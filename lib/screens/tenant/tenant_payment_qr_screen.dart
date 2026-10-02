@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/firestore_service.dart';
-import '../../widgets/app_warning_banner.dart'; // <-- ayusin ang path kung iba ang location
+import '../../widgets/app_warning_banner.dart';
 
 class TenantPaymentHistoryScreen extends StatelessWidget {
   final String tenantId;
@@ -19,11 +19,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final FirestoreService firestore = FirestoreService();
 
-    // Ginagamit ang context ng buong Screen (mula sa build() mismo) sa
-    // lahat ng banner calls sa ibaba, dele tung  sa specific item card,
-    // dahil natatanggal agad ang card na iyon sa StreamBuilder pagka-
-    // approve/reject/delete -- kaya laging stable ang context na ito
-    // hangga't bukas ang buong screen.
     final screenContext = context;
 
     return Scaffold(

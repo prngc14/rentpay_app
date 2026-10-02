@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
-enum BannerType { warning, success }
+enum BannerType { warning, success, info }
 
 class _BannerStyle {
-  final Color background;
+  final String title;
   final Color accent;
   final IconData icon;
 
   const _BannerStyle({
-    required this.background,
+    required this.title,
     required this.accent,
     required this.icon,
   });
@@ -16,14 +17,19 @@ class _BannerStyle {
 
 const Map<BannerType, _BannerStyle> _bannerStyles = {
   BannerType.warning: _BannerStyle(
-    background: Color(0xFFFCE8E8), // light pink
-    accent: Color(0xFFE53935), // red
+    title: 'Needs attention',
+    accent: Color(0xFFE88916),
     icon: Icons.warning_amber_rounded,
   ),
   BannerType.success: _BannerStyle(
-    background: Color(0xFFE6F6EA), // light green
-    accent: Color(0xFF2E7D32), // green
+    title: 'Completed',
+    accent: Color(0xFF219B8A),
     icon: Icons.check_circle_rounded,
+  ),
+  BannerType.info: _BannerStyle(
+    title: 'RentPay update',
+    accent: Color(0xFF328FA8),
+    icon: Icons.notifications_rounded,
   ),
 };
 
@@ -42,39 +48,93 @@ class AppBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _bannerStyles[type]!;
+    final colors = AppColors.of(context);
 
     return Material(
       color: Colors.transparent,
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.fromLTRB(14, 13, 10, 12),
         decoration: BoxDecoration(
-          color: style.background,
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(color: style.accent, width: 5),
+          color: colors.isDark
+              ? const Color(0xFF1B2429)
+              : const Color(0xFFF8FDFE),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: colors.isDark
+                ? Colors.white.withOpacity(0.10)
+                : const Color(0xFFD8EBEF),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(colors.isDark ? 0.28 : 0.10),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(style.icon, color: style.accent, size: 22),
-            const SizedBox(width: 10),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: style.accent.withOpacity(colors.isDark ? 0.18 : 0.12),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(style.icon, color: style.accent, size: 21),
+            ),
+            const SizedBox(width: 11),
             Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: style.accent,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      style.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.title,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        color: colors.subtitle,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      'Just now',
+                      style: TextStyle(
+                        color: colors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onClose,
-              child: Icon(Icons.close, color: style.accent, size: 20),
+            const SizedBox(width: 4),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              padding: EdgeInsets.zero,
+              tooltip: 'Dismiss notification',
+              onPressed: onClose,
+              icon: Icon(Icons.close, color: colors.textMuted, size: 18),
             ),
           ],
         ),
@@ -107,13 +167,19 @@ void _showBanner(BuildContext context, String message, BannerType type) {
       left: 0,
       right: 0,
       child: SafeArea(
-        child: AppBanner(
-          message: message,
-          type: type,
-          onClose: () {
-            entry.remove();
-            if (_currentBannerEntry == entry) _currentBannerEntry = null;
-          },
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: AppBanner(
+              message: message,
+              type: type,
+              onClose: () {
+                entry.remove();
+                if (_currentBannerEntry == entry) _currentBannerEntry = null;
+              },
+            ),
+          ),
         ),
       ),
     ),

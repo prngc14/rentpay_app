@@ -15,16 +15,13 @@ class TenantContractsScreen extends StatefulWidget {
 class _TenantContractsScreenState extends State<TenantContractsScreen> {
   final List<Offset> _signaturePoints = [];
 
-  // Ginagamit ng Save button sa E-Sign dialog para ipakita ang loading.
   final ValueNotifier<bool> _isSaving = ValueNotifier<bool>(false);
 
-  // ===== KULAY (kapareho ng ibang tenant screens; walang orange) =====
   static const Color _navy = Color(0xFF123E5A);
   static const Color _slate = Color(0xFF587287);
   static const Color _blue = Color(0xFF3E8BEA);
   static const Color _green = Color(0xFF1EBA63);
 
-  // ===== THEME-AWARE COLORS (sumusunod sa light/dark mode ng app) =====
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get _textPrimary =>
@@ -44,8 +41,6 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
   Color get _fieldBorder =>
       _isDark ? const Color(0xFF3A464C) : const Color(0xFFCBD8DE);
 
-  // Kulay ng mga pangunahing button (navy sa light, asul sa dark para
-  // makita sa madilim na background).
   Color get _accent => _isDark ? _blue : _navy;
 
   static const List<String> _inactiveStatuses = [
@@ -163,10 +158,6 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
       showAppSuccessBanner(context, "Contract sent to owner.");
     }
   }
-
-  // =====================================================
-  // E-SIGN DIALOG
-  // =====================================================
   void _showSignatureDialog({
     required String contractId,
     required String roomNumber,
@@ -181,7 +172,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
           builder: (dialogContext, setDialogState) {
             final bool hasSignature = _signaturePoints.isNotEmpty;
 
-            // Kulay ng signature pad (madilim sa dark mode, puti sa light).
+          
             final Color padColor =
                 _isDark ? const Color(0xFF12171A) : Colors.white;
             final Color inkColor = _isDark ? const Color(0xFFE8EEF0) : _navy;
@@ -305,7 +296,7 @@ class _TenantContractsScreenState extends State<TenantContractsScreen> {
                                 ),
                               ),
 
-                              // Hint na nawawala kapag may sinusulat na
+                            
                               if (!hasSignature)
                                 Center(
                                   child: Text(
@@ -938,8 +929,6 @@ class SignaturePainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
 
-  // Ang default na kulay ay hindi ginalaw para hindi maapektuhan ang ibang
-  // screen na gumagamit ng SignaturePainter.
   SignaturePainter(
     this.points, {
     this.color = Colors.deepOrange,

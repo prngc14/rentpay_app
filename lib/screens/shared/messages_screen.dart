@@ -12,27 +12,6 @@ import '../../widgets/app_warning_banner.dart';
 import '../../widgets/rentpay_backdrop.dart';
 import '../../services/cloudinary_service.dart';
 
-// =====================================================
-// MESSAGES (Owner <-> Tenant chat, parang Messenger)
-//
-// Firestore:
-//   chats/{ownerId}_{tenantId}
-//     ownerId, tenantId, lastMessage, lastMessageAt,
-//     lastSenderId, unreadOwner, unreadTenant
-//   chats/{ownerId}_{tenantId}/messages/{messageId}
-//     senderId, text, imageUrl, createdAt
-//
-// Larawan:
-//   Ina-upload sa Cloudinary (uploadToCloudinary), at ang URL lang
-//   ang sine-save sa Firestore (imageUrl).
-//
-// - Owner: listahan ng mga tenant niya -> pindutin para mag-chat
-// - Tenant: direktang chat nila sa owner nila
-// =====================================================
-
-// -------------------------------------------------
-// COLORS (sumusunod sa dark mode)
-// -------------------------------------------------
 class _Palette {
   _Palette(this.isDark);
 
@@ -58,10 +37,6 @@ class _Palette {
       isDark ? const Color(0xFF232A2E) : const Color(0xFFF3F6F8);
   Color get barBg => isDark ? const Color(0xEB15191B) : const Color(0xEBFFFFFF);
 }
-
-// -------------------------------------------------
-// AVATAR (larawan o unang letra ng pangalan)
-// -------------------------------------------------
 class _Avatar extends StatelessWidget {
   const _Avatar({
     required this.name,
@@ -182,12 +157,6 @@ class _EmptyMessages extends StatelessWidget {
   }
 }
 
-// =====================================================
-// MessagesScreen
-// Kinikilala kung owner o tenant ang naka-login:
-// - owner  -> listahan ng mga tenant
-// - tenant -> chat nila sa owner nila
-// =====================================================
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
 
@@ -299,13 +268,22 @@ class _TenantEntry {
 
   DateTime? get lastMessageAt {
     final value = chat?['lastMessageAt'];
+    final DateTime? messageTime = value is Timestamp
+        ? value.toDate()
+        : chat?['lastMessage'] != null
+            ? DateTime.now()
+            : null;
+    final clearedValue = chat?['ownerClearedAt'];
+    final DateTime? clearedAt =
+        clearedValue is Timestamp ? clearedValue.toDate() : null;
 
-    if (value is Timestamp) return value.toDate();
+    if (messageTime != null &&
+        clearedAt != null &&
+        !messageTime.isAfter(clearedAt)) {
+      return null;
+    }
 
-    // Bagong message na hinihintay pa ang oras mula sa server
-    if (chat?['lastMessage'] != null) return DateTime.now();
-
-    return null;
+    return messageTime;
   }
 }
 
@@ -440,7 +418,9 @@ class _OwnerMessagesList extends StatelessWidget {
 
                     String subtitle;
 
-                    if (lastMessage != null && lastMessage.isNotEmpty) {
+                    if (lastAt != null &&
+                      lastMessage != null &&
+                      lastMessage.isNotEmpty) {
                       subtitle = lastSenderId == ownerId
                           ? 'You: $lastMessage'
                           : lastMessage;
@@ -649,12 +629,13 @@ class _ChatScreenState extends State<_ChatScreen> {
   Stream<QuerySnapshot<Map<String, dynamic>>>? _messagesStream;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _chatSub;
 
-  // Larawang naka-attach pero hindi pa naipapadala
   Uint8List? _pendingImage;
   String? _pendingImagePath;
 
   bool _isSending = false;
+  bool _isClearing = false;
   bool _chatReady = false;
+  DateTime? _clearedAt;
 
   bool get _isOwner => widget.myRole == 'owner';
 
@@ -662,6 +643,8 @@ class _ChatScreenState extends State<_ChatScreen> {
   String get _myId => _isOwner ? widget.ownerId : widget.tenantId;
   String get _myUnreadField => _isOwner ? 'unreadOwner' : 'unreadTenant';
   String get _otherUnreadField => _isOwner ? 'unreadTenant' : 'unreadOwner';
+  String get _myClearedAtField =>
+      _isOwner ? 'ownerClearedAt' : 'tenantClearedAt';
 
   @override
   void initState() {
@@ -673,8 +656,6 @@ class _ChatScreenState extends State<_ChatScreen> {
   }
 
   Future<void> _init() async {
-    // Gawin muna ang chat document bago mag-subscribe, para hindi
-    // ma-deny ang unang basa ng bagong usapan.
     try {
       await _chatRef.set(
         {
@@ -692,7 +673,6 @@ class _ChatScreenState extends State<_ChatScreen> {
     if (!mounted) return;
 
     setState(() {
-      // Pinakabago muna (descending), kasi naka-reverse ang listahan
       _messagesStream = _chatRef
           .collection('messages')
           .orderBy('createdAt', descending: true)
@@ -706,6 +686,13 @@ class _ChatScreenState extends State<_ChatScreen> {
         final data = snap.data();
 
         if (data == null) return;
+
+        final clearedValue = data[_myClearedAtField];
+        final clearedAt =
+            clearedValue is Timestamp ? clearedValue.toDate() : null;
+        if (clearedAt != _clearedAt && mounted) {
+          setState(() => _clearedAt = clearedAt);
+        }
 
         final unread = (data[_myUnreadField] as num?)?.toInt() ?? 0;
 
@@ -899,6 +886,65 @@ class _ChatScreenState extends State<_ChatScreen> {
     });
   }
 
+  Future<void> _confirmClearChatHistory() async {
+    if (_isClearing || _isSending) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear chat history?'),
+        content: const Text(
+          'Messages will be cleared from your view only. The other person '
+          'will still be able to see their chat history.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFC62828)),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isClearing = true);
+
+    try {
+      await _chatRef.update({
+        _myClearedAtField: FieldValue.serverTimestamp(),
+        _myUnreadField: 0,
+      });
+
+      final chatSnapshot = await _chatRef.get();
+      final clearedValue = chatSnapshot.data()?[_myClearedAtField];
+      final clearedAt = clearedValue is Timestamp
+          ? clearedValue.toDate()
+          : DateTime.now();
+
+      if (mounted) setState(() => _clearedAt = clearedAt);
+
+      if (mounted) {
+        showAppSuccessBanner(context, 'Chat history cleared for you');
+      }
+    } catch (error) {
+      debugPrint('Clear chat history for current user error: $error');
+      if (mounted) {
+        showAppWarningBanner(
+          context,
+          'Unable to clear chat history. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isClearing = false);
+    }
+  }
+
 
   String _formatTime(dynamic value) {
     if (value is! Timestamp) return 'Sending...';
@@ -1062,6 +1108,27 @@ class _ChatScreenState extends State<_ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Chat options',
+            enabled: !_isClearing && !_isSending,
+            onSelected: (value) {
+              if (value == 'clear') _confirmClearChatHistory();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Color(0xFFC62828)),
+                    SizedBox(width: 10),
+                    Text('Clear Chat History'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: RentPayBackdrop(
         child: Column(
@@ -1087,7 +1154,13 @@ class _ChatScreenState extends State<_ChatScreen> {
                     );
                   }
 
-                  final docs = snapshot.data!.docs;
+                  final docs = snapshot.data!.docs.where((doc) {
+                    if (_clearedAt == null) return true;
+
+                    final createdAt = doc.data()['createdAt'];
+                    return createdAt is Timestamp &&
+                        createdAt.toDate().isAfter(_clearedAt!);
+                  }).toList();
 
                   if (docs.isEmpty) {
                     return Center(

@@ -19,18 +19,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   static const Color _brandText = Colors.black;
 
-  // ============================================================
-  // INIT STATE
-  // ============================================================
 
   @override
   void initState() {
     super.initState();
 
     _animateText();
-
-    // Total = (letters × interval) + small hold after completion
-    // 7 letters × 320ms = 2240ms, + 300ms hold = 2540ms
     Future.delayed(
       const Duration(milliseconds: 2540),
       () {
@@ -45,10 +39,6 @@ class _SplashScreenState extends State<SplashScreen> {
       },
     );
   }
-
-  // ============================================================
-  // TEXT ANIMATION (letter-by-letter reveal)
-  // ============================================================
 
   void _animateText() {
     int index = 0;
@@ -68,10 +58,6 @@ class _SplashScreenState extends State<SplashScreen> {
       },
     );
   }
-
-  // ============================================================
-  // BUILD UI
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {

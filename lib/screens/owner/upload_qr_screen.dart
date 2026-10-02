@@ -136,9 +136,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // =====================================================
-        // QR TITLE
-        // =====================================================
 
         Center(
           child: Text(
@@ -154,9 +151,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
         const SizedBox(height: 10),
 
-        // =====================================================
-        // QR IMAGE
-        // =====================================================
 
         GestureDetector(
           onTap: () {
@@ -274,9 +268,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
         const SizedBox(height: 10),
 
-        // =====================================================
-        // ACTION BUTTONS
-        // =====================================================
 
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -356,9 +347,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
 
-      // =====================================================
-      // APP BAR
-      // =====================================================
 
       appBar: AppBar(
         title: Text(
@@ -378,9 +366,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
         scrolledUnderElevation: 0,
       ),
 
-      // =====================================================
-      // BODY
-      // =====================================================
 
       body: isLoading
           ? Center(
@@ -398,9 +383,7 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
                 ),
                 child: Column(
                   children: [
-                    // =================================================
-                    // GCASH QR
-                    // =================================================
+
 
                     buildQrSection(
                       title: "GCash QR",
@@ -412,9 +395,6 @@ class _UploadQrScreenState extends State<UploadQrScreen> {
 
                     const SizedBox(height: 75),
 
-                    // =================================================
-                    // PAYMAYA QR
-                    // =================================================
 
                     buildQrSection(
                       title: "PayMaya QR",

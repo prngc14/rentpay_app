@@ -52,7 +52,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-      // Kapareho ng ibang screens: "Rentpay" script sa gitna, transparent.
       appBar: AppBar(
         title: Text(
           'Rentpay',
@@ -225,8 +224,6 @@ class TenantPaymentHistoryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Naka-indent (35) para kapantay ng salitang "Room X", hindi
-          // sa ilalim ng icon.
           Padding(
             padding: const EdgeInsets.only(left: 35),
             child: Column(

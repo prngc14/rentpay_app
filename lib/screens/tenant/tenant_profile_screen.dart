@@ -123,8 +123,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     try {
       String? uploadedWorkIdUrl = workIdUrl;
 
-      // UPLOAD WORK ID IMAGE
-
       if (selectedWorkIdImage != null) {
         uploadedWorkIdUrl = await uploadToCloudinary(
           selectedWorkIdImage!,
@@ -347,8 +345,6 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
     );
   }
 
-  // Maliit at walang kulay; kapareho ng "Upload Payment Screenshot" at
-  // ng mga buttons sa owner QR screen.
   Widget _buildSaveButton() {
     final ThemeData theme = Theme.of(context);
 

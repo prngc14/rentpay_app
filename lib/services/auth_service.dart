@@ -6,7 +6,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // EMAIL LOGIN
 
   Future<User?> login(
     String email,
@@ -70,8 +69,6 @@ class AuthService {
     }
   }
 
-  // RESEND VERIFICATION EMAIL
-  // DISABLED DURING DEVELOPMENT
 
   Future<void> resendVerificationEmail(
     String email,
@@ -82,7 +79,6 @@ class AuthService {
     );
   }
 
-  // GOOGLE LOGIN
 
   Future<User?> signInWithGoogle() async {
     try {
@@ -137,7 +133,6 @@ class AuthService {
     }
   }
 
-  // LOGOUT
 
   Future<void> logout() async {
     try {

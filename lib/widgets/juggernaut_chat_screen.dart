@@ -13,15 +13,14 @@ import '../theme/app_colors.dart';
 import 'rentpay_backdrop.dart';
 
 class _ChatMessage {
-  // id ng Firestore document (null kung hindi naka-save, hal. greeting o error)
   final String? id;
   final String text;
   final bool isOwner;
 
-  // True kung may larawang kasama ang message
+
   final bool hasImage;
 
-  // URL ng larawan sa Firebase Storage (kung na-upload na)
+
   final String? imageUrl;
 
   const _ChatMessage({
@@ -33,16 +32,12 @@ class _ChatMessage {
   });
 }
 
-// -------------------------------------------------
-// CHAT STORE (Firestore)
-// users/{uid}/juggernaut_messages/{messageId}
-// -------------------------------------------------
 class _ChatStore {
   _ChatStore(this.uid);
 
   final String uid;
 
-  // Ilan ang huling messages na ilo-load
+
   static const int _historyLimit = 100;
 
   CollectionReference<Map<String, dynamic>> get _col =>
@@ -53,7 +48,7 @@ class _ChatStore {
 
   String newId() => _col.doc().id;
 
-  // Live na listahan ng messages, luma -> bago
+
   Stream<List<_ChatMessage>> watch() {
     return _col
         .orderBy('createdAt', descending: true)
@@ -79,8 +74,6 @@ class _ChatStore {
     );
   }
 
-  // Hindi nagbabato ng error. Ibinabalik ang error code kung pumalya
-  // ang save (null kung maayos).
   Future<String?> save({
     String? id,
     required String text,
@@ -105,8 +98,6 @@ class _ChatStore {
     }
   }
 
-  // I-upload ang larawan ng resibo sa Firebase Storage at ilagay
-  // ang URL sa message document. Hindi nagbabato ng error.
   Future<void> uploadAndAttachImage({
     required String messageId,
     required Uint8List bytes,
@@ -139,8 +130,6 @@ class _ChatStore {
     }
   }
 
-  // Burahin lahat ng messages (paunti-unti, may limit ang batch)
-  // kasama ang mga larawan sa Storage
   Future<void> clear() async {
     final db = FirebaseFirestore.instance;
 
@@ -178,28 +167,21 @@ class JuggernautChatScreen extends StatefulWidget {
 }
 
 class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
-  // Para sa fallback icon lang (puti ang background ng avatar sa dalawang mode)
 
-  // Mga uri ng larawang tinatanggap ng function
   static const List<String> _allowedMimeTypes = [
     'image/jpeg',
     'image/png',
     'image/webp',
   ];
 
-  // 5 MB ang limit sa app (6 MB ang limit sa function)
   static const int _maxImageBytes = 5 * 1024 * 1024;
 
-  // Greeting ni Juggernaut, laging nasa taas ng chat (hindi sine-save)
   static const _ChatMessage _greeting = _ChatMessage(
     text: 'Hello, I’m Juggernaut, your RentPay AI assistant. '
         'Attach a tenant’s payment receipt and I’ll screen it '
         'for signs of editing or AI generation.',
     isOwner: false,
   );
-
-  // Cache ng mga larawang kaka-send lang, para agad makita habang
-  // ina-upload pa sa Firebase Storage (mabilis din pag bumalik sa chat).
   static final Map<String, Uint8List> _imageCache = <String, Uint8List>{};
   static const int _maxCachedImages = 10;
 
@@ -216,15 +198,12 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   final ImagePicker _picker = ImagePicker();
-
-  // Pansamantalang mensahe (errors, warnings). Hindi sine-save
-  // at nawawala pag umalis sa screen o nag-send ulit.
   final List<_ChatMessage> _notices = [];
 
   bool _isLoading = false;
   String _loadingLabel = 'Juggernaut is typing...';
 
-  // Larawang naka-attach pero hindi pa naipapadala
+
   Uint8List? _pendingImageBytes;
   String _pendingMimeType = 'image/jpeg';
 
@@ -291,7 +270,7 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
 
     _lastItemCount = itemCount;
 
-    // Unang load ng history: diretso sa baba, walang animation
+  
     final jump = hasData && !_initialScrollDone;
 
     if (hasData) _initialScrollDone = true;
@@ -299,7 +278,7 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     _scrollToBottom(jump: jump);
   }
 
-  // Pansamantalang mensahe mula kay Juggernaut (hindi sine-save)
+
   void _addNotice(String text) {
     if (!mounted) return;
 
@@ -313,8 +292,7 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     });
   }
 
-  // Kung pumalya ang pag-save sa Firestore, ipakita sa chat kung bakit
-  // (hal. permission-denied = kulang ang Firestore rules)
+
   void _persist(Future<String?> saving) {
     unawaited(
       saving.then((errorCode) {
@@ -334,9 +312,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     return error is FirebaseException ? error.code : 'unknown';
   }
 
-  // -------------------------------------------------
-  // IMAGE PICKER
-  // -------------------------------------------------
   String _guessMimeType(XFile file) {
     final mime = file.mimeType;
 
@@ -398,9 +373,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     });
   }
 
-  // -------------------------------------------------
-  // ERROR MESSAGES (walang teknikal na detalye sa chat)
-  // -------------------------------------------------
   String _friendlyError(FirebaseFunctionsException error) {
     switch (error.code) {
       case 'permission-denied':
@@ -419,9 +391,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     }
   }
 
-  // -------------------------------------------------
-  // SEND
-  // -------------------------------------------------
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     final imageBytes = _pendingImageBytes;
@@ -459,9 +428,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     });
 
     _messageController.clear();
-
-    // I-save agad ang mensahe ng owner. Lalabas ito sa chat
-    // sa pamamagitan ng stream (kahit offline, may local cache).
     _persist(
       store.save(
         id: messageId,
@@ -471,8 +437,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
       ),
     );
 
-    // I-upload ang larawan sa Firebase Storage at ilagay ang URL sa
-    // message. Tuloy ito kahit umalis ang owner sa screen.
     if (imageBytes != null) {
       unawaited(
         store.uploadAndAttachImage(
@@ -509,8 +473,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
       final reply = data['reply']?.toString() ??
           'Sorry, I could not generate a response.';
 
-      // I-save ang sagot kahit umalis na ang owner sa screen,
-      // para nandoon na pag bumalik siya.
       _persist(
         store.save(
           text: reply,
@@ -539,10 +501,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
       }
     }
   }
-
-  // -------------------------------------------------
-  // CLEAR CHAT
-  // -------------------------------------------------
   Future<void> _confirmClearChat() async {
     final store = _store;
 
@@ -551,7 +509,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        // Mas maliwanag na pula sa dark mode para mabasa
         final isDark = AppColors.of(dialogContext).isDark;
 
         return AlertDialog(
@@ -607,10 +564,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  // -------------------------------------------------
-  // VERDICT BADGE
-  // -------------------------------------------------
   String? _extractVerdict(String text) {
     final match = RegExp(
       r'VERDICT:\s*([A-Z ]+)',
@@ -659,10 +612,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
       ),
     );
   }
-
-  // -------------------------------------------------
-  // MESSAGE ROW
-  // -------------------------------------------------
   Widget _buildMessageRow(
     _ChatMessage message,
     double maxBubbleWidth,
@@ -672,7 +621,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
 
     final isOwner = message.isOwner;
 
-    // Verdict badge para sa sagot ng receipt check
     final verdict = isOwner ? null : _extractVerdict(message.text);
 
     String displayText = message.text;
@@ -689,7 +637,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
           .trim();
     }
 
-    // Larawan: galing sa cache (kung kaka-send lang)
     final id = message.id;
     final imageBytes = id == null ? null : _imageCache[id];
 
@@ -782,7 +729,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
                       height: 8,
                     ),
                   ] else if (message.hasImage) ...[
-                    // Nag-a-upload pa o hindi na makuha ang larawan
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -831,7 +777,6 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Mga kulay na sumusunod sa light/dark mode
     final c = AppColors.of(context);
 
     final maxBubbleWidth = MediaQuery.of(context).size.width * 0.72;

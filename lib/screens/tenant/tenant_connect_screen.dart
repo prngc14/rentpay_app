@@ -38,9 +38,6 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
   Color get _fieldBorder =>
       _isDark ? Colors.white.withOpacity(0.10) : const Color(0xFFDCE6EA);
 
-  // -------------------------------------------------
-  // CONNECT OWNER
-  // -------------------------------------------------
   Future<void> connectToOwner() async {
     String code = codeController.text.trim();
 

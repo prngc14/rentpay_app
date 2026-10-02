@@ -11,8 +11,7 @@ import '../screens/tenant/tenant_dashboard.dart';
 Future<void> _firebaseMessagingBackgroundHandler(
   RemoteMessage message,
 ) async {
-  // Firebase handles notification display in the background.
-  // The tap action is handled by onMessageOpenedApp or getInitialMessage().
+  
 }
 
 class NotificationService {
@@ -26,8 +25,6 @@ class NotificationService {
   static String? _pendingNotificationPayload;
 
   static const String _contractReminderPayload = 'contract_due_reminder';
-
-  // INITIALIZE NOTIFICATIONS
   static Future<void> initialize() async {
     if (_initialized) {
       await _saveTokenToFirestore();
@@ -56,8 +53,6 @@ class NotificationService {
       settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
-
-    // CHECK LOCAL NOTIFICATION WHEN APP WAS CLOSED
     final launchDetails =
         await _localNotifications.getNotificationAppLaunchDetails();
 
@@ -67,15 +62,12 @@ class NotificationService {
         launchResponse?.payload != null) {
       _pendingNotificationPayload = launchResponse!.payload;
     }
-
-    // CHECK FCM NOTIFICATION WHEN APP WAS FULLY CLOSED
     final initialMessage = await _messaging.getInitialMessage();
 
     if (initialMessage != null) {
       _pendingNotificationPayload = _getNotificationPayload(initialMessage);
     }
 
-    // CREATE ANDROID NOTIFICATION CHANNEL
     const androidChannel = AndroidNotificationChannel(
       'rentpay_reminders',
       'RentPay Reminders',
@@ -88,8 +80,6 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
 
     await androidPlugin?.createNotificationChannel(androidChannel);
-
-    // SAVE FCM TOKEN
     await _saveTokenToFirestore();
 
     // REGISTER LISTENERS
@@ -116,8 +106,6 @@ class NotificationService {
     }
 
     _initialized = true;
-
-    // OPEN PENDING NOTIFICATION AFTER INITIALIZATION
     final pendingPayload = _pendingNotificationPayload;
     _pendingNotificationPayload = null;
 
@@ -164,7 +152,6 @@ class NotificationService {
     }
   }
 
-  // SHOW FIREBASE MESSAGE AS LOCAL NOTIFICATION
   static Future<void> _showLocalNotification(
     RemoteMessage message,
   ) async {
@@ -193,7 +180,6 @@ class NotificationService {
     }
   }
 
-  // SHOW CUSTOM LOCAL NOTIFICATION
   static Future<void> showLocalNotification({
     required String title,
     required String body,
@@ -226,13 +212,6 @@ class NotificationService {
     _openContractsIfNeeded(response.payload);
   }
 
-  // OPEN CONTRACTS TAB
-  // TenantDashboard tab indexes:
-  // 0 = Home
-  // 1 = Payments
-  // 2 = Messages
-  // 3 = Contracts
-  // 4 = Valid IDs
   static void _openContractsIfNeeded(
     String? payload,
   ) {
@@ -266,7 +245,7 @@ class NotificationService {
     });
   }
 
-  // CLEAR TOKEN WHEN USER LOGS OUT
+
   static Future<void> clearTokenOnLogout() async {
     final user = FirebaseAuth.instance.currentUser;
 

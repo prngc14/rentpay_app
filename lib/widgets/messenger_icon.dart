@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Bilog na chat icon na parang Messenger (may kidlat sa loob).
-// Sumusunod sa kulay at laki ng IconTheme, kaya gumagana sa
-// NavigationBar at BottomNavigationBar.
-//
-//   MessengerIcon()                 -> puno (para sa selected)
-//   MessengerIcon(filled: false)    -> outline (para sa unselected)
 class MessengerIcon extends StatelessWidget {
   const MessengerIcon({
     super.key,
@@ -53,7 +47,6 @@ class _MessengerPainter extends CustomPainter {
     // Iginuhit sa 24x24 na grid, tapos i-scale sa laki ng icon.
     canvas.scale(size.width / 24, size.height / 24);
 
-    // Bilog na bubble + maliit na buntot sa kaliwang ibaba
     final Path bubble = Path.combine(
       PathOperation.union,
       Path()
@@ -95,7 +88,6 @@ class _MessengerPainter extends CustomPainter {
           ..color = color,
       );
     } else {
-      // Puno ang bubble, butas ang kidlat
       final Path filled = Path.combine(
         PathOperation.difference,
         bubble,

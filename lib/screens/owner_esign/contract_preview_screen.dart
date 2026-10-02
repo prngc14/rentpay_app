@@ -15,10 +15,6 @@ class ContractPreviewScreen extends StatelessWidget {
     required this.contractData,
   });
 
-  // =====================================================
-  // SIGNATURE DATA
-  // =====================================================
-
   List<Offset> _getSignaturePoints(String fieldName) {
     final rawSignature = contractData[fieldName];
 
@@ -39,10 +35,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
     return points;
   }
-
-  // =====================================================
-  // PDF SIGNATURE WIDGET
-  // =====================================================
 
   pw.Widget _buildSignatureWidget(
     List<Offset> signaturePoints, {
@@ -137,9 +129,6 @@ class ContractPreviewScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // PDF SIGNATURE SECTION
-  // =====================================================
 
   pw.Widget _buildPdfSignatureSection({
     required String title,
@@ -191,9 +180,6 @@ class ContractPreviewScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // GENERATE PDF
-  // =====================================================
 
   Future<void> _generatePdf(BuildContext context) async {
     final regularFont = await PdfGoogleFonts.notoSansRegular();
@@ -544,9 +530,6 @@ class ContractPreviewScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // DETAIL ROW
-  // =====================================================
 
   Widget _detailRow({
     required BuildContext context,
@@ -590,10 +573,6 @@ class ContractPreviewScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // SIGNATURE PREVIEW
-  // =====================================================
-
   Widget _buildSignaturePreview({
     required BuildContext context,
     required List<Offset> points,
@@ -630,10 +609,6 @@ class ContractPreviewScreen extends StatelessWidget {
       ),
     );
   }
-
-  // =====================================================
-  // BUILD
-  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -702,9 +677,6 @@ class ContractPreviewScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // =================================================
-              // CONTRACT TITLE
-              // =================================================
 
               Text(
                 'RENTAL AGREEMENT CONTRACT',
@@ -718,9 +690,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // =================================================
-              // BASIC DETAILS
-              // =================================================
 
               _detailRow(
                 context: context,
@@ -759,10 +728,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
               const SizedBox(height: 5),
 
-              // =================================================
-              // PAYMENT DETAILS
-              // =================================================
-
               _detailRow(
                 context: context,
                 icon: Icons.payments_outlined,
@@ -793,9 +758,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
               const SizedBox(height: 5),
 
-              // =================================================
-              // UTILITY DETAILS
-              // =================================================
 
               _detailRow(
                 context: context,
@@ -813,9 +775,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // =================================================
-              // CONTRACT SUMMARY
-              // =================================================
 
               Container(
                 width: double.infinity,
@@ -937,9 +896,6 @@ class ContractPreviewScreen extends StatelessWidget {
 
               const SizedBox(height: 5),
 
-              // =================================================
-              // PDF FOOTER LABEL
-              // =================================================
 
               Row(
                 children: [
@@ -966,9 +922,6 @@ class ContractPreviewScreen extends StatelessWidget {
   }
 }
 
-// =====================================================
-// SIGNATURE PAINTER
-// =====================================================
 
 class SignaturePreviewPainter extends CustomPainter {
   final List<ui.Offset> points;

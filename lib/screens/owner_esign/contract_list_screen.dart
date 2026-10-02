@@ -328,9 +328,6 @@ class ContractListScreen extends StatelessWidget {
         },
       ),
 
-      // =====================================================
-      // NEW CONTRACT BUTTON
-      // =====================================================
 
       floatingActionButton: SizedBox(
         height: 40,
@@ -382,9 +379,7 @@ class ContractListScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // CONTRACT CARD
-  // =====================================================
+
 
   Widget _buildCompactContractCard({
     required BuildContext context,

@@ -250,10 +250,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         0;
   }
 
-  // =====================================================
-  // PAYMENT LOGIC
-  // =====================================================
-
   double get amountToSubmit {
     if (!isPartialSelected) {
       return remainingBalance;
@@ -450,14 +446,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // =====================================================
-  // CONFIRM PAYMENT
-  // =====================================================
-
-  // =====================================================
-// CONFIRM PAYMENT
-// =====================================================
-
   void confirmPayment() {
     if (totalBill <= 0 || remainingBalance <= 0) {
       showAppWarningBanner(
@@ -499,7 +487,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ),
 
-          // CENTERED CONTENT
           content: Text(
             "Upload proof of payment for "
             "₱${amount.toStringAsFixed(2)}?",
@@ -573,10 +560,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       },
     );
   }
-
-  // =====================================================
-  // MAIN UI
-  // =====================================================
 
   bool get _hasGcash => gcashQR != null && gcashQR!.trim().isNotEmpty;
 

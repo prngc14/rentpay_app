@@ -248,7 +248,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                     overduePayments: overduePayments,
                                   ),
                                   const Spacer(),
-                                  // Pindutin ang Juggernaut card para buksan ang AI chat.
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
                                     onTap: () {
@@ -336,13 +335,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       ),
       floatingActionButton: _selectedIndex == 1 && user != null
           ? Theme(
-              // Explicit override kasi may ThemeData.floatingActionButtonTheme
-              // posibleng nag-a-apply ng sarili nitong default background,
-              // kaya sinisiguro dito na itim talaga ito sa dark mode.
-              // Ang colorScheme.surfaceTint (hindi ang per-widget
-              // surfaceTintColor, na wala pa sa Flutter version na ito) ang
-              // ginagamit ng M3 para sa elevation tint overlay, kaya dito
-              // natin ito i-null out.
+
               data: Theme.of(context).copyWith(
                 colorScheme: Theme.of(context).colorScheme.copyWith(
                       surfaceTint: Colors.transparent,
@@ -385,12 +378,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
-  // =====================================================
-  // NOTIFICATION BELL
-  // Pinagsasama ang: pending payments, overdue rooms,
-  // contract na hinihintay pirmahan ng tenant, at contract
-  // na napirmahan na ng tenant (hindi pa nakikita ng owner).
-  // =====================================================
 
   Widget _buildNotificationButton(String ownerId) {
     return StreamBuilder<QuerySnapshot>(
@@ -442,9 +429,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   "Renewed",
                 ];
 
-                // Na-send na pero hindi pa pumipirma ang tenant.
+
                 final List<Map<String, String>> waitingContracts = [];
-                // Pumirma na ang tenant pero hindi pa nakikita ng owner.
                 final List<Map<String, String>> signedContracts = [];
 
                 for (final doc in contractsSnapshot.data?.docs ?? []) {
@@ -479,7 +465,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 signedContracts
                     .sort((a, b) => a["room"]!.compareTo(b["room"]!));
 
-                // Mga bagong message mula sa tenants (hindi pa nababasa).
+
                 return StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection("chats")
@@ -518,9 +504,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         signedContracts.length +
                         messageChats.length;
 
-                    // Ang bell ay kapareho ng dark mode button: ang InkWell ay nasa
-                    // mismong 42x42 na bilog lang, kaya pareho ang laki ng pindot.
-                    // Ang badge ay nasa labas ng InkWell at hindi humaharang sa tap.
+
                     return Padding(
                       padding: const EdgeInsets.only(left: 4),
                       child: Center(
@@ -609,12 +593,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
-  // Notification panel na lumalabas sa ilalim ng bell (hindi na sa ibaba ng screen).
-  // - Bagong message mula sa tenant -> bubukas ang chat nila
-  // - Contract na napirmahan ng tenant -> Contracts screen (mula sa More) (minamarkahang "seen")
-  // - Payment na hinihintay ang approval -> Payments screen (mula sa More)
-  // - Overdue na room -> Contracts screen (mula sa More)
-  // - Contract na hinihintay pirmahan ng tenant -> Contracts screen (mula sa More)
+
   void _showNotificationPanel({
     required String ownerId,
     required int pendingCount,
@@ -1051,13 +1030,10 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    // Dark mode: itim ang fill (hindi ang light na
-                    // _textPrimary) para makita ang puting camera icon sa
-                    // itaas nito. Light mode: mananatili ang dating dark navy.
+
                     color: _isDark ? Colors.black : _textPrimary,
                     shape: BoxShape.circle,
-                    // Border na tumutugma sa background ng screen sa halip
-                    // na laging puti, para blend ito sa dark mode.
+
                     border: Border.all(
                       color: Theme.of(context).scaffoldBackgroundColor,
                       width: 2,
@@ -1365,17 +1341,6 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
-  // =====================================================
-  // COLLECTION HISTORY
-  // Isang linya bawat na-verify na bayad, galing sa
-  // "payments" collection (hindi sa running total ng room),
-  // kaya kumpleto pa rin kahit nag-reset ang bill ng room.
-  // =====================================================
-  // =====================================================
-  // COLLECTION HISTORY
-  // Unang dialog: room list lang.
-  // Kapag pinindot ang room, saka ipapakita ang payment records.
-  // =====================================================
   void _showCollectionHistory(
     BuildContext context,
     String ownerId,

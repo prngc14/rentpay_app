@@ -81,10 +81,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     super.dispose();
   }
 
-  // =====================================================
-  // LOAD OPTIONS
-  // =====================================================
-
   Future<void> _loadOptions() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -262,10 +258,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     }
   }
 
-  // =====================================================
-  // PICK DATE
-  // =====================================================
-
   Future<void> _pickDate({
     required bool isStart,
   }) async {
@@ -305,9 +297,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     });
   }
 
-  // =====================================================
-  // SMOOTH OWNER E-SIGNATURE
-  // =====================================================
 
   Future<List<Offset>?> _showOwnerSignatureDialog({
     required String roomNumber,
@@ -452,10 +441,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       signatureNotifier.dispose();
     }
   }
-
-  // =====================================================
-  // CREATE CONTRACT
-  // =====================================================
 
   Future<void> _createContract() async {
     debugPrint('Create Contract button clicked');
@@ -673,10 +658,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     }
   }
 
-  // =====================================================
-  // INPUT DECORATION
-  // =====================================================
-
   InputDecoration _contractInputDecoration(
     String label, {
     String? prefixText,
@@ -721,10 +702,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       ),
     );
   }
-
-  // =====================================================
-  // DATE FIELD
-  // =====================================================
 
   Widget _dateField({
     required String label,
@@ -773,10 +750,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
       ),
     );
   }
-
-  // =====================================================
-  // BUILD
-  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -1106,9 +1079,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   }
 }
 
-// =====================================================
-// SMOOTH SIGNATURE PAINTER
-// =====================================================
 
 class _ContractSignaturePainter extends CustomPainter {
   final ValueNotifier<List<Offset?>> pointsNotifier;

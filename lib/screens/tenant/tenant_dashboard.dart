@@ -35,7 +35,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
 
   final FirestoreService firestore = FirestoreService();
 
-  // ===== THEME-AWARE COLORS (kapareho ng owner dashboard) =====
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _textPrimary =>
       _isDark ? const Color(0xFFE8EEF0) : const Color(0xFF123E5A);
@@ -49,13 +48,11 @@ class _TenantDashboardState extends State<TenantDashboard> {
   Color get _navIndicator =>
       _isDark ? const Color(0xFF26313A) : const Color(0xFFE5F1F3);
 
-  // Ang Payments (1) at Messages (2) ay may sariling AppBar.
   bool get _hasOwnAppBar => _currentIndex == 1 || _currentIndex == 2;
 
   @override
   void initState() {
     super.initState();
-    // Tabs: 0 Home, 1 Payments, 2 Messages, 3 Contracts, 4 Valid IDs
     _currentIndex = widget.initialTabIndex.clamp(0, 4);
     _refreshOverdue();
     if (widget.showConnectionSuccess) {
@@ -66,9 +63,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
       });
     }
   }
-
-  // Sinusuri kung overdue na ang room ng tenant at ina-update ang
-  // isOverdue field, kapareho ng ginagawa sa Owner Dashboard.
   Future<void> _refreshOverdue() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -99,10 +93,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
         ),
       );
     }
-
-    // Ang buong Scaffold ay naka-wrap sa StreamBuilder ng sariling user doc
-    // ng tenant para malaman kung naka-connect na siya sa isang room
-    // (para itago ang "Connect Owner" icon).
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection("users")
@@ -137,8 +127,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
                   centerTitle: true,
                   leading: _buildNotificationButton(user.uid),
                   actions: [
-                    // CONNECT TO OWNER BUTTON — Home tab lang at itinatago
-                    // kapag naka-connect na ang tenant.
                     if (_currentIndex == 0 && !isConnected)
                       IconButton(
                         icon: Icon(Icons.link, color: _textPrimary),
@@ -152,7 +140,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
                           );
                         },
                       ),
-                    // SETTINGS BUTTON — Valid IDs tab lang.
                     if (_currentIndex == 4) _buildSettingsButton(),
                   ],
                 ),
@@ -199,15 +186,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
       },
     );
   }
-
-  // =====================================================
-  // BODY
-  // Ang Payments at Messages ay may sariling AppBar.
-  // - Payments: inilalagay ang bell sa ibabaw nito, sa parehong pwesto
-  //   ng bell sa AppBar ng ibang tabs (kapareho ng owner side).
-  // - Messages: WALANG bell, dahil natatakpan nito ang profile ng owner
-  //   sa AppBar ng Messages.
-  // =====================================================
   Widget _buildScaffoldBody(String uid) {
     final body = _buildBody(uid);
 
@@ -234,10 +212,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
     );
   }
 
-  // =====================================================
-  // SETTINGS BUTTON
-  // Dito makikita ang Dark Mode at Log out.
-  // =====================================================
   Widget _buildSettingsButton() {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
@@ -342,11 +316,6 @@ class _TenantDashboardState extends State<TenantDashboard> {
     );
   }
 
-  // =====================================================
-  // NOTIFICATION BELL
-  // Pinagsasama ang: bagong message mula sa owner, overdue
-  // na bayad, at contract na hinihintay pirmahan ng tenant.
-  // =====================================================
   Widget _buildNotificationButton(String tenantId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -917,14 +886,11 @@ class _TenantDashboardState extends State<TenantDashboard> {
 
               if (!mounted) return;
               setState(() {
-                _currentIndex = 0; // balik sa Home tab
+                _currentIndex = 0; 
               });
             },
             onSubmitNew: () async {
               await firestore.clearActivePayment(uid);
-              // mananatili sa Payments tab — awtomatikong
-              // magpapakita ng normal PaymentScreen (upload form)
-              // sa sandaling ma-clear ang activePaymentId.
             },
           );
         }

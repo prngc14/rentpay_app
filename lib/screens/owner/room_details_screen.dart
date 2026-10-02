@@ -4,22 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_colors.dart';
 
 class RoomDetailsScreen extends StatelessWidget {
-  // Kailangan na ngayon ang roomId para makapag-listen ng LIVE data
-  // mula sa Firestore. Ito yung document ID ng room sa "rooms" collection
-  // (hindi yung roomNumber). Kunin mo ito sa .id ng QueryDocumentSnapshot
-  // kapag nag-navigate papunta dito mula sa dashboard, hal.:
-  //
-  //   RoomDetailsScreen(
-  //     roomId: roomDoc.id,
-  //     roomData: roomDoc.data() as Map<String, dynamic>,
-  //     ...
-  //   )
+
   final String roomId;
 
-  // Ginagamit pa rin ito bilang paunang/fallback data (para walang
-  // blangko/flicker habang naglo-load pa ang unang snapshot), pero
-  // ang live StreamBuilder na sa ibaba ang siyang magiging source of
-  // truth pagkatapos noon.
+
   final Map<String, dynamic> roomData;
 
   final VoidCallback? onUpdateBilling;
@@ -38,18 +26,6 @@ class RoomDetailsScreen extends StatelessWidget {
     // Mga kulay na sumusunod sa light/dark mode
     final c = AppColors.of(context);
 
-    // =====================================================
-    // LIVE ROOM STREAM
-    // =====================================================
-    //
-    // Dati, static na Map lang (roomData) ang ginagamit dito kaya
-    // hindi agad nakikita ang bagong Monthly Rent / billing pagkatapos
-    // mag-update -- kailangan pang bumalik at pumasok ulit sa screen.
-    //
-    // Ngayon, nakikinig na ito nang live sa "rooms/{roomId}" doc, kaya
-    // sa sandaling mag-succeed ang updateRoomBilling() sa Firestore,
-    // awtomatiko na ring nag-rerebuild ang buong screen na ito -- kasing
-    // bilis ng tenant info section na StreamBuilder na rin dati.
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection("rooms")
@@ -68,11 +44,7 @@ class RoomDetailsScreen extends StatelessWidget {
         final tenant = data["tenantId"] ?? "No tenant yet";
 
         return Scaffold(
-          // Ang background ay galing sa theme (light: maputla, dark: itim)
 
-          // =====================================================
-          // APP BAR
-          // =====================================================
           appBar: AppBar(
             title: Text(
               "Room $roomNumber",
@@ -89,9 +61,6 @@ class RoomDetailsScreen extends StatelessWidget {
             scrolledUnderElevation: 0,
           ),
 
-          // =====================================================
-          // BODY
-          // =====================================================
           body: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
               16,
@@ -101,9 +70,6 @@ class RoomDetailsScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // =================================================
-                // TENANT INFORMATION
-                // =================================================
                 if (tenant == "No tenant yet")
                   _buildInfoCard(
                     c: c,
@@ -151,9 +117,7 @@ class RoomDetailsScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // ---------------------------------
-                              // TITLE
-                              // ---------------------------------
+
                               Row(
                                 children: [
                                   Container(
@@ -184,9 +148,6 @@ class RoomDetailsScreen extends StatelessWidget {
 
                               const SizedBox(height: 14),
 
-                              // ---------------------------------
-                              // TENANT DETAILS
-                              // ---------------------------------
                               _buildTenantDetail(
                                 c,
                                 "Name",
@@ -207,9 +168,6 @@ class RoomDetailsScreen extends StatelessWidget {
 
                               const SizedBox(height: 12),
 
-                              // ---------------------------------
-                              // MONTHLY RENT
-                              // ---------------------------------
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.fromLTRB(
@@ -277,9 +235,6 @@ class RoomDetailsScreen extends StatelessWidget {
                                 ),
                               ),
 
-                              // ---------------------------------
-                              // WORK ID
-                              // ---------------------------------
                               if ((tenantData["workIdUrl"] ?? "")
                                   .toString()
                                   .isNotEmpty) ...[
@@ -333,9 +288,7 @@ class RoomDetailsScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // =================================================
-                // UPDATE BILLING BUTTON
-                // =================================================
+
                 if (onUpdateBilling != null)
                   SizedBox(
                     height: 36,
@@ -370,9 +323,6 @@ class RoomDetailsScreen extends StatelessWidget {
                     ),
                   ),
 
-                // =================================================
-                // DELETE ROOM BUTTON
-                // =================================================
                 if (onDeleteRoom != null) ...[
                   const SizedBox(height: 8),
                   SizedBox(
@@ -416,9 +366,6 @@ class RoomDetailsScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // TENANT DETAIL ROW
-  // =====================================================
 
   Widget _buildTenantDetail(
     AppColors c,
@@ -455,9 +402,6 @@ class RoomDetailsScreen extends StatelessWidget {
     );
   }
 
-  // =====================================================
-  // REUSABLE INFO CARD
-  // =====================================================
 
   Widget _buildInfoCard({
     required AppColors c,

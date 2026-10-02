@@ -1,15 +1,5 @@
 import 'package:flutter/material.dart';
 
-// =====================================================
-// RENTPAY BACKDROP
-// Background sa likod ng mga glass panel. Sumusunod sa
-// light/dark mode ng app:
-//   Light: parehong itsura tulad ng dati.
-//   Dark:  nagsisimula sa mismong kulay ng scaffold (kaya
-//          walang guhit sa pagitan ng AppBar at ng screen),
-//          may malalabong teal na liwanag para makita pa
-//          rin ang blur ng glass panels.
-// =====================================================
 class RentPayBackdrop extends StatelessWidget {
   final Widget child;
 
@@ -43,7 +33,7 @@ class RentPayBackdrop extends StatelessWidget {
 class _RentPayBackdropPainter extends CustomPainter {
   final bool isDark;
 
-  // Kulay ng scaffold sa dark mode; dito nagsisimula ang gradient.
+
   final Color darkBase;
 
   const _RentPayBackdropPainter({

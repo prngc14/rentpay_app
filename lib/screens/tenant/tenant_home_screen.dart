@@ -1026,10 +1026,6 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
   }
 }
 
-// =====================================================
-// GLASS PANEL
-// =====================================================
-
 class _GlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;

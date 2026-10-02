@@ -269,9 +269,6 @@ class TenantRoomScreen extends StatelessWidget {
 
                         const Divider(height: 40),
 
-                        // ====================================
-                        // MONTHLY ANALYTICS
-                        // ====================================
                         const Text(
                           "Monthly Analytics",
                           style: TextStyle(
@@ -363,10 +360,6 @@ class TenantRoomScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 30),
-
-                        // ====================================
-                        // TOTAL BILL
-                        // ====================================
                         const Text(
                           "Total Billing Summary",
                           style: TextStyle(
