@@ -566,8 +566,9 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
   }
   String? _extractVerdict(String text) {
     final match = RegExp(
-      r'VERDICT:\s*([A-Z ]+)',
+      r'^\s*VERDICT:\s*<?\s*(GREEN|ORANGE|RED|LIKELY GENUINE|SUSPICIOUS|LIKELY FAKE|CANNOT DETERMINE)\b',
       caseSensitive: false,
+      multiLine: true,
     ).firstMatch(text);
 
     final value = match?.group(1)?.trim().toUpperCase();
@@ -578,19 +579,13 @@ class _JuggernautChatScreenState extends State<JuggernautChatScreen> {
   }
 
   Widget _buildVerdictBadge(String verdict) {
-    final isDark = AppColors.of(context).isDark;
-
-    final Color color;
-
-    if (verdict.contains('FAKE')) {
-      color = isDark ? const Color(0xFFEF5350) : const Color(0xFFC62828);
-    } else if (verdict.contains('SUSPICIOUS')) {
-      color = isDark ? const Color(0xFFFFA726) : const Color(0xFFEF6C00);
-    } else if (verdict.contains('GENUINE')) {
-      color = isDark ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32);
-    } else {
-      color = Colors.blueGrey;
-    }
+    final colors = AppColors.of(context);
+    final Color color = switch (verdict) {
+      'GREEN' || 'LIKELY GENUINE' => colors.receiptGreen,
+      'ORANGE' || 'SUSPICIOUS' || 'CANNOT DETERMINE' => colors.receiptOrange,
+      'RED' || 'LIKELY FAKE' => colors.receiptRed,
+      _ => Colors.blueGrey,
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(

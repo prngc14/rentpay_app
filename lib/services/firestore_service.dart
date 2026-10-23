@@ -351,6 +351,7 @@ class FirestoreService {
 
       await roomDoc.reference.update({
         "tenantId": tenantId,
+        "tenantConnectedAt": FieldValue.serverTimestamp(),
         "paymentStatus": "unpaid",
         "paidAt": null,
       });

@@ -27,8 +27,6 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
   bool _contractDueNotificationShown = false;
   String? _profileImageOverride;
 
-  static const double _avatarMaxSize = 200;
-
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get _textPrimary =>
@@ -317,11 +315,13 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
     Widget? bottom,
   }) {
     const EdgeInsets padding = EdgeInsets.fromLTRB(16, 4, 16, 8);
+    const double avatarSize = 116;
 
     final Widget nameText = Text(
       name,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: 23,
         height: 1.0,
@@ -332,6 +332,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
     final Widget tenantText = Text(
       "Tenant",
+      textAlign: TextAlign.center,
       style: TextStyle(
         color: _textSecondary,
         fontSize: 11,
@@ -341,140 +342,134 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool compact =
-            constraints.hasBoundedHeight && constraints.maxHeight < 570;
-
-        final bool flexibleHeader = bottom != null && !compact;
-
-        final double fixedAvatarSize = compact ? 100 : _avatarMaxSize;
-
-        final Widget header = flexibleHeader
-            ? Expanded(
-                child: Column(
-                  children: [
-                    Flexible(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: _avatarMaxSize,
-                        ),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: _buildAvatar(
-                            profileImageUrl,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Ibinaba nang kaunti ang name at Tenant.
-                    const SizedBox(height: 12),
-
-                    nameText,
-                    tenantText,
-                  ],
-                ),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: fixedAvatarSize,
-                    height: fixedAvatarSize,
-                    child: _buildAvatar(
-                      profileImageUrl,
-                    ),
-                  ),
-
-                  // Ibinaba nang kaunti ang name at Tenant.
-                  const SizedBox(height: 12),
-
-                  nameText,
-                  tenantText,
-                ],
-              );
-
-        final Widget column = Column(
-          children: [
-            header,
-            if (bottom != null) ...[
-              const SizedBox(height: 10),
-              content,
-              const SizedBox(height: 8),
-              bottom,
-            ] else ...[
-              const SizedBox(height: 16),
-              content,
-            ],
-          ],
-        );
-
-        if (compact) {
-          return SingleChildScrollView(
-            padding: padding,
-            child: column,
-          );
-        }
-
         return Padding(
           padding: padding,
-          child: column,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (bottom != null)
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, headerConstraints) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox.square(
+                              dimension: avatarSize,
+                              child: _buildAvatar(profileImageUrl),
+                            ),
+                            const SizedBox(height: 10),
+                            nameText,
+                            tenantText,
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else ...[
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox.square(
+                    dimension: avatarSize,
+                    child: _buildAvatar(profileImageUrl),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                nameText,
+                tenantText,
+                const SizedBox(height: 16),
+              ],
+              if (bottom != null) ...[
+                const SizedBox(height: 10),
+                content,
+                const SizedBox(height: 8),
+                bottom,
+              ] else
+                content,
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildAvatar(String? profileImageUrl) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _chooseProfileImageSource,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: ClipOval(
-              child: ColoredBox(
-                color: _avatarBg,
-                child: profileImageUrl != null && profileImageUrl.isNotEmpty
-                    ? Image.network(
-                        profileImageUrl,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        errorBuilder: (_, __, ___) {
-                          return Center(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final badgeSize = (constraints.maxWidth * 0.13)
+            .clamp(18.0, 22.0)
+            .toDouble();
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _chooseProfileImageSource,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: ClipOval(
+                  child: ColoredBox(
+                    color: _avatarBg,
+                    child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                        ? Image.network(
+                            profileImageUrl,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            errorBuilder: (_, __, ___) {
+                              return Center(
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: _isDark
+                                      ? Colors.white
+                                      : const Color(0xFF111111),
+                                ),
+                              );
+                            },
+                          )
+                        : Center(
                             child: Icon(
                               Icons.person,
                               size: 50,
-                              color: _isDark
-                                  ? Colors.white
-                                  : const Color(0xFF111111),
+                              color: const Color(0xFF111111),
                             ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.person,
-                          size: 50,
-                          color: const Color(0xFF111111),
-                        ),
-                      ),
+                          ),
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                right: constraints.maxWidth * 0.10,
+                bottom: constraints.maxWidth * 0.015,
+                child: Container(
+                  width: badgeSize,
+                  height: badgeSize,
+                  decoration: BoxDecoration(
+                    color: _isDark ? const Color(0xFF26313A) : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isDark ? Colors.white24 : Colors.black12,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.18),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: badgeSize * 0.62,
+                    color: _textPrimary,
+                  ),
+                ),
+              ),
+            ],
           ),
-
-          // Plain camera icon lamang.
-          // Walang bilog, background, border, o shadow.
-          Positioned(
-            right: 24,
-            bottom: 12,
-            child: Icon(
-              Icons.camera_alt,
-              size: 22,
-              color: _textPrimary,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

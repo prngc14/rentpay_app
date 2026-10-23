@@ -13,8 +13,14 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'approved',
               'paymentStatus',
-              'lastPaymentDate'
+              'lastPaymentDate',
+              'ownerSeenWorkIdAt'
             ])
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['ownerSeenWorkIdAt'])
+              || request.resource.data.ownerSeenWorkIdAt == request.time
+            )
           )
         );
 
@@ -36,8 +42,10 @@ service cloud.firestore {
             && request.resource.data.ownerId == resource.data.ownerId
             && request.resource.data.tenantId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'tenantId'
+              'tenantId',
+              'tenantConnectedAt'
             ])
+            && request.resource.data.tenantConnectedAt == request.time
           )
           || (
             resource.data.tenantId == request.auth.uid
@@ -156,9 +164,6 @@ service cloud.firestore {
     }
   }
 }
-
-
-
 
 
 

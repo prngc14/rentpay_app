@@ -9,22 +9,13 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 // Model na nasa listahan ng key mo (Flash-Lite, para sa Free tier).
 const MODEL_NAME = "gemini-3.5-flash-lite";
+const FALLBACK_MODEL_NAME = "gemini-2.5-flash-lite";
 
-// =====================================================
-// OWNER-ONLY SETTINGS
-// Owner accounts lang ang puwedeng gumamit. Tinitingnan sa Firestore
-// ang users/{uid} at binabasa ang role field.
-// Kung iba ang pangalan ng collection o field sa database ninyo,
-// palitan dito. Para i-off muna habang nagte-test: ENFORCE_OWNER_ONLY = false
-// =====================================================
 const ENFORCE_OWNER_ONLY = true;
 const USERS_COLLECTION = "users";
 const ROLE_FIELDS = ["role", "userType", "accountType"];
 const OWNER_VALUE = "owner";
 
-// =====================================================
-// IMAGE SETTINGS
-// =====================================================
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB
 const ALLOWED_IMAGE_HOSTS = ["res.cloudinary.com"];
@@ -37,9 +28,7 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-// -----------------------------------------------------
-// OWNER CHECK
-// -----------------------------------------------------
+
 async function assertOwner(uid) {
   if (!ENFORCE_OWNER_ONLY) return;
 
@@ -70,13 +59,7 @@ async function assertOwner(uid) {
   }
 }
 
-// -----------------------------------------------------
-// LOAD RECEIPT IMAGE
-// Tumatanggap ng alinman sa:
-//   data.imageBase64 + data.mimeType   (galing sa phone/gallery)
-//   data.imageUrl                      (Cloudinary link)
-// Nagbabalik ng { data, mimeType } o null kung walang larawan.
-// -----------------------------------------------------
+
 async function loadImage(payload) {
   // OPTION 1: BASE64
   if (
@@ -162,9 +145,7 @@ async function loadImage(payload) {
   return null;
 }
 
-// -----------------------------------------------------
-// PROMPTS
-// -----------------------------------------------------
+
 function buildChatPrompt(message) {
   return `
 You are Juggernaut, the AI assistant of RentPay.
@@ -192,6 +173,11 @@ ${message}
 }
 
 function buildReceiptPrompt(message, expectedAmount) {
+  const currentDate = new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "long",
+    timeZone: "Asia/Manila",
+  }).format(new Date());
+
   let expectedBlock = "";
 
   if (Number.isFinite(expectedAmount) && expectedAmount > 0) {
@@ -212,28 +198,74 @@ You are Juggernaut, the receipt-checking assistant of RentPay, a rental billing 
 
 A property owner uploaded a payment receipt screenshot submitted by a tenant (usually GCash, Maya, or a bank transfer). Examine the image carefully for signs that it may be fake, edited, or AI-generated.
 
-Look for:
+Review the visible receipt for:
 - Inconsistent fonts, font sizes, spacing, or alignment
 - Blurry, pasted, or mismatched areas around amounts, names, dates, or reference numbers
 - Garbled, misspelled, or unnatural text (common in AI-generated images)
 - Missing or oddly formatted reference number, date, or time
-- Amounts or dates that look unrealistic or inconsistent within the receipt
-- A layout that does not match a real GCash, Maya, or bank receipt
+- Amounts or dates that are internally inconsistent or clearly impossible
+- Clear visual inconsistencies with the payment platform shown on the receipt
 - Signs of a screenshot of a screenshot, or heavy compression that may hide edits
 ${expectedBlock}${noteBlock}
 Important rules:
-- You cannot prove that a receipt is real or fake from an image alone. Give a screening result, not a final judgment.
+- Return exactly one of these three verdicts:
+  - GREEN: It is a readable payment receipt with no obvious visual manipulation and no clear internal inconsistencies. This only means low visible concern; it does not prove that money was received.
+  - ORANGE: The image is not a payment receipt, is unreadable, has important missing details, has a possible amount mismatch, or has uncertain/weak concerns that need manual review. Do not treat a mismatch or poor image quality alone as proof of fraud.
+  - RED: There are multiple strong, specific, corroborating visual signs of editing or AI generation, or a clearly impossible internal inconsistency. Describe the evidence; do not claim fraud as a proven fact.
+- You cannot prove that a receipt is real or fake from an image alone. This is a screening result, not a final judgment or payment approval.
 - Do not invent details that are not visible in the image.
-- If the image is not a payment receipt, say so clearly.
+- If the image is not a payment receipt, use ORANGE and say so clearly.
+- The current date in the Philippines is ${currentDate}. Only call a transaction date "in the future" if it is later than this date. A past date is not suspicious just because it is old.
+- GCash and Maya may mask part of a sender's name or phone number for privacy. Masking alone is normal and is never evidence of editing or fraud.
+- Receipts may include ads, promotional banners, app controls, status/navigation bars, colored backgrounds, or be captured as screenshots. These alone are not evidence of fraud.
+- Do not label a receipt RED just because its layout is unfamiliar, a detail is masked, or image quality is imperfect. Use ORANGE when you cannot confidently assess it.
+- Do not assume a "standard" receipt layout unless there is a clear, specific inconsistency visible in this image.
 - Keep it short and easy to understand. Reply in English.
 
-Reply in exactly this format:
-VERDICT: <LIKELY GENUINE | SUSPICIOUS | LIKELY FAKE | CANNOT DETERMINE>
+Reply in exactly this format. Replace the verdict instruction with exactly one word: GREEN, ORANGE, or RED. Do not include angle brackets or the other choices on the VERDICT line.
+VERDICT: GREEN
 CONFIDENCE: <Low | Medium | High>
 READ FROM RECEIPT: amount, date and time, reference number, sender, receiver (write "not visible" for anything missing)
-RED FLAGS: a short bullet list, or "None noticed"
-NEXT STEP FOR OWNER: one or two sentences, for example confirming the reference number and amount in your own GCash, Maya, or bank account before approving the payment.
+FEEDBACK: a short explanation of why this verdict was chosen
+NEXT STEP FOR OWNER: one sentence advising what to verify manually before approving the payment.
 `;
+}
+
+function isTransientGeminiError(error) {
+  const message = String(error?.message ?? "");
+  return /\[(?:429|500|502|503|504)\b/.test(message) ||
+    /\b(?:429|500|502|503|504)\s+(?:RESOURCE_EXHAUSTED|INTERNAL|UNAVAILABLE|GATEWAY_TIMEOUT)\b/i.test(message);
+}
+
+async function generateContentWithFallback(genAI, content, generationConfig) {
+  const models = [MODEL_NAME, FALLBACK_MODEL_NAME];
+  let lastError;
+
+  for (let index = 0; index < models.length; index += 1) {
+    const modelName = models[index];
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig,
+    });
+
+    try {
+      const result = await model.generateContent(content);
+      console.log("Gemini response generated with model:", modelName);
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (index === models.length - 1 || !isTransientGeminiError(error)) {
+        throw error;
+      }
+
+      console.warn(
+        `Gemini model ${modelName} temporarily unavailable; retrying with ${FALLBACK_MODEL_NAME}.`,
+        error?.message
+      );
+    }
+  }
+
+  throw lastError;
 }
 
 // -----------------------------------------------------
@@ -299,27 +331,28 @@ exports.juggernautChat = onCall(
       // INITIALIZE GEMINI
       const genAI = new GoogleGenerativeAI(apiKey);
 
-      const model = genAI.getGenerativeModel({
-        model: MODEL_NAME,
-        generationConfig: {
-          temperature: image ? 0.2 : 0.7,
-        },
-      });
-
       // GENERATE AI RESPONSE
-      let result;
+      const generationConfig = {
+        temperature: image ? 0.2 : 0.7,
+      };
+      let content;
 
       if (image) {
         const expectedAmount = Number(payload.expectedAmount);
 
-        result = await model.generateContent([
+        content = [
           buildReceiptPrompt(message, expectedAmount),
           { inlineData: { data: image.data, mimeType: image.mimeType } },
-        ]);
+        ];
       } else {
-        result = await model.generateContent(buildChatPrompt(message));
+        content = buildChatPrompt(message);
       }
 
+      const result = await generateContentWithFallback(
+        genAI,
+        content,
+        generationConfig
+      );
       const reply = result.response.text();
 
       // CHECK EMPTY RESPONSE
@@ -363,7 +396,6 @@ exports.juggernautChat = onCall(
         );
       }
 
-      // RETURN INTERNAL ERROR (walang detalye para hindi lumabas sa app)
       throw new HttpsError(
         "internal",
         "Sorry, Juggernaut could not process your request."

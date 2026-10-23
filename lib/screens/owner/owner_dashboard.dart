@@ -401,10 +401,24 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           builder: (context, roomsSnapshot) {
             // Mga room na may tenant pero overdue ang bayad.
             final List<Map<String, String>> overdueRooms = [];
+            final List<Map<String, String>> newTenantConnections = [];
 
             for (final room in roomsSnapshot.data?.docs ?? []) {
               final data = room.data() as Map<String, dynamic>;
               final String tenantId = data["tenantId"]?.toString() ?? "";
+
+              final connectedAt = data["tenantConnectedAt"];
+              final seenAt = data["ownerSeenTenantConnectionAt"];
+              final bool hasUnseenConnection = connectedAt is Timestamp &&
+                  (seenAt is! Timestamp || connectedAt.compareTo(seenAt) > 0);
+
+              if (tenantId.isNotEmpty && hasUnseenConnection) {
+                newTenantConnections.add({
+                  "id": room.id,
+                  "room": (data["roomNumber"] ?? "?").toString(),
+                  "tenantId": tenantId,
+                });
+              }
 
               if (tenantId.isNotEmpty && data["isOverdue"] == true) {
                 overdueRooms.add({
@@ -498,14 +512,43 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                       (a, b) => (b["time"] as int).compareTo(a["time"] as int),
                     );
 
-                    final int count = pendingCount +
-                        overdueRooms.length +
-                        waitingContracts.length +
-                        signedContracts.length +
-                        messageChats.length;
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection("users")
+                          .where("ownerId", isEqualTo: ownerId)
+                          .where("role", isEqualTo: "tenant")
+                          .snapshots(),
+                      builder: (context, tenantsSnapshot) {
+                        final List<Map<String, String>> workIdUploads = [];
 
+                        for (final tenant in tenantsSnapshot.data?.docs ?? []) {
+                          final data = tenant.data() as Map<String, dynamic>;
+                          final workIdUrl =
+                              (data["workIdUrl"] ?? "").toString();
+                          final uploadedAt = data["workIdUploadedAt"];
+                          final seenAt = data["ownerSeenWorkIdAt"];
 
-                    return Padding(
+                          if (workIdUrl.isNotEmpty &&
+                              uploadedAt is Timestamp &&
+                              (seenAt is! Timestamp ||
+                                  uploadedAt.compareTo(seenAt) > 0)) {
+                            workIdUploads.add({
+                              "tenantId": tenant.id,
+                              "tenant": (data["name"] ?? "Tenant").toString(),
+                              "room": (data["room"] ?? "?").toString(),
+                            });
+                          }
+                        }
+
+                        final int count = pendingCount +
+                            newTenantConnections.length +
+                            workIdUploads.length +
+                            overdueRooms.length +
+                            waitingContracts.length +
+                            signedContracts.length +
+                            messageChats.length;
+
+                        return Padding(
                       padding: const EdgeInsets.only(left: 4),
                       child: Center(
                         child: SizedBox(
@@ -524,6 +567,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                       _showNotificationPanel(
                                         ownerId: ownerId,
                                         pendingCount: pendingCount,
+                                        newTenantConnections:
+                                            newTenantConnections,
+                                        workIdUploads: workIdUploads,
                                         overdueRooms: overdueRooms,
                                         waitingContracts: waitingContracts,
                                         signedContracts: signedContracts,
@@ -583,6 +629,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         ),
                       ),
                     );
+                      },
+                    );
                   },
                 );
               },
@@ -597,6 +645,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   void _showNotificationPanel({
     required String ownerId,
     required int pendingCount,
+    required List<Map<String, String>> newTenantConnections,
+    required List<Map<String, String>> workIdUploads,
     required List<Map<String, String>> overdueRooms,
     required List<Map<String, String>> waitingContracts,
     required List<Map<String, String>> signedContracts,
@@ -606,6 +656,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         FirestoreService().getOwnerTenants(ownerId);
 
     final int total = pendingCount +
+        newTenantConnections.length +
+        workIdUploads.length +
         overdueRooms.length +
         waitingContracts.length +
         signedContracts.length +
@@ -739,6 +791,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                     (tenantData["room"] ?? "").toString();
                               }
 
+                              String tenantName(String tenantId) {
+                                final name = tenantNames[tenantId];
+                                return (name == null || name.isEmpty)
+                                    ? "A tenant"
+                                    : name;
+                              }
+
                               String messageSender(String tenantId) {
                                 final name = tenantNames[tenantId];
                                 return (name == null || name.isEmpty)
@@ -771,6 +830,75 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                                 padding:
                                     const EdgeInsets.fromLTRB(12, 0, 12, 14),
                                 children: [
+                                  for (final item in newTenantConnections)
+                                    _buildNotificationTile(
+                                      icon: Icons.person_add_alt_1,
+                                      color: const Color(0xFF3B82F6),
+                                      title: "New tenant connected",
+                                      subtitle:
+                                          "${tenantName(item["tenantId"]!)} joined Room ${item["room"]}",
+                                      onTap: () async {
+                                        try {
+                                          await FirebaseFirestore.instance
+                                              .collection("rooms")
+                                              .doc(item["id"])
+                                              .update({
+                                            "ownerSeenTenantConnectionAt":
+                                                FieldValue.serverTimestamp(),
+                                          });
+                                        } catch (error) {
+                                          debugPrint(
+                                            "MARK TENANT CONNECTION SEEN ERROR: $error",
+                                          );
+                                        }
+
+                                        if (!mounted) return;
+                                        Navigator.pop(dialogContext);
+                                        setState(() {
+                                          _selectedIndex = 1;
+                                        });
+                                      },
+                                    ),
+
+                                  for (final item in workIdUploads)
+                                    _buildNotificationTile(
+                                      icon: Icons.badge_outlined,
+                                      color: const Color(0xFF8B5CF6),
+                                      title: "New Work ID uploaded",
+                                      subtitle:
+                                          "${item["tenant"]} uploaded a Work ID for Room ${item["room"]}",
+                                      onTap: () async {
+                                        try {
+                                          await FirebaseFirestore.instance
+                                              .collection("users")
+                                              .doc(item["tenantId"])
+                                              .update({
+                                            "ownerSeenWorkIdAt":
+                                                FieldValue.serverTimestamp(),
+                                          });
+                                        } catch (error) {
+                                          debugPrint(
+                                            "MARK WORK ID SEEN ERROR: $error",
+                                          );
+                                        }
+
+                                        if (!mounted) return;
+                                        Navigator.pop(dialogContext);
+                                        setState(() {
+                                          _selectedIndex = 4;
+                                        });
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                          if (mounted) {
+                                            _showTenantsDialog(
+                                              context,
+                                              ownerId,
+                                            );
+                                          }
+                                        });
+                                      },
+                                    ),
+
                                   // NEW MESSAGES (lila)
                                   for (final chat in messageChats)
                                     _buildNotificationTile(
@@ -1026,21 +1154,16 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               Positioned(
                 right: 0,
                 bottom: 0,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-
-                    color: _isDark ? Colors.black : _textPrimary,
-                    shape: BoxShape.circle,
-
-                    border: Border.all(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      width: 2,
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Center(
+                    child: Icon(
+                      Icons.camera_alt,
+                      size: 14,
+                      color: Color(0xFFE88916),
                     ),
                   ),
-                  child: const Icon(Icons.camera_alt,
-                      size: 17, color: Colors.white),
                 ),
               ),
             ],

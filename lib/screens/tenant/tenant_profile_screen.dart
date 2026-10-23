@@ -120,31 +120,51 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
       isSaving = true;
     });
 
+    final userDoc = FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid);
+    final pendingWorkIdImage = selectedWorkIdImage;
+    var personalInfoSaved = false;
+
     try {
-      String? uploadedWorkIdUrl = workIdUrl;
-
-      if (selectedWorkIdImage != null) {
-        uploadedWorkIdUrl = await uploadToCloudinary(
-          selectedWorkIdImage!,
-        );
-      }
-
-    
-
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .update({
+      await userDoc.update({
         "name": nameController.text.trim(),
         "job": jobController.text.trim(),
         "phone": phoneController.text.trim(),
-        "workIdUrl": uploadedWorkIdUrl,
       });
+      personalInfoSaved = true;
+
+      String? uploadedWorkIdUrl;
+      if (pendingWorkIdImage != null) {
+        uploadedWorkIdUrl = await uploadToCloudinary(pendingWorkIdImage);
+
+        if (uploadedWorkIdUrl == null || uploadedWorkIdUrl.isEmpty) {
+          if (!mounted) return;
+
+          setState(() {
+            isSaving = false;
+          });
+
+          showAppWarningBanner(
+            context,
+            "Personal information was saved, but the Work ID upload failed. Please try uploading it again.",
+          );
+          return;
+        }
+
+        await userDoc.update({
+          "workIdUrl": uploadedWorkIdUrl,
+          "workIdUploadedAt": FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
 
       setState(() {
-        workIdUrl = uploadedWorkIdUrl;
+        if (uploadedWorkIdUrl != null) {
+          workIdUrl = uploadedWorkIdUrl;
+          selectedWorkIdImage = null;
+        }
         isSaving = false;
       });
 
@@ -161,7 +181,9 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
 
       showAppWarningBanner(
         context,
-        friendlyAuthError(e),
+        personalInfoSaved
+            ? "Personal information was saved, but the Work ID could not be saved. Please try uploading it again."
+            : friendlyAuthError(e),
       );
     }
   }
@@ -412,32 +434,15 @@ class _TenantProfileScreenState extends State<TenantProfileScreen> {
           builder: (context, constraints) {
             const EdgeInsets padding = EdgeInsets.fromLTRB(16, 8, 16, 8);
 
-
-            final bool scrollMode = constraints.maxHeight < 520;
-
-            if (scrollMode) {
-              return SingleChildScrollView(
-                padding: padding,
-                child: Column(
-                  children: [
-                    _buildPersonalInfoPanel(),
-                    const SizedBox(height: 10),
-                    _buildWorkIdPanel(expand: false),
-                    const SizedBox(height: 10),
-                    _buildSaveButton(),
-                  ],
-                ),
-              );
-            }
-
-
-            return Padding(
+            return SingleChildScrollView(
               padding: padding,
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
               child: Column(
                 children: [
                   _buildPersonalInfoPanel(),
                   const SizedBox(height: 10),
-                  Expanded(child: _buildWorkIdPanel(expand: true)),
+                  _buildWorkIdPanel(expand: false),
                   const SizedBox(height: 10),
                   _buildSaveButton(),
                 ],

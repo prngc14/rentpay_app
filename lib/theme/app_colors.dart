@@ -25,9 +25,17 @@ class AppColors {
   Color get subtitle =>
       isDark ? const Color(0xFFB8C2C7) : const Color(0xFF587287);
 
-  // Pula para sa Delete at error (mas maliwanag sa dark mode)
   Color get danger =>
       isDark ? const Color(0xFFEF5350) : const Color(0xFFD93636);
+
+  Color get receiptGreen =>
+      isDark ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32);
+
+  Color get receiptOrange =>
+      isDark ? const Color(0xFFFFA726) : const Color(0xFFEF6C00);
+
+  Color get receiptRed =>
+      isDark ? const Color(0xFFEF5350) : const Color(0xFFC62828);
 
 
   // Card

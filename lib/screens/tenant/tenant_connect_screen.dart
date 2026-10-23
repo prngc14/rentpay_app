@@ -133,6 +133,7 @@ class _TenantConnectScreenState extends State<TenantConnectScreen> {
           .doc(roomDoc.id)
           .update({
         "tenantId": user.uid,
+        "tenantConnectedAt": FieldValue.serverTimestamp(),
       });
 
       // UPDATE USER

@@ -336,19 +336,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // RENTPAY LOGIN TITLE
-                    Text.rich(
-                      TextSpan(
-                        children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text.rich(
                           TextSpan(
-                            text: "Rentpay",
-                            style: GoogleFonts.lobster(
-                              fontSize: 80,
-                              color: const Color.fromARGB(255, 7, 7, 7),
-                            ),
+                            children: [
+                              TextSpan(
+                                text: "Rentpay",
+                                style: GoogleFonts.lobster(
+                                  fontSize: 80,
+                                  color: const Color.fromARGB(255, 7, 7, 7),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                          maxLines: 1,
+                          softWrap: false,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
 
                     const SizedBox(height: 16),

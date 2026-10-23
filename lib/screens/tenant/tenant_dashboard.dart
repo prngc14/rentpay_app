@@ -178,7 +178,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
               NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person),
-                label: "Valid IDs",
+                label: "Profile",
               ),
             ],
           ),
